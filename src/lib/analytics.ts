@@ -12,7 +12,7 @@ export function applyFilters(
     if (selectedPeriods && selectedPeriods.length && !selectedPeriods.includes(r.periodo)) return false;
     for (const [k, vals] of Object.entries(filters)) {
       if (!vals || vals.length === 0) continue;
-      const v = (r as Record<string, unknown>)[k] as string | undefined;
+      const v = (r as unknown as Record<string, unknown>)[k] as string | undefined;
       if (!v || !vals.includes(v)) return false;
     }
     return true;
