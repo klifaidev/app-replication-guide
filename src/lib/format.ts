@@ -44,8 +44,10 @@ export const monthLabel = (mes: number, ano: number) =>
   `${MONTH_LABELS[mes - 1] ?? "?"}/${String(ano).slice(-2)}`;
 
 /**
- * Parse a period string like "005.2025" or "5/2025" or "2025-05" into {mes, ano, fy, fyNum}
- * Fiscal year: April–March. FY25/26 = April 2025 → March 2026.
+ * Parse a period string into {mes, ano, fy, fyNum}.
+ * Aceita: "005.2025", "5.2025", "05/2025", "2025-05", "2025/05",
+ *        "mai/25", "Mai/2025", "mai-25", "01/05/2025", "2025-05-01".
+ * Fiscal year: Apr–Mar. FY25/26 = Apr 2025 → Mar 2026.
  */
 export function parsePeriod(raw: string | number): {
   periodo: string;
@@ -60,23 +62,39 @@ export function parsePeriod(raw: string | number): {
   let mes = 0;
   let ano = 0;
 
-  // "005.2025" or "5.2025" or "05/2025"
-  const m1 = s.match(/^0*(\d{1,2})[./-](\d{4})$/);
-  // "2025-05" or "2025/05"
-  const m2 = s.match(/^(\d{4})[./-]0*(\d{1,2})$/);
-  // "5-2025"
-  if (m1) {
-    mes = parseInt(m1[1], 10);
-    ano = parseInt(m1[2], 10);
-  } else if (m2) {
-    ano = parseInt(m2[1], 10);
-    mes = parseInt(m2[2], 10);
+  // Numeric formats
+  const m1 = s.match(/^0*(\d{1,2})[./-](\d{4})$/);              // 5.2025 / 05/2025
+  const m2 = s.match(/^(\d{4})[./-]0*(\d{1,2})$/);              // 2025-05
+  const m3 = s.match(/^0*(\d{1,2})[./-]0*(\d{1,2})[./-](\d{4})$/); // 01/05/2025 (dd/mm/yyyy)
+  const m4 = s.match(/^(\d{4})[./-]0*(\d{1,2})[./-]0*(\d{1,2})$/); // 2025-05-01
+
+  // Month-name formats (PT/EN abbreviations)
+  const monthMap: Record<string, number> = {
+    jan: 1, fev: 2, feb: 2, mar: 3, abr: 4, apr: 4, mai: 5, may: 5,
+    jun: 6, jul: 7, ago: 8, aug: 8, set: 9, sep: 9, out: 10, oct: 10,
+    nov: 11, dez: 12, dec: 12,
+  };
+  const m5 = s.toLowerCase().match(/^([a-zç]{3,9})[\s./-]+(\d{2,4})$/);
+  const m6 = s.toLowerCase().match(/^(\d{2,4})[\s./-]+([a-zç]{3,9})$/);
+
+  if (m1) { mes = parseInt(m1[1], 10); ano = parseInt(m1[2], 10); }
+  else if (m2) { ano = parseInt(m2[1], 10); mes = parseInt(m2[2], 10); }
+  else if (m3) { mes = parseInt(m3[2], 10); ano = parseInt(m3[3], 10); }
+  else if (m4) { ano = parseInt(m4[1], 10); mes = parseInt(m4[2], 10); }
+  else if (m5) {
+    const mn = monthMap[m5[1].slice(0, 3).normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
+    if (mn) { mes = mn; ano = parseInt(m5[2], 10); }
+  }
+  else if (m6) {
+    const mn = monthMap[m6[2].slice(0, 3).normalize("NFD").replace(/[\u0300-\u036f]/g, "")];
+    if (mn) { mes = mn; ano = parseInt(m6[1], 10); }
   } else {
     return null;
   }
+
+  if (ano < 100) ano += 2000;
   if (mes < 1 || mes > 12 || ano < 2000 || ano > 2099) return null;
 
-  // FY (April–March)
   const fyStart = mes >= 4 ? ano : ano - 1;
   const fyEnd = fyStart + 1;
   const fy = `FY${String(fyStart).slice(-2)}/${String(fyEnd).slice(-2)}`;

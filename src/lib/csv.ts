@@ -3,48 +3,82 @@ import type { LoadedFile, PricingRow } from "./types";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
 
 // Map of normalized header → canonical field
+// Keys are normalized via normHeader (lowercase, no accents/spaces/punct).
 const HEADER_MAP: Record<string, keyof PricingRow | "ignore"> = {
   // period
   periodo: "periodo",
-  período: "periodo",
   mes: "periodo",
+  mesano: "periodo",
+  anomes: "periodo",
+  competencia: "periodo",
+  data: "periodo",
   // dims
   marca: "marca",
+  brand: "marca",
   canal: "canal",
   canalvenda: "canal",
+  canaldevenda: "canal",
+  channel: "canal",
   categoria: "categoria",
+  category: "categoria",
   subcategoria: "subcategoria",
+  subcategory: "subcategoria",
   sku: "sku",
   codsku: "sku",
   codigosku: "sku",
+  codigo: "sku",
+  cdsku: "sku",
   descricaosku: "skuDesc",
+  descricao: "skuDesc",
   descsku: "skuDesc",
   produto: "skuDesc",
+  product: "skuDesc",
+  item: "skuDesc",
   cliente: "cliente",
+  client: "cliente",
+  customer: "cliente",
   razaosocial: "cliente",
   regiao: "regiao",
-  região: "regiao",
   uf: "regiao",
+  estado: "regiao",
+  region: "regiao",
   mercado: "mercado",
+  market: "mercado",
   sabor: "sabor",
+  flavor: "sabor",
   tecnologia: "tecnologia",
+  technology: "tecnologia",
   faixapeso: "faixaPeso",
   faixadepeso: "faixaPeso",
+  weightrange: "faixaPeso",
   // measures
   rol: "rol",
   receita: "rol",
+  receitaliquida: "rol",
   receitaoperacionalliquida: "rol",
+  netrevenue: "rol",
+  netsales: "rol",
+  faturamento: "rol",
+  faturamentoliquido: "rol",
+  vendaliquida: "rol",
   volume: "volumeKg",
   volumekg: "volumeKg",
   kg: "volumeKg",
+  qtdkg: "volumeKg",
+  quantidade: "volumeKg",
+  qtde: "volumeKg",
   cogs: "cogs",
   cmv: "cogs",
   custo: "cogs",
+  custototal: "cogs",
+  custovariavel: "cogs",
   margembruta: "margemBruta",
   mb: "margemBruta",
+  grossmargin: "margemBruta",
   contribuicaomarginal: "contribMarginal",
   contribmarginal: "contribMarginal",
   cm: "contribMarginal",
+  margemcontribuicao: "contribMarginal",
 };
 
 function detectDelimiter(sample: string): string {
@@ -90,13 +124,35 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
 
   // Build column map
   const sampleRow = result.data[0] ?? {};
+  const allHeaders = Object.keys(sampleRow);
   const colMap: Record<string, keyof PricingRow> = {};
-  for (const rawHeader of Object.keys(sampleRow)) {
+  const unmapped: string[] = [];
+  for (const rawHeader of allHeaders) {
     const key = normHeader(rawHeader);
     const canonical = HEADER_MAP[key];
     if (canonical && canonical !== "ignore") {
       colMap[rawHeader] = canonical as keyof PricingRow;
+    } else {
+      unmapped.push(rawHeader);
     }
+  }
+
+  // Diagnostics counters
+  let rejectedNoPeriod = 0;
+  let rejectedNoRol = 0;
+  let firstFailureSample: Record<string, unknown> | null = null;
+
+  // Detect missing critical columns
+  const mappedFields = new Set(Object.values(colMap));
+  if (!mappedFields.has("periodo")) {
+    warnings.push(
+      `Coluna de período não encontrada. Headers detectados: ${allHeaders.join(", ") || "(nenhum)"}.`,
+    );
+  }
+  if (!mappedFields.has("rol")) {
+    warnings.push(
+      `Coluna de receita (ROL) não encontrada. Headers detectados: ${allHeaders.join(", ") || "(nenhum)"}.`,
+    );
   }
 
   for (const raw of result.data) {
@@ -114,7 +170,11 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     }
 
     const period = parsePeriod(obj.periodo as string);
-    if (!period) continue;
+    if (!period) {
+      rejectedNoPeriod++;
+      if (!firstFailureSample) firstFailureSample = raw;
+      continue;
+    }
     obj.periodo = period.periodo;
     obj.mes = period.mes;
     obj.ano = period.ano;
@@ -127,14 +187,40 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     obj.margemBruta = obj.margemBruta ?? (obj.rol! - obj.cogs!);
     obj.contribMarginal = obj.contribMarginal ?? obj.margemBruta;
 
-    if ((obj.rol ?? 0) <= 0) continue;
+    if ((obj.rol ?? 0) <= 0) {
+      rejectedNoRol++;
+      if (!firstFailureSample) firstFailureSample = raw;
+      continue;
+    }
 
     monthsSet.add(period.periodo);
     rows.push(obj as PricingRow);
   }
 
+  // Diagnostics output
+  // eslint-disable-next-line no-console
+  console.groupCollapsed(`[CSV] ${file.name} — diagnóstico`);
+  console.log("Delimitador detectado:", JSON.stringify(delimiter));
+  console.log("Total de linhas brutas:", result.data.length);
+  console.log("Headers brutos:", allHeaders);
+  console.log("Mapeamento aplicado:", colMap);
+  console.log("Headers ignorados (sem mapeamento):", unmapped);
+  console.log("Rejeitadas (período inválido):", rejectedNoPeriod);
+  console.log("Rejeitadas (ROL ≤ 0 ou ausente):", rejectedNoRol);
+  console.log("Linhas válidas:", rows.length);
+  if (firstFailureSample) console.log("Exemplo de linha rejeitada:", firstFailureSample);
+  if (result.errors.length) console.log("Erros do parser:", result.errors.slice(0, 5));
+  console.groupEnd();
+
   if (rows.length === 0) {
-    warnings.push("Nenhuma linha válida encontrada (verifique colunas e período).");
+    const reasons: string[] = [];
+    if (!mappedFields.has("periodo")) reasons.push("coluna de período não encontrada");
+    if (!mappedFields.has("rol")) reasons.push("coluna de receita não encontrada");
+    if (rejectedNoPeriod > 0) reasons.push(`${rejectedNoPeriod} linhas com período inválido`);
+    if (rejectedNoRol > 0) reasons.push(`${rejectedNoRol} linhas com ROL ≤ 0`);
+    warnings.push(
+      `Nenhuma linha válida. ${reasons.join("; ") || "Verifique o formato."}. Veja o console para detalhes.`,
+    );
   }
 
   return {
