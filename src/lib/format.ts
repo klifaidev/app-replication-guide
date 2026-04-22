@@ -63,15 +63,6 @@ export function parsePeriod(raw: string | number): {
   let mes = 0;
   let ano = 0;
 
-  // Composite format: "005.2025 Maio 2025" — pick the leading MM.YYYY token
-  const composite = s.match(/^0*(\d{1,2})[.\/-](\d{4})\b/);
-  if (composite) {
-    mes = parseInt(composite[1], 10);
-    ano = parseInt(composite[2], 10);
-    const r = finish();
-    if (r) return r;
-  }
-
   const finish = () => {
     if (ano < 100) ano += 2000;
     if (mes < 1 || mes > 12 || ano < 2000 || ano > 2099) return null;
@@ -82,6 +73,15 @@ export function parsePeriod(raw: string | number): {
     const periodo = `${String(mes).padStart(3, "0")}.${ano}`;
     return { periodo, mes, ano, fy, fyNum };
   };
+
+  // Composite format: "005.2025 Maio 2025" — pick the leading MM.YYYY token
+  const composite = s.match(/^0*(\d{1,2})[.\/-](\d{4})\b/);
+  if (composite) {
+    mes = parseInt(composite[1], 10);
+    ano = parseInt(composite[2], 10);
+    const r = finish();
+    if (r) return r;
+  }
 
   // Excel serial date, e.g. 45748
   if (/^\d{5}$/.test(s)) {
