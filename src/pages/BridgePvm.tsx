@@ -4,6 +4,7 @@ import { KpiCard } from "@/components/pricing/KpiCard";
 import { Waterfall } from "@/components/pricing/Waterfall";
 import { EmptyState } from "@/components/pricing/EmptyState";
 import { usePricing } from "@/store/pricing";
+import { useFyList } from "@/store/selectors";
 import { applyFilters, calcPVM } from "@/lib/analytics";
 import { formatBRL } from "@/lib/format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";

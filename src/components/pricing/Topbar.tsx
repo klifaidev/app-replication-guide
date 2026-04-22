@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { usePricing } from "@/store/pricing";
+import { useMonthsInfo } from "@/store/selectors";
 import { cn } from "@/lib/utils";
 
 interface TopbarProps {

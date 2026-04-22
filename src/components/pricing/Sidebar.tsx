@@ -2,6 +2,7 @@ import { NavLink } from "@/components/NavLink";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { usePricing } from "@/store/pricing";
+import { useMonthsInfo } from "@/store/selectors";
 import { BarChart3, Database, Home, LineChart, Network, TableProperties, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 

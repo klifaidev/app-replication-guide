@@ -4,6 +4,7 @@ import { UploadZone } from "@/components/pricing/UploadZone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
+import { useMonthsInfo } from "@/store/selectors";
 import { Trash2, FileSpreadsheet, Calendar } from "lucide-react";
 
 const EXPECTED_COLS = [

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Upload as UploadIcon, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { parseCsvFile } from "@/lib/csv";
 import { usePricing } from "@/store/pricing";
+import { useExistingPeriods } from "@/store/selectors";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { monthLabel } from "@/lib/format";

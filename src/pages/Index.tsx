@@ -3,6 +3,7 @@ import { UploadZone } from "@/components/pricing/UploadZone";
 import { FilterGrid } from "@/components/pricing/FilterGrid";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { usePricing } from "@/store/pricing";
+import { useMonthsInfo } from "@/store/selectors";
 import { applyFilters, computeKPIs } from "@/lib/analytics";
 import { formatBRL, formatNum, formatPct, formatTon } from "@/lib/format";
 import { Sparkles, BarChart3, TrendingUp, Database } from "lucide-react";
