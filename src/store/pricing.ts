@@ -85,4 +85,5 @@ export const usePricing = create<PricingState>((set, get) => ({
   clearAll: () => set({ rows: [], files: [], filters: {}, selectedPeriods: null, pvmBase: null, pvmComp: null }),
 
   setPvm: (base, comp) => set({ pvmBase: base, pvmComp: comp }),
+  setPvmMode: (mode) => set({ pvmMode: mode, pvmBase: null, pvmComp: null }),
 }));
