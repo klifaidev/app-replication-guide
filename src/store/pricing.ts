@@ -8,6 +8,7 @@ interface PricingState {
   filters: Filters;
   selectedPeriods: string[] | null; // null = all
   // PVM
+  pvmMode: "fy" | "month";
   pvmBase: string | null;
   pvmComp: string | null;
 
@@ -23,6 +24,7 @@ interface PricingState {
   clearAll: () => void;
 
   setPvm: (base: string | null, comp: string | null) => void;
+  setPvmMode: (mode: "fy" | "month") => void;
 }
 
 export const usePricing = create<PricingState>((set, get) => ({
