@@ -92,17 +92,22 @@ export interface PVMResult {
 }
 
 /**
- * Classic PVM bridge between two fiscal years.
+ * Classic PVM bridge between two periods (FY or month).
  * Decomposes margin variation into Volume / Price / Cost / Mix.
+ *
+ * `mode`: "fy" compares by `r.fy`, "month" compares by `r.periodo`.
  */
 export function calcPVM(
   rows: PricingRow[],
   metric: Metric,
-  fyBase: string,
-  fyComp: string,
+  base: string,
+  comp: string,
+  mode: "fy" | "month" = "fy",
+  labels?: { base?: string; comp?: string },
 ): PVMResult {
-  const baseRows = rows.filter((r) => r.fy === fyBase);
-  const compRows = rows.filter((r) => r.fy === fyComp);
+  const keyOf = (r: PricingRow) => (mode === "fy" ? r.fy : r.periodo);
+  const baseRows = rows.filter((r) => keyOf(r) === base);
+  const compRows = rows.filter((r) => keyOf(r) === comp);
 
   // Per-SKU aggregates
   const aggSku = (rs: PricingRow[]) => {
@@ -122,24 +127,19 @@ export function calcPVM(
   const a = aggSku(baseRows);
   const b = aggSku(compRows);
 
-  let base = 0, current = 0;
+  let baseTotal = 0, currentTotal = 0;
   let volEffect = 0, priceEffect = 0, costEffect = 0;
 
-  // Totals
-  for (const v of a.values()) base += v.margem;
-  for (const v of b.values()) current += v.margem;
+  for (const v of a.values()) baseTotal += v.margem;
+  for (const v of b.values()) currentTotal += v.margem;
 
-  // Per-sku effects (only SKUs in both years isolate price/cost; volume/mix from totals)
   let baseTotalVol = 0, compTotalVol = 0;
-  let baseMargemPct = 0;
   for (const v of a.values()) baseTotalVol += v.vol;
   for (const v of b.values()) compTotalVol += v.vol;
-  baseMargemPct = baseTotalVol > 0 ? base / baseTotalVol : 0;
+  const baseMargemPct = baseTotalVol > 0 ? baseTotal / baseTotalVol : 0;
 
-  // Volume effect = (compVol - baseVol) * baseMargem/kg
   volEffect = (compTotalVol - baseTotalVol) * baseMargemPct;
 
-  // Price & cost effects from SKUs in both periods
   const allSkus = new Set([...a.keys(), ...b.keys()]);
   for (const sku of allSkus) {
     const ra = a.get(sku);
@@ -150,21 +150,20 @@ export function calcPVM(
     const costA = ra.cogs / ra.vol;
     const costB = rb.cogs / rb.vol;
     priceEffect += (priceB - priceA) * rb.vol;
-    costEffect -= (costB - costA) * rb.vol; // rising cost reduces margin
+    costEffect -= (costB - costA) * rb.vol;
   }
 
-  // Mix = residual
-  const mixEffect = current - base - volEffect - priceEffect - costEffect;
+  const mixEffect = currentTotal - baseTotal - volEffect - priceEffect - costEffect;
 
   return {
-    base,
+    base: baseTotal,
     volume: volEffect,
     price: priceEffect,
     cost: costEffect,
     mix: mixEffect,
-    current,
-    baseLabel: fyBase,
-    currentLabel: fyComp,
+    current: currentTotal,
+    baseLabel: labels?.base ?? base,
+    currentLabel: labels?.comp ?? comp,
   };
 }
 
