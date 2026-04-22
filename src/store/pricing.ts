@@ -82,32 +82,4 @@ export const usePricing = create<PricingState>((set, get) => ({
   clearAll: () => set({ rows: [], files: [], filters: {}, selectedPeriods: null, pvmBase: null, pvmComp: null }),
 
   setPvm: (base, comp) => set({ pvmBase: base, pvmComp: comp }),
-
-  monthsInfo: () => {
-    const { rows } = get();
-    const map = new Map<string, MonthInfo>();
-    for (const r of rows) {
-      const cur = map.get(r.periodo);
-      if (cur) cur.rowCount++;
-      else
-        map.set(r.periodo, {
-          periodo: r.periodo,
-          mes: r.mes,
-          ano: r.ano,
-          fy: r.fy,
-          fyNum: r.fyNum,
-          rowCount: 1,
-          label: monthLabel(r.mes, r.ano),
-        });
-    }
-    return Array.from(map.values()).sort(
-      (a, b) => a.ano - b.ano || a.mes - b.mes,
-    );
-  },
-
-  fyList: () => {
-    const set = new Set<string>();
-    for (const r of get().rows) set.add(r.fy);
-    return Array.from(set).sort();
-  },
 }));
