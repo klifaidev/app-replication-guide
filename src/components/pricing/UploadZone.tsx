@@ -25,8 +25,12 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
           }
           const parsed = await parseCsvFile(file);
           if (parsed.rows.length === 0) {
-            toast.error(`${parsed.file.name}: nenhuma linha válida encontrada.`);
+            const msg = parsed.warnings[0] ?? "nenhuma linha válida encontrada.";
+            toast.error(`${parsed.file.name}: ${msg}`, { duration: 8000 });
             continue;
+          }
+          if (parsed.warnings.length) {
+            parsed.warnings.forEach((w) => toast.warning(`${parsed.file.name}: ${w}`));
           }
           const dup = parsed.file.months.filter((m) => existingMonths.has(m));
           let replace = false;
