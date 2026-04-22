@@ -57,11 +57,20 @@ export function parsePeriod(raw: string | number): {
   fy: string;
   fyNum: number;
 } | null {
-  const s = String(raw ?? "").trim();
+  const s = String(raw ?? "").trim().replace(/^['"]|['"]$/g, "");
   if (!s) return null;
 
   let mes = 0;
   let ano = 0;
+
+  // Composite format: "005.2025 Maio 2025" — pick the leading MM.YYYY token
+  const composite = s.match(/^0*(\d{1,2})[.\/-](\d{4})\b/);
+  if (composite) {
+    mes = parseInt(composite[1], 10);
+    ano = parseInt(composite[2], 10);
+    const r = finish();
+    if (r) return r;
+  }
 
   const finish = () => {
     if (ano < 100) ano += 2000;
