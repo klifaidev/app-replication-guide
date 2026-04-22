@@ -14,7 +14,27 @@ export function Topbar({ title, subtitle }: TopbarProps) {
   const togglePeriod = usePricing((s) => s.togglePeriod);
   const setAll = usePricing((s) => s.setAllPeriods);
 
+  const setSelected = usePricing((s) => s.setSelectedPeriods);
+
   const allSelected = selected === null;
+
+  const handleMonthClick = (periodo: string, e: React.MouseEvent) => {
+    // Shift/Ctrl/Cmd-click: toggle (multi-select). Plain click: select only this one.
+    if (e.shiftKey || e.metaKey || e.ctrlKey) {
+      togglePeriod(periodo);
+      return;
+    }
+    if (allSelected) {
+      setSelected([periodo]);
+      return;
+    }
+    // If only this one is selected, clicking again returns to "Todos"
+    if (selected!.length === 1 && selected![0] === periodo) {
+      setAll();
+      return;
+    }
+    setSelected([periodo]);
+  };
 
   return (
     <header className="sticky top-0 z-20 border-b border-border/40 bg-background/60 px-8 py-4 backdrop-blur-2xl">
@@ -34,6 +54,7 @@ export function Topbar({ title, subtitle }: TopbarProps) {
                 allSelected && "bg-primary/20 text-primary hover:bg-primary/25 border border-primary/30",
               )}
               onClick={() => setAll()}
+              title="Selecionar todos os meses"
             >
               Todos
             </Button>
@@ -45,15 +66,21 @@ export function Topbar({ title, subtitle }: TopbarProps) {
                   size="sm"
                   variant="outline"
                   className={cn(
-                    "h-7 rounded-full border-border/60 bg-secondary/40 px-3 text-xs",
+                    "h-7 rounded-full border-border/60 bg-secondary/40 px-3 text-xs transition-colors",
                     active && "border-primary/40 bg-primary/15 text-primary",
                   )}
-                  onClick={() => togglePeriod(m.periodo)}
+                  onClick={(e) => handleMonthClick(m.periodo, e)}
+                  title="Clique para focar apenas neste mês • Shift/Ctrl-clique para múltipla seleção"
                 >
                   {m.label}
                 </Button>
               );
             })}
+            {!allSelected && (
+              <span className="ml-1 hidden text-[10px] text-muted-foreground/70 md:inline">
+                Shift-clique p/ múltipla
+              </span>
+            )}
           </div>
         )}
       </div>
