@@ -33,6 +33,7 @@ export const usePricing = create<PricingState>((set, get) => ({
   metric: "cm",
   filters: {},
   selectedPeriods: null,
+  pvmMode: "fy",
   pvmBase: null,
   pvmComp: null,
 
