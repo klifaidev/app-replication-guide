@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import type { Filters, LoadedFile, Metric, MonthInfo, PricingRow } from "@/lib/types";
-import { monthLabel } from "@/lib/format";
+import type { Filters, LoadedFile, Metric, PricingRow } from "@/lib/types";
 
 interface PricingState {
   rows: PricingRow[];
@@ -24,10 +23,6 @@ interface PricingState {
   clearAll: () => void;
 
   setPvm: (base: string | null, comp: string | null) => void;
-
-  // derived
-  monthsInfo: () => MonthInfo[];
-  fyList: () => string[];
 }
 
 export const usePricing = create<PricingState>((set, get) => ({
@@ -46,7 +41,8 @@ export const usePricing = create<PricingState>((set, get) => ({
   setSelectedPeriods: (p) => set({ selectedPeriods: p }),
   togglePeriod: (p) =>
     set((s) => {
-      const cur = s.selectedPeriods ?? get().monthsInfo().map((m) => m.periodo);
+      const all = Array.from(new Set(get().rows.map((r) => r.periodo))).sort();
+      const cur = s.selectedPeriods ?? all;
       const next = cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p];
       return { selectedPeriods: next };
     }),
