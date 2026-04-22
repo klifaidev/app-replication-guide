@@ -2,6 +2,7 @@ import { NavLink } from "@/components/NavLink";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { usePricing } from "@/store/pricing";
+import { useMonthsInfo } from "@/store/selectors";
 import { BarChart3, Database, Home, LineChart, Network, TableProperties, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 
@@ -17,7 +18,7 @@ const dashItems = [
 export function Sidebar() {
   const metric = usePricing((s) => s.metric);
   const setMetric = usePricing((s) => s.setMetric);
-  const monthsCount = usePricing((s) => s.monthsInfo().length);
+  const monthsCount = useMonthsInfo().length;
 
   const cm = useMemo(() => metric === "cm", [metric]);
 

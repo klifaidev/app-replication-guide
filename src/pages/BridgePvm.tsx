@@ -4,6 +4,7 @@ import { KpiCard } from "@/components/pricing/KpiCard";
 import { Waterfall } from "@/components/pricing/Waterfall";
 import { EmptyState } from "@/components/pricing/EmptyState";
 import { usePricing } from "@/store/pricing";
+import { useFyList } from "@/store/selectors";
 import { applyFilters, calcPVM } from "@/lib/analytics";
 import { formatBRL } from "@/lib/format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +14,7 @@ export default function BridgePvm() {
   const rows = usePricing((s) => s.rows);
   const metric = usePricing((s) => s.metric);
   const filters = usePricing((s) => s.filters);
-  const fyList = usePricing((s) => s.fyList());
+  const fyList = useFyList();
   const pvmBase = usePricing((s) => s.pvmBase);
   const pvmComp = usePricing((s) => s.pvmComp);
   const setPvm = usePricing((s) => s.setPvm);

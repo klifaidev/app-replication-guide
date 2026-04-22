@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import type { Filters, LoadedFile, Metric, MonthInfo, PricingRow } from "@/lib/types";
-import { monthLabel } from "@/lib/format";
+import type { Filters, LoadedFile, Metric, PricingRow } from "@/lib/types";
 
 interface PricingState {
   rows: PricingRow[];
@@ -24,10 +23,6 @@ interface PricingState {
   clearAll: () => void;
 
   setPvm: (base: string | null, comp: string | null) => void;
-
-  // derived
-  monthsInfo: () => MonthInfo[];
-  fyList: () => string[];
 }
 
 export const usePricing = create<PricingState>((set, get) => ({
@@ -46,7 +41,8 @@ export const usePricing = create<PricingState>((set, get) => ({
   setSelectedPeriods: (p) => set({ selectedPeriods: p }),
   togglePeriod: (p) =>
     set((s) => {
-      const cur = s.selectedPeriods ?? get().monthsInfo().map((m) => m.periodo);
+      const all = Array.from(new Set(get().rows.map((r) => r.periodo))).sort();
+      const cur = s.selectedPeriods ?? all;
       const next = cur.includes(p) ? cur.filter((x) => x !== p) : [...cur, p];
       return { selectedPeriods: next };
     }),
@@ -86,32 +82,4 @@ export const usePricing = create<PricingState>((set, get) => ({
   clearAll: () => set({ rows: [], files: [], filters: {}, selectedPeriods: null, pvmBase: null, pvmComp: null }),
 
   setPvm: (base, comp) => set({ pvmBase: base, pvmComp: comp }),
-
-  monthsInfo: () => {
-    const { rows } = get();
-    const map = new Map<string, MonthInfo>();
-    for (const r of rows) {
-      const cur = map.get(r.periodo);
-      if (cur) cur.rowCount++;
-      else
-        map.set(r.periodo, {
-          periodo: r.periodo,
-          mes: r.mes,
-          ano: r.ano,
-          fy: r.fy,
-          fyNum: r.fyNum,
-          rowCount: 1,
-          label: monthLabel(r.mes, r.ano),
-        });
-    }
-    return Array.from(map.values()).sort(
-      (a, b) => a.ano - b.ano || a.mes - b.mes,
-    );
-  },
-
-  fyList: () => {
-    const set = new Set<string>();
-    for (const r of get().rows) set.add(r.fy);
-    return Array.from(set).sort();
-  },
 }));
