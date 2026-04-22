@@ -1,0 +1,120 @@
+import { useCallback, useRef, useState } from "react";
+import { Upload as UploadIcon, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { parseCsvFile } from "@/lib/csv";
+import { usePricing } from "@/store/pricing";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { monthLabel } from "@/lib/format";
+
+export function UploadZone({ compact = false }: { compact?: boolean }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [drag, setDrag] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const addParsed = usePricing((s) => s.addParsed);
+  const existingMonths = usePricing((s) => new Set(s.monthsInfo().map((m) => m.periodo)));
+
+  const handleFiles = useCallback(
+    async (files: FileList | File[]) => {
+      setBusy(true);
+      try {
+        for (const file of Array.from(files)) {
+          if (!file.name.toLowerCase().endsWith(".csv")) {
+            toast.error(`${file.name}: apenas arquivos .csv são aceitos.`);
+            continue;
+          }
+          const parsed = await parseCsvFile(file);
+          if (parsed.rows.length === 0) {
+            toast.error(`${parsed.file.name}: nenhuma linha válida encontrada.`);
+            continue;
+          }
+          const dup = parsed.file.months.filter((m) => existingMonths.has(m));
+          let replace = false;
+          if (dup.length > 0) {
+            const labels = dup
+              .map((p) => {
+                const [mes, ano] = p.split(".").map((x) => parseInt(x, 10));
+                return monthLabel(mes, ano);
+              })
+              .join(", ");
+            replace = window.confirm(
+              `O arquivo "${parsed.file.name}" contém meses já carregados (${labels}). Deseja sobrescrever?`,
+            );
+            if (!replace) continue;
+          }
+          addParsed(parsed.rows, parsed.file, replace);
+          toast.success(
+            `${parsed.file.name}: ${parsed.rows.length.toLocaleString("pt-BR")} linhas em ${parsed.file.months.length} mês(es).`,
+          );
+        }
+      } catch (e) {
+        console.error(e);
+        toast.error("Falha ao processar arquivo.");
+      } finally {
+        setBusy(false);
+        if (inputRef.current) inputRef.current.value = "";
+      }
+    },
+    [addParsed, existingMonths],
+  );
+
+  return (
+    <div
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDrag(true);
+      }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDrag(false);
+        if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+      }}
+      onClick={() => inputRef.current?.click()}
+      className={cn(
+        "group cursor-pointer rounded-2xl border-2 border-dashed border-border/60 bg-secondary/20 transition-all",
+        "hover:border-primary/50 hover:bg-primary/5",
+        drag && "border-primary bg-primary/10 scale-[1.01]",
+        compact ? "p-6" : "p-12",
+      )}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".csv"
+        multiple
+        className="hidden"
+        onChange={(e) => e.target.files && handleFiles(e.target.files)}
+      />
+      <div className="flex flex-col items-center gap-3 text-center">
+        <div
+          className={cn(
+            "flex items-center justify-center rounded-2xl bg-primary/10 transition-all group-hover:bg-primary/20",
+            compact ? "h-12 w-12" : "h-16 w-16",
+          )}
+        >
+          {busy ? (
+            <AlertCircle className="h-6 w-6 animate-pulse text-primary" />
+          ) : (
+            <UploadIcon className={cn("text-primary", compact ? "h-5 w-5" : "h-7 w-7")} />
+          )}
+        </div>
+        <div>
+          <div className={cn("font-medium", compact ? "text-sm" : "text-base")}>
+            {busy ? "Processando..." : "Arraste seus CSVs ou clique para selecionar"}
+          </div>
+          {!compact && (
+            <div className="mt-1 text-xs text-muted-foreground">
+              Suporta CSV BR (separador “;”, decimal “,”) e internacional. Múltiplos meses por upload.
+            </div>
+          )}
+        </div>
+        {!compact && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            <span>Períodos no formato 005.2025</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
