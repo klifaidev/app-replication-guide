@@ -13,7 +13,7 @@ export default function Index() {
   const filters = usePricing((s) => s.filters);
   const selected = usePricing((s) => s.selectedPeriods);
   const metric = usePricing((s) => s.metric);
-  const months = usePricing((s) => s.monthsInfo());
+  const months = useMonthsInfo();
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const kpis = useMemo(() => computeKPIs(filtered, metric), [filtered, metric]);

@@ -13,7 +13,7 @@ export default function BridgePvm() {
   const rows = usePricing((s) => s.rows);
   const metric = usePricing((s) => s.metric);
   const filters = usePricing((s) => s.filters);
-  const fyList = usePricing((s) => s.fyList());
+  const fyList = useFyList();
   const pvmBase = usePricing((s) => s.pvmBase);
   const pvmComp = usePricing((s) => s.pvmComp);
   const setPvm = usePricing((s) => s.setPvm);

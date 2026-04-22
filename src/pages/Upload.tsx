@@ -20,7 +20,7 @@ export default function Upload() {
   const files = usePricing((s) => s.files);
   const removeFile = usePricing((s) => s.removeFile);
   const clearAll = usePricing((s) => s.clearAll);
-  const months = usePricing((s) => s.monthsInfo());
+  const months = useMonthsInfo();
 
   return (
     <>

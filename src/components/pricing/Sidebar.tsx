@@ -17,7 +17,7 @@ const dashItems = [
 export function Sidebar() {
   const metric = usePricing((s) => s.metric);
   const setMetric = usePricing((s) => s.setMetric);
-  const monthsCount = usePricing((s) => s.monthsInfo().length);
+  const monthsCount = useMonthsInfo().length;
 
   const cm = useMemo(() => metric === "cm", [metric]);
 

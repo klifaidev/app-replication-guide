@@ -8,7 +8,7 @@ interface TopbarProps {
 }
 
 export function Topbar({ title, subtitle }: TopbarProps) {
-  const months = usePricing((s) => s.monthsInfo());
+  const months = useMonthsInfo();
   const selected = usePricing((s) => s.selectedPeriods);
   const togglePeriod = usePricing((s) => s.togglePeriod);
   const setAll = usePricing((s) => s.setAllPeriods);
