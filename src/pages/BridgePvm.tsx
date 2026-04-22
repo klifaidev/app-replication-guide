@@ -4,10 +4,12 @@ import { KpiCard } from "@/components/pricing/KpiCard";
 import { Waterfall } from "@/components/pricing/Waterfall";
 import { EmptyState } from "@/components/pricing/EmptyState";
 import { usePricing } from "@/store/pricing";
-import { useFyList } from "@/store/selectors";
+import { useFyList, useMonthsInfo } from "@/store/selectors";
 import { applyFilters, calcPVM } from "@/lib/analytics";
 import { formatBRL } from "@/lib/format";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { ArrowRight, Calendar, CalendarDays } from "lucide-react";
 import { useEffect, useMemo } from "react";
 
 export default function BridgePvm() {
@@ -15,23 +17,46 @@ export default function BridgePvm() {
   const metric = usePricing((s) => s.metric);
   const filters = usePricing((s) => s.filters);
   const fyList = useFyList();
+  const months = useMonthsInfo();
+  const pvmMode = usePricing((s) => s.pvmMode);
   const pvmBase = usePricing((s) => s.pvmBase);
   const pvmComp = usePricing((s) => s.pvmComp);
   const setPvm = usePricing((s) => s.setPvm);
+  const setPvmMode = usePricing((s) => s.setPvmMode);
 
-  // Defaults
+  const options = useMemo(
+    () =>
+      pvmMode === "fy"
+        ? fyList.map((fy) => ({ value: fy, label: fy }))
+        : months.map((m) => ({ value: m.periodo, label: m.label })),
+    [pvmMode, fyList, months],
+  );
+
+  // Defaults: pick first and last available option whenever mode/data changes
+  // and current values are invalid.
   useEffect(() => {
-    if (fyList.length >= 2 && (!pvmBase || !pvmComp)) {
-      setPvm(fyList[0], fyList[fyList.length - 1]);
+    if (options.length < 2) return;
+    const values = new Set(options.map((o) => o.value));
+    const baseOk = pvmBase && values.has(pvmBase);
+    const compOk = pvmComp && values.has(pvmComp);
+    if (!baseOk || !compOk) {
+      setPvm(options[0].value, options[options.length - 1].value);
     }
-  }, [fyList, pvmBase, pvmComp, setPvm]);
+  }, [options, pvmBase, pvmComp, setPvm]);
 
   const filtered = useMemo(() => applyFilters(rows, filters, null), [rows, filters]);
 
   const result = useMemo(() => {
-    if (!pvmBase || !pvmComp) return null;
-    return calcPVM(filtered, metric, pvmBase, pvmComp);
-  }, [filtered, metric, pvmBase, pvmComp]);
+    if (!pvmBase || !pvmComp || pvmBase === pvmComp) return null;
+    const labels =
+      pvmMode === "month"
+        ? {
+            base: months.find((m) => m.periodo === pvmBase)?.label ?? pvmBase,
+            comp: months.find((m) => m.periodo === pvmComp)?.label ?? pvmComp,
+          }
+        : undefined;
+    return calcPVM(filtered, metric, pvmBase, pvmComp, pvmMode, labels);
+  }, [filtered, metric, pvmBase, pvmComp, pvmMode, months]);
 
   if (rows.length === 0) {
     return (
@@ -42,30 +67,72 @@ export default function BridgePvm() {
     );
   }
 
-  if (fyList.length < 2) {
-    return (
-      <>
-        <Topbar title="Bridge PVM" />
-        <div className="px-8 py-6">
-          <GlassCard className="py-12 text-center">
-            <h3 className="text-lg font-medium">Carregue ao menos dois anos fiscais</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              O Bridge PVM compara dois FYs (abr–mar). Você tem: {fyList.join(", ") || "—"}
-            </p>
-          </GlassCard>
-        </div>
-      </>
-    );
-  }
+  const notEnough =
+    (pvmMode === "fy" && fyList.length < 2) || (pvmMode === "month" && months.length < 2);
 
   return (
     <>
       <Topbar title="Bridge PVM" subtitle="Decomposição da variação de margem (Volume · Preço · Custo · Mix)" />
       <div className="space-y-6 px-8 py-6">
-        <GlassCard className="flex flex-wrap items-end gap-4">
-          <FySelect label="Base (FY)" value={pvmBase} onChange={(v) => setPvm(v, pvmComp)} options={fyList} />
-          <span className="pb-2 text-2xl text-muted-foreground">→</span>
-          <FySelect label="Comparação (FY)" value={pvmComp} onChange={(v) => setPvm(pvmBase, v)} options={fyList} />
+        <GlassCard className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Comparar por
+              </div>
+              <ToggleGroup
+                type="single"
+                value={pvmMode}
+                onValueChange={(v) => v && setPvmMode(v as "fy" | "month")}
+                className="mt-1.5 inline-flex rounded-full border border-border/50 bg-secondary/30 p-1"
+              >
+                <ToggleGroupItem
+                  value="fy"
+                  className="h-8 gap-1.5 rounded-full px-4 text-xs data-[state=on]:bg-primary/20 data-[state=on]:text-primary data-[state=on]:shadow-sm"
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  Ano Fiscal
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="month"
+                  className="h-8 gap-1.5 rounded-full px-4 text-xs data-[state=on]:bg-primary/20 data-[state=on]:text-primary data-[state=on]:shadow-sm"
+                >
+                  <Calendar className="h-3.5 w-3.5" />
+                  Mês
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </div>
+
+          {notEnough ? (
+            <p className="text-sm text-muted-foreground">
+              {pvmMode === "fy"
+                ? `Carregue ao menos dois anos fiscais. Você tem: ${fyList.join(", ") || "—"}`
+                : `Carregue ao menos dois meses para comparar.`}
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-end gap-3">
+              <PeriodSelect
+                label={pvmMode === "fy" ? "Base (FY)" : "Mês base"}
+                value={pvmBase}
+                onChange={(v) => setPvm(v, pvmComp)}
+                options={options}
+              />
+              <div className="flex h-10 items-center text-primary/60">
+                <ArrowRight className="h-5 w-5" />
+              </div>
+              <PeriodSelect
+                label={pvmMode === "fy" ? "Comparação (FY)" : "Mês de comparação"}
+                value={pvmComp}
+                onChange={(v) => setPvm(pvmBase, v)}
+                options={options}
+                excludeValue={pvmBase}
+              />
+              {pvmBase && pvmComp && pvmBase === pvmComp && (
+                <p className="pb-2.5 text-xs text-warning">Selecione períodos diferentes.</p>
+              )}
+            </div>
+          )}
         </GlassCard>
 
         {result && (
@@ -79,7 +146,9 @@ export default function BridgePvm() {
 
             <GlassCard glow="blue">
               <header className="mb-4">
-                <h2 className="text-lg font-medium">Bridge {result.baseLabel} → {result.currentLabel}</h2>
+                <h2 className="text-lg font-medium">
+                  Bridge {result.baseLabel} → {result.currentLabel}
+                </h2>
                 <p className="text-xs text-muted-foreground">
                   Variação total: {formatBRL(result.current - result.base, { compact: true })}
                 </p>
@@ -93,16 +162,34 @@ export default function BridgePvm() {
   );
 }
 
-function FySelect({ label, value, onChange, options }: { label: string; value: string | null; onChange: (v: string) => void; options: string[] }) {
+function PeriodSelect({
+  label,
+  value,
+  onChange,
+  options,
+  excludeValue,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  excludeValue?: string | null;
+}) {
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</label>
+      <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </label>
       <Select value={value ?? undefined} onValueChange={onChange}>
-        <SelectTrigger className="h-10 w-44 border-border/50 bg-secondary/40 text-sm">
+        <SelectTrigger className="h-10 w-48 border-border/50 bg-secondary/40 text-sm">
           <SelectValue placeholder="Escolha..." />
         </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+        <SelectContent className="max-h-72">
+          {options.map((o) => (
+            <SelectItem key={o.value} value={o.value} disabled={o.value === excludeValue}>
+              {o.label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
     </div>
