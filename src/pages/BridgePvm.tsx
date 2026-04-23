@@ -149,13 +149,24 @@ export default function BridgePvm() {
             </div>
 
             <GlassCard glow="blue">
-              <header className="mb-4">
-                <h2 className="text-lg font-medium">
-                  Bridge {result.baseLabel} → {result.currentLabel}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Variação total: {formatBRL(result.current - result.base, { compact: true })}
-                </p>
+              <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-medium">
+                    Bridge {result.baseLabel} → {result.currentLabel}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Variação total: {formatBRL(result.current - result.base, { compact: true })}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportPvmCsv(result)}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Exportar CSV (auditoria)
+                </Button>
               </header>
               <Waterfall data={result} />
             </GlassCard>
