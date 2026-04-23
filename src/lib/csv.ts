@@ -228,7 +228,15 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     obj.margemBruta = obj.margemBruta ?? (obj.rol! - obj.cogs!);
     obj.contribMarginal = obj.contribMarginal ?? obj.margemBruta;
 
-    if ((obj.rol ?? 0) <= 0) {
+    // Keep all rows with a valid period — including returns / negatives —
+    // so totals match the source report. Skip only fully-empty rows.
+    if (
+      (obj.rol ?? 0) === 0 &&
+      (obj.volumeKg ?? 0) === 0 &&
+      (obj.cogs ?? 0) === 0 &&
+      (obj.margemBruta ?? 0) === 0 &&
+      (obj.contribMarginal ?? 0) === 0
+    ) {
       rejectedNoRol++;
       if (!firstFailureSample) firstFailureSample = raw;
       continue;
