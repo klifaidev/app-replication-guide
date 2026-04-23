@@ -144,13 +144,10 @@ export function calcPVM(
   const b = aggSku(compRows);
 
   let baseTotal = 0, currentTotal = 0;
-  let baseTotalVol = 0, compTotalVol = 0;
-  for (const v of a.values()) { baseTotal += v.margem; baseTotalVol += v.vol; }
-  for (const v of b.values()) { currentTotal += v.margem; compTotalVol += v.vol; }
+  for (const v of a.values()) { baseTotal += v.margem; }
+  for (const v of b.values()) { currentTotal += v.margem; }
 
-  const baseMargemUnit = baseTotalVol > 0 ? baseTotal / baseTotalVol : 0;
-  const volEffect = (compTotalVol - baseTotalVol) * baseMargemUnit;
-
+  let volEffect = 0;
   let priceEffect = 0;
   let costEffect = 0;
   let freightEffect = 0;
@@ -161,6 +158,12 @@ export function calcPVM(
     const ra = a.get(sku);
     const rb = b.get(sku);
     if (!ra || !rb || ra.vol === 0 || rb.vol === 0) continue;
+
+    // Efeito Volume no nível do SKU: ΔV × margem unitária base daquele SKU
+    const margemUnitA = ra.margem / ra.vol;
+    volEffect += (rb.vol - ra.vol) * margemUnitA;
+
+    // Laspeyres: efeitos unitários valorizados pelo VOLUME BASE (A)
     const priceA = ra.rol / ra.vol;
     const priceB = rb.rol / rb.vol;
     const costA = ra.cogs / ra.vol;
@@ -169,10 +172,11 @@ export function calcPVM(
     const freightB = rb.frete / rb.vol;
     const commA = ra.comissao / ra.vol;
     const commB = rb.comissao / rb.vol;
-    priceEffect += (priceB - priceA) * rb.vol;
-    costEffect -= (costB - costA) * rb.vol;
-    freightEffect -= (freightB - freightA) * rb.vol;
-    commissionEffect -= (commB - commA) * rb.vol;
+
+    priceEffect += (priceB - priceA) * ra.vol;
+    costEffect -= (costB - costA) * ra.vol;
+    freightEffect -= (freightB - freightA) * ra.vol;
+    commissionEffect -= (commB - commA) * ra.vol;
   }
 
   const others =
