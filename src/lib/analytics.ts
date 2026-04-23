@@ -84,16 +84,22 @@ export interface PVMResult {
   base: number;
   volume: number;
   price: number;
-  cost: number;
-  mix: number;
+  cost: number;       // Custo variável (CPV)
+  freight: number;    // Frete sobre vendas
+  commission: number; // Comissão
+  others: number;     // Mix + outros (resíduo)
   current: number;
   baseLabel: string;
   currentLabel: string;
 }
 
 /**
- * Classic PVM bridge between two periods (FY or month).
- * Decomposes margin variation into Volume / Price / Cost / Mix.
+ * Detailed PVM bridge between two periods (FY or month).
+ * Decomposes CM/MB variation into:
+ *   Volume · Preço · Custo Variável · Frete · Comissão · Outros (mix + resíduo)
+ *
+ * Per-SKU effects use comp-period volumes for unit deltas; volume effect uses
+ * base CM unit margin × Δvolume (classic PVM approach).
  *
  * `mode`: "fy" compares by `r.fy`, "month" compares by `r.periodo`.
  */
@@ -109,15 +115,25 @@ export function calcPVM(
   const baseRows = rows.filter((r) => keyOf(r) === base);
   const compRows = rows.filter((r) => keyOf(r) === comp);
 
-  // Per-SKU aggregates
+  interface Agg {
+    vol: number;
+    rol: number;
+    cogs: number;
+    frete: number;
+    comissao: number;
+    margem: number;
+  }
+
   const aggSku = (rs: PricingRow[]) => {
-    const m = new Map<string, { vol: number; rol: number; cogs: number; margem: number }>();
+    const m = new Map<string, Agg>();
     for (const r of rs) {
       const k = r.sku || r.skuDesc || "—";
-      const c = m.get(k) ?? { vol: 0, rol: 0, cogs: 0, margem: 0 };
+      const c = m.get(k) ?? { vol: 0, rol: 0, cogs: 0, frete: 0, comissao: 0, margem: 0 };
       c.vol += r.volumeKg;
       c.rol += r.rol;
       c.cogs += r.cogs;
+      c.frete += r.frete ?? 0;
+      c.comissao += r.comissao ?? 0;
       c.margem += measureOf(r, metric);
       m.set(k, c);
     }
@@ -128,17 +144,17 @@ export function calcPVM(
   const b = aggSku(compRows);
 
   let baseTotal = 0, currentTotal = 0;
-  let volEffect = 0, priceEffect = 0, costEffect = 0;
-
-  for (const v of a.values()) baseTotal += v.margem;
-  for (const v of b.values()) currentTotal += v.margem;
-
   let baseTotalVol = 0, compTotalVol = 0;
-  for (const v of a.values()) baseTotalVol += v.vol;
-  for (const v of b.values()) compTotalVol += v.vol;
-  const baseMargemPct = baseTotalVol > 0 ? baseTotal / baseTotalVol : 0;
+  for (const v of a.values()) { baseTotal += v.margem; baseTotalVol += v.vol; }
+  for (const v of b.values()) { currentTotal += v.margem; compTotalVol += v.vol; }
 
-  volEffect = (compTotalVol - baseTotalVol) * baseMargemPct;
+  const baseMargemUnit = baseTotalVol > 0 ? baseTotal / baseTotalVol : 0;
+  const volEffect = (compTotalVol - baseTotalVol) * baseMargemUnit;
+
+  let priceEffect = 0;
+  let costEffect = 0;
+  let freightEffect = 0;
+  let commissionEffect = 0;
 
   const allSkus = new Set([...a.keys(), ...b.keys()]);
   for (const sku of allSkus) {
@@ -149,18 +165,27 @@ export function calcPVM(
     const priceB = rb.rol / rb.vol;
     const costA = ra.cogs / ra.vol;
     const costB = rb.cogs / rb.vol;
+    const freightA = ra.frete / ra.vol;
+    const freightB = rb.frete / rb.vol;
+    const commA = ra.comissao / ra.vol;
+    const commB = rb.comissao / rb.vol;
     priceEffect += (priceB - priceA) * rb.vol;
     costEffect -= (costB - costA) * rb.vol;
+    freightEffect -= (freightB - freightA) * rb.vol;
+    commissionEffect -= (commB - commA) * rb.vol;
   }
 
-  const mixEffect = currentTotal - baseTotal - volEffect - priceEffect - costEffect;
+  const others =
+    currentTotal - baseTotal - volEffect - priceEffect - costEffect - freightEffect - commissionEffect;
 
   return {
     base: baseTotal,
     volume: volEffect,
     price: priceEffect,
     cost: costEffect,
-    mix: mixEffect,
+    freight: freightEffect,
+    commission: commissionEffect,
+    others,
     current: currentTotal,
     baseLabel: labels?.base ?? base,
     currentLabel: labels?.comp ?? comp,

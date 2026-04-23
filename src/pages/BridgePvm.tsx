@@ -72,7 +72,7 @@ export default function BridgePvm() {
 
   return (
     <>
-      <Topbar title="Bridge PVM" subtitle="Decomposição da variação de margem (Volume · Preço · Custo · Mix)" />
+      <Topbar title="Bridge PVM" subtitle="Decomposição da variação de Contribuição Marginal" />
       <div className="space-y-6 px-8 py-6">
         <GlassCard className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -137,11 +137,13 @@ export default function BridgePvm() {
 
         {result && (
           <>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
               <KpiCard label="Δ Volume" value={formatBRL(result.volume, { compact: true })} accent={result.volume >= 0 ? "green" : "red"} />
               <KpiCard label="Δ Preço" value={formatBRL(result.price, { compact: true })} accent={result.price >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Custo" value={formatBRL(result.cost, { compact: true })} accent={result.cost >= 0 ? "green" : "red"} />
-              <KpiCard label="Δ Mix" value={formatBRL(result.mix, { compact: true })} accent={result.mix >= 0 ? "green" : "red"} />
+              <KpiCard label="Δ Custo Var." value={formatBRL(result.cost, { compact: true })} accent={result.cost >= 0 ? "green" : "red"} />
+              <KpiCard label="Δ Frete" value={formatBRL(result.freight, { compact: true })} accent={result.freight >= 0 ? "green" : "red"} />
+              <KpiCard label="Δ Comissão" value={formatBRL(result.commission, { compact: true })} accent={result.commission >= 0 ? "green" : "red"} />
+              <KpiCard label="Δ Outros" value={formatBRL(result.others, { compact: true })} accent={result.others >= 0 ? "green" : "red"} />
             </div>
 
             <GlassCard glow="blue">
