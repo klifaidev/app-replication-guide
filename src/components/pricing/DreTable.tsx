@@ -42,7 +42,7 @@ function aggregate(rs: PricingRow[]): PeriodAgg {
   return a;
 }
 
-type RowKind = "value" | "perKg" | "pct" | "section" | "totalSection";
+type RowKind = "value" | "perKg" | "pct" | "kg";
 
 interface DreLine {
   label: string;
@@ -54,7 +54,7 @@ interface DreLine {
 const safe = (n: number, d: number) => (d > 0 ? n / d : 0);
 
 const LINES: DreLine[] = [
-  { label: "Volume (Kg)", kind: "value", bold: true, get: (a) => a.volume },
+  { label: "Volume (Kg)", kind: "kg", bold: true, get: (a) => a.volume },
   { label: "Receita Líquida", kind: "value", get: (a) => a.rol },
   { label: "ROL (R$/Kg)", kind: "perKg", bold: true, get: (a) => safe(a.rol, a.volume) },
   { label: "Custo Variável", kind: "value", get: (a) => -Math.abs(a.cogs) },
@@ -75,9 +75,9 @@ function fmt(value: number | null, kind: RowKind) {
   if (value == null) return <span className="text-muted-foreground/50">—</span>;
   if (kind === "pct") return formatPct(value);
   if (kind === "perKg") return formatBRL(value, { digits: 2 });
-  if (kind === "value" && Math.abs(value) >= 1_000_000) return formatBRL(value, { compact: true });
-  if (kind === "value") return formatBRL(value, { digits: 0 });
-  return formatNum(value, 0);
+  if (kind === "kg") return `${formatNum(value, 0)} kg`;
+  if (Math.abs(value) >= 1_000_000) return formatBRL(value, { compact: true });
+  return formatBRL(value, { digits: 0 });
 }
 
 export function DreTable({ rows, months }: DreTableProps) {
