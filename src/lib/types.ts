@@ -30,6 +30,8 @@ export interface PricingRow {
   contribMarginal: number;
   frete: number;      // Frete sobre vendas
   comissao: number;   // Comissão representante
+  materiaPrima?: number; // Matéria Prima Ajustado (componente do CPV)
+  embalagem?: number;    // Embalagem Ajustado (componente do CPV)
 }
 
 export interface LoadedFile {
