@@ -218,7 +218,7 @@ export function calcPVM(
     const margemUnitA = ra.margem / ra.vol;
     const skuVol = (rb.vol - ra.vol) * margemUnitA;
 
-    // Laspeyres: efeitos unitários valorizados pelo VOLUME BASE (A)
+    // Paasche: efeitos unitários valorizados pelo VOLUME ATUAL (B)
     const priceA = ra.rol / ra.vol;
     const priceB = rb.rol / rb.vol;
     const costA = ra.cogs / ra.vol;
@@ -228,10 +228,10 @@ export function calcPVM(
     const commA = ra.comissao / ra.vol;
     const commB = rb.comissao / rb.vol;
 
-    const skuPrice = (priceB - priceA) * ra.vol;
-    const skuCost = -(costB - costA) * ra.vol;
-    const skuFreight = -(freightB - freightA) * ra.vol;
-    const skuComm = -(commB - commA) * ra.vol;
+    const skuPrice = (priceB - priceA) * rb.vol;
+    const skuCost = -(costB - costA) * rb.vol;
+    const skuFreight = -(freightB - freightA) * rb.vol;
+    const skuComm = -(commB - commA) * rb.vol;
 
     detail.volumeEffect = skuVol;
     detail.priceEffect = skuPrice;
