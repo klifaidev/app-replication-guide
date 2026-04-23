@@ -157,6 +157,18 @@ export function calcPVM(
   for (const sku of allSkus) {
     const ra = a.get(sku);
     const rb = b.get(sku);
+
+    // SKU novo (só em B): entrada de portfólio → efeito Volume puro
+    // valorizado pela margem unitária do próprio SKU em B
+    if (!ra && rb && rb.vol !== 0) {
+      volEffect += rb.margem;
+      continue;
+    }
+    // SKU descontinuado (só em A): saída de portfólio → efeito Volume negativo
+    if (ra && !rb && ra.vol !== 0) {
+      volEffect -= ra.margem;
+      continue;
+    }
     if (!ra || !rb || ra.vol === 0 || rb.vol === 0) continue;
 
     // Efeito Volume no nível do SKU: ΔV × margem unitária base daquele SKU
