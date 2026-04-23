@@ -121,12 +121,20 @@ const HEADER_MAP: Record<string, keyof PricingRow | "ignore"> = {
   comissaorepresentante: "comissao",
   comissaorepresentantes: "comissao",
   commission: "comissao",
+  // CPV components (Matéria Prima e Embalagem) — exibidos no DRE
+  materiaprima: "materiaPrima",
+  materiaprimaajustado: "materiaPrima",
+  materiaprimaajust: "materiaPrima",
+  mp: "materiaPrima",
+  rawmaterial: "materiaPrima",
+  embalagem: "embalagem",
+  embalagemajustado: "embalagem",
+  embalagemajust: "embalagem",
+  packaging: "embalagem",
   // explicit ignores (avoid noise in unmapped list)
   ctbmg: "ignore",                // "Ctb. Mg. %"
   gestorresp: "ignore",
   centro: "ignore",
-  materiaprima: "ignore",
-  embalagem: "ignore",
   mod: "ignore",
   cif: "ignore",
 };

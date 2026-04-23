@@ -3,6 +3,7 @@ import { GlassCard } from "@/components/pricing/GlassCard";
 import { KpiCard } from "@/components/pricing/KpiCard";
 import { Waterfall } from "@/components/pricing/Waterfall";
 import { EmptyState } from "@/components/pricing/EmptyState";
+import { DreTable } from "@/components/pricing/DreTable";
 import { usePricing } from "@/store/pricing";
 import { useFyList, useMonthsInfo } from "@/store/selectors";
 import { applyFilters, calcPVM } from "@/lib/analytics";
@@ -172,6 +173,16 @@ export default function BridgePvm() {
             </GlassCard>
           </>
         )}
+
+        <GlassCard>
+          <header className="mb-4">
+            <h2 className="text-lg font-medium">DRE por Período</h2>
+            <p className="text-xs text-muted-foreground">
+              Visão consolidada por mês — valores aplicam os filtros ativos.
+            </p>
+          </header>
+          <DreTable rows={filtered} months={months} />
+        </GlassCard>
       </div>
     </>
   );
