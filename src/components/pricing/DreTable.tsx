@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { PricingRow } from "@/lib/types";
 import type { MonthInfo } from "@/lib/types";
-import { formatBRL, formatNumber, formatPercent } from "@/lib/format";
+import { formatBRL, formatNum, formatPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface DreTableProps {
@@ -73,11 +73,11 @@ const LINES: DreLine[] = [
 
 function fmt(value: number | null, kind: RowKind) {
   if (value == null) return <span className="text-muted-foreground/50">—</span>;
-  if (kind === "pct") return formatPercent(value);
-  if (kind === "perKg") return formatBRL(value, { decimals: 2 });
-  // raw values
-  if (Math.abs(value) >= 1000) return formatBRL(value, { compact: true });
-  return formatBRL(value, { decimals: 0 });
+  if (kind === "pct") return formatPct(value);
+  if (kind === "perKg") return formatBRL(value, { digits: 2 });
+  if (kind === "value" && Math.abs(value) >= 1_000_000) return formatBRL(value, { compact: true });
+  if (kind === "value") return formatBRL(value, { digits: 0 });
+  return formatNum(value, 0);
 }
 
 export function DreTable({ rows, months }: DreTableProps) {
