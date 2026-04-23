@@ -53,10 +53,13 @@
 
     /* PVM accent palette */
     --pvm-volume: 217 91% 60%;
-    --pvm-price: 158 64% 52%;
-    --pvm-cost: 0 84% 65%;
+    --pvm-price: 200 90% 55%;
+    --pvm-cost: 220 80% 50%;
+    --pvm-freight: 0 84% 65%;
+    --pvm-commission: 195 70% 60%;
+    --pvm-others: 220 12% 70%;
     --pvm-mix: 38 92% 60%;
-    --pvm-base: 220 12% 55%;
+    --pvm-base: 0 0% 8%;
 
     /* Gradients */
     --gradient-bg: radial-gradient(ellipse at top left, hsl(240 40% 12%) 0%, hsl(240 30% 6%) 60%);

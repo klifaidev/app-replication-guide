@@ -18,11 +18,13 @@ export function Waterfall({ data, height = 360 }: WaterfallProps) {
   const steps: Step[] = useMemo(
     () => [
       { label: data.baseLabel, delta: data.base, total: true, color: "hsl(var(--pvm-base))" },
-      { label: "Volume", delta: data.volume, total: false, color: "hsl(var(--pvm-volume))" },
-      { label: "Preço", delta: data.price, total: false, color: "hsl(var(--pvm-price))" },
-      { label: "Custo", delta: data.cost, total: false, color: "hsl(var(--pvm-cost))" },
-      { label: "Mix", delta: data.mix, total: false, color: "hsl(var(--pvm-mix))" },
-      { label: data.currentLabel, delta: data.current, total: true, color: "hsl(var(--primary))" },
+      { label: "Efeito Volume", delta: data.volume, total: false, color: "hsl(var(--pvm-volume))" },
+      { label: "Efeito Preço", delta: data.price, total: false, color: "hsl(var(--pvm-price))" },
+      { label: "Efeito Custo Variável", delta: data.cost, total: false, color: "hsl(var(--pvm-cost))" },
+      { label: "Efeito Frete", delta: data.freight, total: false, color: "hsl(var(--pvm-freight))" },
+      { label: "Efeito Comissão", delta: data.commission, total: false, color: "hsl(var(--pvm-commission))" },
+      { label: "Efeito Outros", delta: data.others, total: false, color: "hsl(var(--pvm-others))" },
+      { label: data.currentLabel, delta: data.current, total: true, color: "hsl(var(--pvm-base))" },
     ],
     [data],
   );
