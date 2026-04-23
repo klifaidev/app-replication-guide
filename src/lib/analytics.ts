@@ -80,6 +80,30 @@ export function aggregateBy(
     .sort((a, b) => b.rol - a.rol);
 }
 
+export interface PVMSkuDetail {
+  sku: string;
+  status: "both" | "only_base" | "only_comp";
+  volA: number;
+  volB: number;
+  rolA: number;
+  rolB: number;
+  cogsA: number;
+  cogsB: number;
+  freteA: number;
+  freteB: number;
+  comissaoA: number;
+  comissaoB: number;
+  margemA: number;
+  margemB: number;
+  // Effects attributable to this SKU
+  volumeEffect: number;
+  priceEffect: number;
+  costEffect: number;
+  freightEffect: number;
+  commissionEffect: number;
+  othersEffect: number; // for orphan SKUs, full margin impact
+}
+
 export interface PVMResult {
   base: number;
   volume: number;
@@ -91,6 +115,7 @@ export interface PVMResult {
   current: number;
   baseLabel: string;
   currentLabel: string;
+  skuDetails: PVMSkuDetail[];
 }
 
 /**
