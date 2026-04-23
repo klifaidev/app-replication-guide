@@ -6,10 +6,12 @@ import { EmptyState } from "@/components/pricing/EmptyState";
 import { usePricing } from "@/store/pricing";
 import { useFyList, useMonthsInfo } from "@/store/selectors";
 import { applyFilters, calcPVM } from "@/lib/analytics";
+import { exportPvmCsv } from "@/lib/exportCsv";
 import { formatBRL } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowRight, Calendar, CalendarDays } from "lucide-react";
+import { ArrowRight, Calendar, CalendarDays, Download } from "lucide-react";
 import { useEffect, useMemo } from "react";
 
 export default function BridgePvm() {
