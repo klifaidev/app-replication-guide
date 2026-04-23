@@ -80,6 +80,30 @@ export function aggregateBy(
     .sort((a, b) => b.rol - a.rol);
 }
 
+export interface PVMSkuDetail {
+  sku: string;
+  status: "both" | "only_base" | "only_comp";
+  volA: number;
+  volB: number;
+  rolA: number;
+  rolB: number;
+  cogsA: number;
+  cogsB: number;
+  freteA: number;
+  freteB: number;
+  comissaoA: number;
+  comissaoB: number;
+  margemA: number;
+  margemB: number;
+  // Effects attributable to this SKU
+  volumeEffect: number;
+  priceEffect: number;
+  costEffect: number;
+  freightEffect: number;
+  commissionEffect: number;
+  othersEffect: number; // for orphan SKUs, full margin impact
+}
+
 export interface PVMResult {
   base: number;
   volume: number;
@@ -91,6 +115,7 @@ export interface PVMResult {
   current: number;
   baseLabel: string;
   currentLabel: string;
+  skuDetails: PVMSkuDetail[];
 }
 
 /**
@@ -153,19 +178,45 @@ export function calcPVM(
   let freightEffect = 0;
   let commissionEffect = 0;
 
+  const skuDetails: PVMSkuDetail[] = [];
   const allSkus = new Set([...a.keys(), ...b.keys()]);
   for (const sku of allSkus) {
     const ra = a.get(sku);
     const rb = b.get(sku);
 
+    const detail: PVMSkuDetail = {
+      sku,
+      status: ra && rb ? "both" : ra ? "only_base" : "only_comp",
+      volA: ra?.vol ?? 0,
+      volB: rb?.vol ?? 0,
+      rolA: ra?.rol ?? 0,
+      rolB: rb?.rol ?? 0,
+      cogsA: ra?.cogs ?? 0,
+      cogsB: rb?.cogs ?? 0,
+      freteA: ra?.frete ?? 0,
+      freteB: rb?.frete ?? 0,
+      comissaoA: ra?.comissao ?? 0,
+      comissaoB: rb?.comissao ?? 0,
+      margemA: ra?.margem ?? 0,
+      margemB: rb?.margem ?? 0,
+      volumeEffect: 0,
+      priceEffect: 0,
+      costEffect: 0,
+      freightEffect: 0,
+      commissionEffect: 0,
+      othersEffect: 0,
+    };
+
     // SKUs órfãos (só A ou só B) → impacto total cai em Mix/Outros (resíduo).
-    // Não contribuem para Volume nem para efeitos unitários.
-    if (!ra || !rb) continue;
-    if (ra.vol === 0 || rb.vol === 0) continue;
+    if (!ra || !rb || ra.vol === 0 || rb.vol === 0) {
+      detail.othersEffect = (rb?.margem ?? 0) - (ra?.margem ?? 0);
+      skuDetails.push(detail);
+      continue;
+    }
 
     // Efeito Volume no nível do SKU: ΔV × margem unitária base daquele SKU
     const margemUnitA = ra.margem / ra.vol;
-    volEffect += (rb.vol - ra.vol) * margemUnitA;
+    const skuVol = (rb.vol - ra.vol) * margemUnitA;
 
     // Laspeyres: efeitos unitários valorizados pelo VOLUME BASE (A)
     const priceA = ra.rol / ra.vol;
@@ -177,10 +228,27 @@ export function calcPVM(
     const commA = ra.comissao / ra.vol;
     const commB = rb.comissao / rb.vol;
 
-    priceEffect += (priceB - priceA) * ra.vol;
-    costEffect -= (costB - costA) * ra.vol;
-    freightEffect -= (freightB - freightA) * ra.vol;
-    commissionEffect -= (commB - commA) * ra.vol;
+    const skuPrice = (priceB - priceA) * ra.vol;
+    const skuCost = -(costB - costA) * ra.vol;
+    const skuFreight = -(freightB - freightA) * ra.vol;
+    const skuComm = -(commB - commA) * ra.vol;
+
+    detail.volumeEffect = skuVol;
+    detail.priceEffect = skuPrice;
+    detail.costEffect = skuCost;
+    detail.freightEffect = skuFreight;
+    detail.commissionEffect = skuComm;
+    // residual per-SKU (mix puro): ΔMargem - soma dos efeitos calculados
+    detail.othersEffect =
+      (rb.margem - ra.margem) - skuVol - skuPrice - skuCost - skuFreight - skuComm;
+
+    volEffect += skuVol;
+    priceEffect += skuPrice;
+    costEffect += skuCost;
+    freightEffect += skuFreight;
+    commissionEffect += skuComm;
+
+    skuDetails.push(detail);
   }
 
   const others =
@@ -197,6 +265,7 @@ export function calcPVM(
     current: currentTotal,
     baseLabel: labels?.base ?? base,
     currentLabel: labels?.comp ?? comp,
+    skuDetails,
   };
 }
 

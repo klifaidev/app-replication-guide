@@ -6,10 +6,12 @@ import { EmptyState } from "@/components/pricing/EmptyState";
 import { usePricing } from "@/store/pricing";
 import { useFyList, useMonthsInfo } from "@/store/selectors";
 import { applyFilters, calcPVM } from "@/lib/analytics";
+import { exportPvmCsv } from "@/lib/exportCsv";
 import { formatBRL } from "@/lib/format";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowRight, Calendar, CalendarDays } from "lucide-react";
+import { ArrowRight, Calendar, CalendarDays, Download } from "lucide-react";
 import { useEffect, useMemo } from "react";
 
 export default function BridgePvm() {
@@ -147,13 +149,24 @@ export default function BridgePvm() {
             </div>
 
             <GlassCard glow="blue">
-              <header className="mb-4">
-                <h2 className="text-lg font-medium">
-                  Bridge {result.baseLabel} → {result.currentLabel}
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Variação total: {formatBRL(result.current - result.base, { compact: true })}
-                </p>
+              <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-medium">
+                    Bridge {result.baseLabel} → {result.currentLabel}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Variação total: {formatBRL(result.current - result.base, { compact: true })}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportPvmCsv(result)}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Exportar CSV (auditoria)
+                </Button>
               </header>
               <Waterfall data={result} />
             </GlassCard>
