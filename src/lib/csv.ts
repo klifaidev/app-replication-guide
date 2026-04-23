@@ -110,6 +110,17 @@ const HEADER_MAP: Record<string, keyof PricingRow | "ignore"> = {
   contribmarginal: "contribMarginal",
   cm: "contribMarginal",
   margemcontribuicao: "contribMarginal",
+  // frete sobre vendas
+  frete: "frete",
+  fretesobrevendas: "frete",
+  fretevendas: "frete",
+  freight: "frete",
+  // comissão
+  comissao: "comissao",
+  comissaorepres: "comissao",
+  comissaorepresentante: "comissao",
+  comissaorepresentantes: "comissao",
+  commission: "comissao",
   // explicit ignores (avoid noise in unmapped list)
   ctbmg: "ignore",                // "Ctb. Mg. %"
   gestorresp: "ignore",
@@ -118,8 +129,6 @@ const HEADER_MAP: Record<string, keyof PricingRow | "ignore"> = {
   embalagem: "ignore",
   mod: "ignore",
   cif: "ignore",
-  fretesobrevendas: "ignore",
-  comissaorepres: "ignore",
 };
 
 function detectDelimiter(sample: string): string {
@@ -202,7 +211,8 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       const val = raw[src];
       if (
         dest === "rol" || dest === "volumeKg" || dest === "cogs" ||
-        dest === "margemBruta" || dest === "contribMarginal"
+        dest === "margemBruta" || dest === "contribMarginal" ||
+        dest === "frete" || dest === "comissao"
       ) {
         (obj as Record<string, number>)[dest] = parseDecimal(val);
       } else {
@@ -226,7 +236,9 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     obj.volumeKg = obj.volumeKg ?? 0;
     obj.cogs = obj.cogs ?? 0;
     obj.margemBruta = obj.margemBruta ?? (obj.rol! - obj.cogs!);
-    obj.contribMarginal = obj.contribMarginal ?? obj.margemBruta;
+    obj.frete = obj.frete ?? 0;
+    obj.comissao = obj.comissao ?? 0;
+    obj.contribMarginal = obj.contribMarginal ?? (obj.margemBruta! - obj.frete! - obj.comissao!);
 
     // Keep all rows with a valid period — including returns / negatives —
     // so totals match the source report. Skip only fully-empty rows.

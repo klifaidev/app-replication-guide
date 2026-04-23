@@ -25,9 +25,11 @@ export interface PricingRow {
   // Measures (R$, kg)
   rol: number;        // Receita Operacional Líquida
   volumeKg: number;
-  cogs: number;       // Custo (CMV)
+  cogs: number;       // Custo (CMV / CPV)
   margemBruta: number;
   contribMarginal: number;
+  frete: number;      // Frete sobre vendas
+  comissao: number;   // Comissão representante
 }
 
 export interface LoadedFile {
