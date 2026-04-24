@@ -2,6 +2,12 @@ import Papa from "papaparse";
 import type { LoadedFile, PricingRow } from "./types";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
 import { getDeParaBySku } from "./depara";
+import {
+  getCanalAjustado,
+  getUfFromRegiao,
+  getMercadoAjustadoFromRegiao,
+  getRegionalFromUf,
+} from "./deparaComercial";
 
 // Map of normalized header → canonical field
 // Keys are normalized via normHeader (lowercase, no accents/spaces/punct).
@@ -254,6 +260,20 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       obj.sabor = dp.sabor || obj.sabor;
       obj.skuDesc = dp.skuDesc || obj.skuDesc;
     }
+
+    // De Para Comercial — Canal Ajustado, UF, Mercado Ajustado, Regional.
+    // Sempre tem prioridade sobre o que veio do CSV.
+    const canalAj = getCanalAjustado(obj.canal);
+    if (canalAj) obj.canalAjustado = canalAj;
+
+    const uf = getUfFromRegiao(obj.regiao);
+    if (uf) obj.uf = uf;
+
+    const mercadoAj = getMercadoAjustadoFromRegiao(obj.regiao);
+    if (mercadoAj) obj.mercadoAjustado = mercadoAj;
+
+    const regional = getRegionalFromUf(obj.uf);
+    if (regional) obj.regional = regional;
 
 
     const period = parsePeriod(obj.periodo as string);
