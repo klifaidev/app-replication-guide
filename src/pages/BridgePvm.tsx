@@ -7,12 +7,14 @@ import { usePricing } from "@/store/pricing";
 import { useFyList, useMonthsInfo } from "@/store/selectors";
 import { applyFilters, calcPVM, type PVMSkuDetail } from "@/lib/analytics";
 import { exportPvmCsv } from "@/lib/exportCsv";
+import { exportBridgePvmPpt } from "@/lib/exportPpt";
 import { formatBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ArrowRight, Calendar, CalendarDays, Download, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 const EFFECTS: Array<{
   key: keyof Pick<PVMSkuDetail, "volumeEffect" | "priceEffect" | "costEffect">;
@@ -47,6 +49,7 @@ export default function BridgePvm() {
   const pvmComp = usePricing((s) => s.pvmComp);
   const setPvm = usePricing((s) => s.setPvm);
   const setPvmMode = usePricing((s) => s.setPvmMode);
+  const [exportingPpt, setExportingPpt] = useState(false);
 
   const options = useMemo(
     () =>
@@ -180,6 +183,27 @@ export default function BridgePvm() {
                     Variação total: {formatBRL(result.current - result.base, { compact: true })}
                   </p>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      setExportingPpt(true);
+                      await exportBridgePvmPpt(result);
+                      toast.success("PPTX exportado com gráficos e tabelas editáveis.");
+                    } catch (error) {
+                      console.error(error);
+                      toast.error("Não foi possível gerar o PPTX da Bridge PVM.");
+                    } finally {
+                      setExportingPpt(false);
+                    }
+                  }}
+                  className="gap-2"
+                  disabled={exportingPpt}
+                >
+                  <Download className="h-4 w-4" />
+                  {exportingPpt ? "Gerando PPTX..." : "Exportar PPTX"}
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
