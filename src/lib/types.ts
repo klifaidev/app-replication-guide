@@ -19,6 +19,10 @@ export interface PricingRow {
   skuDesc?: string;
   cliente?: string;
   regiao?: string;
+  uf?: string;
+  regional?: string;
+  canalAjustado?: string;
+  mercadoAjustado?: string;
   mercado?: string;
   sabor?: string;
   tecnologia?: string;
@@ -54,12 +58,16 @@ export interface MonthInfo {
 export type FilterKey =
   | "marca"
   | "canal"
+  | "canalAjustado"
   | "categoria"
   | "subcategoria"
   | "formato"
   | "sku"
   | "regiao"
+  | "uf"
+  | "regional"
   | "mercado"
+  | "mercadoAjustado"
   | "sabor"
   | "tecnologia"
   | "faixaPeso";
