@@ -6,18 +6,18 @@ import { uniqueValues, applyFilters } from "@/lib/analytics";
 import type { FilterKey, PricingRow } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { getDeParaBySku } from "@/lib/depara";
 
+// Apenas as colunas existentes na planilha De Para IA.
 const FIELDS: { key: FilterKey; label: string }[] = [
   { key: "categoria", label: "01. Categoria" },
   { key: "marca", label: "02. Marca" },
+  { key: "tecnologia", label: "03. Tecnologia" },
   { key: "subcategoria", label: "04. Formato" },
   { key: "mercado", label: "05. Mercado" },
   { key: "faixaPeso", label: "06. Faixa de Peso" },
   { key: "sabor", label: "07. Sabor" },
-  { key: "canal", label: "Canal distrib." },
   { key: "sku", label: "Artigo (SKU)" },
-  { key: "regiao", label: "Região" },
-  { key: "tecnologia", label: "Tecnologia" },
 ];
 
 export function FilterGrid() {
@@ -27,7 +27,11 @@ export function FilterGrid() {
   const clear = usePricing((s) => s.clearFilters);
   const selected = usePricing((s) => s.selectedPeriods);
 
-  const baseRows = applyFilters(rows, {}, selected);
+  // Considera apenas linhas cujo SKU está no De Para — assim os valores
+  // exibidos em cada filtro vêm exclusivamente da planilha De Para IA.
+  const baseRows = applyFilters(rows, {}, selected).filter((r) =>
+    getDeParaBySku(r.sku),
+  );
 
   const hasAny = Object.values(filters).some((v) => v && v.length);
 
@@ -41,7 +45,7 @@ export function FilterGrid() {
           </Button>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {FIELDS.map((f) => {
           const opts = uniqueValues(baseRows, f.key as keyof PricingRow);
           if (opts.length === 0) return null;
