@@ -17,6 +17,8 @@ const chartConfig = {
   custoVariavelPctRol: { label: "CV / ROL", color: "hsl(var(--warning))" },
   custoFixoPctRol: { label: "CF / ROL", color: "hsl(var(--accent))" },
   custoTotalPorKg: { label: "Custo Total / Kg", color: "hsl(var(--primary))" },
+  custoVariavelPorKg: { label: "Custo Variável / Kg", color: "hsl(var(--warning))" },
+  custoFixoPorKg: { label: "Custo Fixo / Kg", color: "hsl(var(--accent))" },
 } as const;
 
 export default function Custos() {
