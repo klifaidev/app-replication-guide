@@ -79,8 +79,6 @@ export default function Index() {
             <GlassCard>
               <FilterGrid />
             </GlassCard>
-
-            <UploadZone compact />
           </>
         )}
       </div>
