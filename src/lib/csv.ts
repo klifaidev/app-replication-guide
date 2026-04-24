@@ -1,6 +1,7 @@
 import Papa from "papaparse";
 import type { LoadedFile, PricingRow } from "./types";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
+import { getDeParaBySku } from "./depara";
 
 // Map of normalized header → canonical field
 // Keys are normalized via normHeader (lowercase, no accents/spaces/punct).
@@ -237,6 +238,20 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
         obj.sku = m[1];
         if (!obj.skuDesc) obj.skuDesc = m[2];
       }
+    }
+
+    // De Para — sobrescreve atributos do SKU com a fonte de verdade.
+    // Mesmo que a base tenha os campos preenchidos, o De Para tem prioridade.
+    const dp = getDeParaBySku(obj.sku);
+    if (dp) {
+      obj.categoria = dp.categoria || obj.categoria;
+      obj.subcategoria = dp.subcategoria || obj.subcategoria;
+      obj.marca = dp.marca || obj.marca;
+      obj.tecnologia = dp.tecnologia || obj.tecnologia;
+      obj.mercado = dp.mercado || obj.mercado;
+      obj.faixaPeso = dp.faixaPeso || obj.faixaPeso;
+      obj.sabor = dp.sabor || obj.sabor;
+      obj.skuDesc = dp.skuDesc || obj.skuDesc;
     }
 
 
