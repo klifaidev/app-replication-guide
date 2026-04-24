@@ -11,9 +11,10 @@ import { getDeParaBySku } from "@/lib/depara";
 // Apenas as colunas existentes na planilha De Para IA.
 const FIELDS: { key: FilterKey; label: string }[] = [
   { key: "categoria", label: "01. Categoria" },
+  { key: "subcategoria", label: "Subcategoria" },
   { key: "marca", label: "02. Marca" },
   { key: "tecnologia", label: "03. Tecnologia" },
-  { key: "subcategoria", label: "04. Formato" },
+  { key: "formato", label: "04. Formato" },
   { key: "mercado", label: "05. Mercado" },
   { key: "faixaPeso", label: "06. Faixa de Peso" },
   { key: "sabor", label: "07. Sabor" },
