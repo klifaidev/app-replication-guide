@@ -17,6 +17,8 @@ const chartConfig = {
   custoVariavelPctRol: { label: "CV / ROL", color: "hsl(var(--warning))" },
   custoFixoPctRol: { label: "CF / ROL", color: "hsl(var(--accent))" },
   custoTotalPorKg: { label: "Custo Total / Kg", color: "hsl(var(--primary))" },
+  custoVariavelPorKg: { label: "Custo Variável / Kg", color: "hsl(var(--warning))" },
+  custoFixoPorKg: { label: "Custo Fixo / Kg", color: "hsl(var(--accent))" },
 } as const;
 
 export default function Custos() {
@@ -65,44 +67,7 @@ export default function Custos() {
           <KpiCard label="Volume filtrado" value={formatTon(totals.volumeKg)} subValue={`${evolution.length} período(s)`} accent="green" />
         </div>
 
-        <GlassCard glow="blue">
-          <header className="mb-4">
-            <h2 className="text-lg font-medium">Evolução absoluta de custos</h2>
-            <p className="text-xs text-muted-foreground">Área empilhada para leitura de composição e linha para total consolidado.</p>
-          </header>
-          <ChartContainer config={chartConfig} className="h-[360px] w-full">
-            <AreaChart data={evolution} margin={{ left: 8, right: 8, top: 12, bottom: 0 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
-              <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatBRL(Number(v), { compact: true })} width={84} />
-              <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [formatBRL(Number(value)), chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)]} />} />
-              <Legend />
-              <Area type="monotone" dataKey="custoVariavel" stackId="custos" stroke="var(--color-custoVariavel)" fill="var(--color-custoVariavel)" fillOpacity={0.45} />
-              <Area type="monotone" dataKey="custoFixo" stackId="custos" stroke="var(--color-custoFixo)" fill="var(--color-custoFixo)" fillOpacity={0.35} />
-              <Line type="monotone" dataKey="custoTotal" stroke="var(--color-custoTotal)" strokeWidth={2.5} dot={false} />
-            </AreaChart>
-          </ChartContainer>
-        </GlassCard>
-
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <GlassCard>
-            <header className="mb-4">
-              <h2 className="text-lg font-medium">Pressão de custo sobre a receita</h2>
-              <p className="text-xs text-muted-foreground">Percentual do ROL consumido por custo variável e fixo em cada período.</p>
-            </header>
-            <ChartContainer config={chartConfig} className="h-[320px] w-full">
-              <ComposedChart data={evolution} margin={{ left: 8, right: 8, top: 12, bottom: 0 }}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
-                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatPct(Number(v), 0)} width={72} />
-                <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [formatPct(Number(value)), chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)]} />} />
-                <ReferenceLine y={0} stroke="hsl(var(--border))" />
-                <Area type="monotone" dataKey="custoVariavelPctRol" stackId="pct" stroke="var(--color-custoVariavelPctRol)" fill="var(--color-custoVariavelPctRol)" fillOpacity={0.35} />
-                <Area type="monotone" dataKey="custoFixoPctRol" stackId="pct" stroke="var(--color-custoFixoPctRol)" fill="var(--color-custoFixoPctRol)" fillOpacity={0.25} />
-              </ComposedChart>
-            </ChartContainer>
-          </GlassCard>
-
           <GlassCard>
             <header className="mb-4">
               <h2 className="text-lg font-medium">Eficiência por Kg</h2>
@@ -114,9 +79,29 @@ export default function Custos() {
                 <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
                 <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatBRL(Number(v), { digits: 2 })} width={96} />
                 <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [formatBRL(Number(value), { digits: 2 }), chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)]} />} />
-                <Line type="monotone" dataKey="custoVariavelPorKg" stroke="var(--color-custoVariavel)" strokeWidth={2.25} dot={false} />
-                <Line type="monotone" dataKey="custoFixoPorKg" stroke="var(--color-custoFixo)" strokeWidth={2.25} dot={false} />
-                <Line type="monotone" dataKey="custoTotalPorKg" stroke="var(--color-custoTotalPorKg)" strokeWidth={2.75} dot={false} />
+                <Legend />
+                <Line type="monotone" dataKey="custoVariavelPorKg" stroke="var(--color-custoVariavel)" strokeWidth={2.25} dot={false} name="custoVariavel" />
+                <Line type="monotone" dataKey="custoFixoPorKg" stroke="var(--color-custoFixo)" strokeWidth={2.25} dot={false} name="custoFixo" />
+                <Line type="monotone" dataKey="custoTotalPorKg" stroke="var(--color-custoTotalPorKg)" strokeWidth={2.75} dot={false} name="custoTotalPorKg" />
+              </ComposedChart>
+            </ChartContainer>
+          </GlassCard>
+
+          <GlassCard>
+            <header className="mb-4">
+              <h2 className="text-lg font-medium">Pressão de custo sobre a receita</h2>
+              <p className="text-xs text-muted-foreground">Percentual do ROL consumido por custo variável e fixo em cada período.</p>
+            </header>
+            <ChartContainer config={chartConfig} className="h-[320px] w-full">
+              <ComposedChart data={evolution} margin={{ left: 8, right: 8, top: 12, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatPct(Number(v), 0)} width={72} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [formatPct(Number(value)), chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)]} />} />
+                <Legend />
+                <ReferenceLine y={0} stroke="hsl(var(--border))" />
+                <Area type="monotone" dataKey="custoVariavelPctRol" stackId="pct" stroke="var(--color-custoVariavelPctRol)" fill="var(--color-custoVariavelPctRol)" fillOpacity={0.35} name="custoVariavelPctRol" />
+                <Area type="monotone" dataKey="custoFixoPctRol" stackId="pct" stroke="var(--color-custoFixoPctRol)" fill="var(--color-custoFixoPctRol)" fillOpacity={0.25} name="custoFixoPctRol" />
               </ComposedChart>
             </ChartContainer>
           </GlassCard>
