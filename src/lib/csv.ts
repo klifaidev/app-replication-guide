@@ -155,10 +155,18 @@ function detectDelimiter(sample: string): string {
   return counts[0].d || ";";
 }
 
+export interface MissingMappings {
+  skus: { sku: string; descricao?: string }[]; // SKUs sem De Para IA
+  canais: string[];           // Canal distrib. sem De Para Comercial
+  regioes: string[];          // Região sem De Para (UF/Mercado Ajustado)
+  ufs: string[];              // UF sem De Para Regional
+}
+
 export interface ParsedCsv {
   rows: PricingRow[];
   file: LoadedFile;
   warnings: string[];
+  missing: MissingMappings;
 }
 
 export async function parseCsvFile(file: File): Promise<ParsedCsv> {
@@ -186,6 +194,12 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
   const warnings: string[] = [];
   const rows: PricingRow[] = [];
   const monthsSet = new Set<string>();
+
+  // Tracking de valores ausentes nos De Paras
+  const missingSkus = new Map<string, string | undefined>(); // sku -> desc
+  const missingCanais = new Set<string>();
+  const missingRegioes = new Set<string>();
+  const missingUfs = new Set<string>();
 
   // Build column map
   const sampleRow = result.data[0] ?? {};
@@ -259,21 +273,34 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       obj.faixaPeso = dp.faixaPeso || obj.faixaPeso;
       obj.sabor = dp.sabor || obj.sabor;
       obj.skuDesc = dp.skuDesc || obj.skuDesc;
+    } else if (obj.sku) {
+      // SKU presente na base mas ausente no De Para IA
+      if (!missingSkus.has(obj.sku)) {
+        missingSkus.set(obj.sku, obj.skuDesc);
+      }
     }
 
     // De Para Comercial — Canal Ajustado, UF, Mercado Ajustado, Regional.
     // Sempre tem prioridade sobre o que veio do CSV.
-    const canalAj = getCanalAjustado(obj.canal);
-    if (canalAj) obj.canalAjustado = canalAj;
+    if (obj.canal) {
+      const canalAj = getCanalAjustado(obj.canal);
+      if (canalAj) obj.canalAjustado = canalAj;
+      else missingCanais.add(obj.canal);
+    }
 
-    const uf = getUfFromRegiao(obj.regiao);
-    if (uf) obj.uf = uf;
+    if (obj.regiao) {
+      const uf = getUfFromRegiao(obj.regiao);
+      const mercadoAj = getMercadoAjustadoFromRegiao(obj.regiao);
+      if (uf) obj.uf = uf;
+      if (mercadoAj) obj.mercadoAjustado = mercadoAj;
+      if (!uf && !mercadoAj) missingRegioes.add(obj.regiao);
+    }
 
-    const mercadoAj = getMercadoAjustadoFromRegiao(obj.regiao);
-    if (mercadoAj) obj.mercadoAjustado = mercadoAj;
-
-    const regional = getRegionalFromUf(obj.uf);
-    if (regional) obj.regional = regional;
+    if (obj.uf) {
+      const regional = getRegionalFromUf(obj.uf);
+      if (regional) obj.regional = regional;
+      else missingUfs.add(obj.uf);
+    }
 
 
     const period = parsePeriod(obj.periodo as string);
@@ -348,5 +375,11 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       months: Array.from(monthsSet).sort(),
     },
     warnings,
+    missing: {
+      skus: Array.from(missingSkus.entries()).map(([sku, descricao]) => ({ sku, descricao })),
+      canais: Array.from(missingCanais).sort(),
+      regioes: Array.from(missingRegioes).sort(),
+      ufs: Array.from(missingUfs).sort(),
+    },
   };
 }

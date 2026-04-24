@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { Filters, LoadedFile, Metric, PricingRow } from "@/lib/types";
+import type { MissingMappings } from "@/lib/csv";
 
 interface PricingState {
   rows: PricingRow[];
@@ -7,6 +8,7 @@ interface PricingState {
   metric: Metric;
   filters: Filters;
   selectedPeriods: string[] | null; // null = all
+  missing: MissingMappings;         // valores ausentes nos De Paras
   // PVM
   pvmMode: "fy" | "month";
   pvmBase: string | null;
@@ -19,12 +21,35 @@ interface PricingState {
   togglePeriod: (p: string) => void;
   setAllPeriods: () => void;
 
-  addParsed: (rows: PricingRow[], file: LoadedFile, replaceMonths: boolean) => void;
+  addParsed: (
+    rows: PricingRow[],
+    file: LoadedFile,
+    replaceMonths: boolean,
+    missing?: MissingMappings,
+  ) => void;
   removeFile: (name: string) => void;
   clearAll: () => void;
+  dismissMissing: () => void;
 
   setPvm: (base: string | null, comp: string | null) => void;
   setPvmMode: (mode: "fy" | "month") => void;
+}
+
+const EMPTY_MISSING: MissingMappings = { skus: [], canais: [], regioes: [], ufs: [] };
+
+function mergeMissing(a: MissingMappings, b: MissingMappings): MissingMappings {
+  const skuMap = new Map<string, string | undefined>();
+  for (const it of [...a.skus, ...b.skus]) {
+    if (!skuMap.has(it.sku)) skuMap.set(it.sku, it.descricao);
+  }
+  return {
+    skus: Array.from(skuMap.entries())
+      .map(([sku, descricao]) => ({ sku, descricao }))
+      .sort((x, y) => x.sku.localeCompare(y.sku)),
+    canais: Array.from(new Set([...a.canais, ...b.canais])).sort(),
+    regioes: Array.from(new Set([...a.regioes, ...b.regioes])).sort(),
+    ufs: Array.from(new Set([...a.ufs, ...b.ufs])).sort(),
+  };
 }
 
 export const usePricing = create<PricingState>((set, get) => ({
@@ -33,6 +58,7 @@ export const usePricing = create<PricingState>((set, get) => ({
   metric: "cm",
   filters: {},
   selectedPeriods: null,
+  missing: EMPTY_MISSING,
   pvmMode: "fy",
   pvmBase: null,
   pvmComp: null,
@@ -51,7 +77,7 @@ export const usePricing = create<PricingState>((set, get) => ({
     }),
   setAllPeriods: () => set({ selectedPeriods: null }),
 
-  addParsed: (newRows, file, replaceMonths) => {
+  addParsed: (newRows, file, replaceMonths, missing) => {
     const newPeriods = new Set(newRows.map((r) => r.periodo));
     set((s) => {
       const keptRows = replaceMonths
@@ -63,6 +89,7 @@ export const usePricing = create<PricingState>((set, get) => ({
       return {
         rows: [...keptRows, ...newRows],
         files: [...keptFiles, file],
+        missing: missing ? mergeMissing(s.missing, missing) : s.missing,
       };
     });
   },
@@ -72,7 +99,6 @@ export const usePricing = create<PricingState>((set, get) => ({
       const file = s.files.find((f) => f.name === name);
       if (!file) return {};
       const removedPeriods = new Set(file.months);
-      // Recompute remaining periods
       const remainingFiles = s.files.filter((f) => f.name !== name);
       const stillCoveredPeriods = new Set(remainingFiles.flatMap((f) => f.months));
       const rows = s.rows.filter((r) => {
@@ -82,7 +108,18 @@ export const usePricing = create<PricingState>((set, get) => ({
       return { rows, files: remainingFiles };
     }),
 
-  clearAll: () => set({ rows: [], files: [], filters: {}, selectedPeriods: null, pvmBase: null, pvmComp: null }),
+  clearAll: () =>
+    set({
+      rows: [],
+      files: [],
+      filters: {},
+      selectedPeriods: null,
+      pvmBase: null,
+      pvmComp: null,
+      missing: EMPTY_MISSING,
+    }),
+
+  dismissMissing: () => set({ missing: EMPTY_MISSING }),
 
   setPvm: (base, comp) => set({ pvmBase: base, pvmComp: comp }),
   setPvmMode: (mode) => set({ pvmMode: mode, pvmBase: null, pvmComp: null }),
