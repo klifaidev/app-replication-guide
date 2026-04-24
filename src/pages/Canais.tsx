@@ -15,7 +15,7 @@ export default function Canais() {
   const selected = usePricing((s) => s.selectedPeriods);
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
-  const byCanal = useMemo(() => aggregateBy(filtered, metric, (r) => r.canal || "Sem canal"), [filtered, metric]);
+  const byCanal = useMemo(() => aggregateBy(filtered, metric, (r) => r.canalAjustado || "Sem canal"), [filtered, metric]);
 
   if (rows.length === 0) return (<><Topbar title="Canais" /><div className="px-8 py-6"><EmptyState /></div></>);
 
