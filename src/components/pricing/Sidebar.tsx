@@ -3,13 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
-import { AlertTriangle, BarChart3, Coins, Database, Home, LineChart, Network, TableProperties, TrendingUp } from "lucide-react";
+import { AlertTriangle, BarChart3, Coins, Database, FileSpreadsheet, Home, LineChart, Network, TableProperties, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 
 const dashItems = [
   { to: "/", label: "Início", icon: Home, end: true },
   { to: "/visao-geral", label: "Visão Geral", icon: BarChart3 },
   { to: "/bridge-pvm", label: "Bridge PVM", icon: TrendingUp },
+  { to: "/dre", label: "DRE", icon: FileSpreadsheet },
   { to: "/canais", label: "Canais", icon: Network },
   { to: "/custos", label: "Custos", icon: Coins },
   { to: "/abc", label: "ABC Heróis", icon: LineChart },
