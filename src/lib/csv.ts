@@ -220,7 +220,8 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       if (
         dest === "rol" || dest === "volumeKg" || dest === "cogs" ||
         dest === "margemBruta" || dest === "contribMarginal" ||
-        dest === "frete" || dest === "comissao"
+        dest === "frete" || dest === "comissao" ||
+        dest === "materiaPrima" || dest === "embalagem"
       ) {
         (obj as Record<string, number>)[dest] = parseDecimal(val);
       } else {
