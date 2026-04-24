@@ -375,5 +375,11 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       months: Array.from(monthsSet).sort(),
     },
     warnings,
+    missing: {
+      skus: Array.from(missingSkus.entries()).map(([sku, descricao]) => ({ sku, descricao })),
+      canais: Array.from(missingCanais).sort(),
+      regioes: Array.from(missingRegioes).sort(),
+      ufs: Array.from(missingUfs).sort(),
+    },
   };
 }
