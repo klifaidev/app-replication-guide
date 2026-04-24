@@ -46,6 +46,32 @@ export function FilterGrid() {
           const opts = uniqueValues(baseRows, f.key as keyof PricingRow);
           if (opts.length === 0) return null;
           const current = filters[f.key]?.[0] ?? "__all__";
+
+          // For SKU, build "SKU - NOME ITEM" labels using skuDesc from rows
+          let optionItems: { value: string; label: string }[];
+          if (f.key === "sku") {
+            const descBySku = new Map<string, string>();
+            for (const r of baseRows) {
+              if (r.sku && r.skuDesc && !descBySku.has(r.sku)) {
+                descBySku.set(r.sku, r.skuDesc);
+              }
+            }
+            optionItems = opts
+              .map((o) => {
+                const desc = descBySku.get(o);
+                return { value: o, label: desc ? `${o} - ${desc}` : o };
+              })
+              .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+          } else {
+            optionItems = opts.map((o) => ({ value: o, label: o }));
+          }
+
+          // Custom display for selected SKU value in trigger
+          const triggerDisplay =
+            f.key === "sku" && current !== "__all__"
+              ? optionItems.find((o) => o.value === current)?.label
+              : undefined;
+
           return (
             <div key={f.key}>
               <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -56,13 +82,17 @@ export function FilterGrid() {
                 onValueChange={(v) => setFilter(f.key, v === "__all__" ? [] : [v])}
               >
                 <SelectTrigger className="h-9 border-border/50 bg-secondary/40 text-xs">
-                  <SelectValue placeholder="Todos" />
+                  {triggerDisplay ? (
+                    <span className="truncate">{triggerDisplay}</span>
+                  ) : (
+                    <SelectValue placeholder="Todos" />
+                  )}
                 </SelectTrigger>
                 <SelectContent className="max-h-72">
                   <SelectItem value="__all__">Todos</SelectItem>
-                  {opts.map((o) => (
-                    <SelectItem key={o} value={o} className="text-xs">
-                      {o}
+                  {optionItems.map((o) => (
+                    <SelectItem key={o.value} value={o.value} className="text-xs">
+                      {o.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
