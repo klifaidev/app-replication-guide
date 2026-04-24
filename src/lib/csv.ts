@@ -155,10 +155,18 @@ function detectDelimiter(sample: string): string {
   return counts[0].d || ";";
 }
 
+export interface MissingMappings {
+  skus: { sku: string; descricao?: string }[]; // SKUs sem De Para IA
+  canais: string[];           // Canal distrib. sem De Para Comercial
+  regioes: string[];          // Região sem De Para (UF/Mercado Ajustado)
+  ufs: string[];              // UF sem De Para Regional
+}
+
 export interface ParsedCsv {
   rows: PricingRow[];
   file: LoadedFile;
   warnings: string[];
+  missing: MissingMappings;
 }
 
 export async function parseCsvFile(file: File): Promise<ParsedCsv> {
