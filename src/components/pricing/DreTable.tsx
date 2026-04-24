@@ -82,23 +82,25 @@ function fmt(value: number | null, kind: RowKind) {
 }
 
 export function DreTable({ rows, months }: DreTableProps) {
-  // chronological order
-  const sortedMonths = useMemo(
-    () =>
-      [...months].sort((a, b) =>
-        a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes,
-      ),
-    [months],
-  );
+  const selectedPeriods = usePricing((s) => s.selectedPeriods);
+  
+  // Filter months based on selectedPeriods (null = all)
+  const filteredMonths = useMemo(() => {
+    const sorted = [...months].sort((a, b) =>
+      a.ano !== b.ano ? a.ano - b.ano : a.mes - b.mes,
+    );
+    if (selectedPeriods === null) return sorted;
+    return sorted.filter((m) => selectedPeriods.includes(m.periodo));
+  }, [months, selectedPeriods]);
 
   const aggsByPeriod = useMemo(() => {
     const map = new Map<string, PeriodAgg>();
-    for (const m of sortedMonths) {
+    for (const m of filteredMonths) {
       const rs = rows.filter((r) => r.periodo === m.periodo);
       map.set(m.periodo, aggregate(rs));
     }
     return map;
-  }, [rows, sortedMonths]);
+  }, [rows, filteredMonths]);
 
   if (sortedMonths.length === 0) {
     return (
