@@ -138,12 +138,17 @@ const HEADER_MAP: Record<string, keyof PricingRow | "ignore"> = {
   embalagemajustado: "embalagem",
   embalagemajust: "embalagem",
   packaging: "embalagem",
+  // custo fixo components (MOD e CIF)
+  mod: "mod",
+  modajustado: "mod",
+  maodeobra: "mod",
+  maodeobraajustado: "mod",
+  cif: "cif",
+  cifajustado: "cif",
   // explicit ignores (avoid noise in unmapped list)
   ctbmg: "ignore",                // "Ctb. Mg. %"
   gestorresp: "ignore",
   centro: "ignore",
-  mod: "ignore",
-  cif: "ignore",
 };
 
 function detectDelimiter(sample: string): string {
@@ -242,7 +247,8 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
         dest === "rol" || dest === "volumeKg" || dest === "cogs" ||
         dest === "margemBruta" || dest === "contribMarginal" ||
         dest === "frete" || dest === "comissao" ||
-        dest === "materiaPrima" || dest === "embalagem"
+        dest === "materiaPrima" || dest === "embalagem" ||
+        dest === "mod" || dest === "cif"
       ) {
         (obj as Record<string, number>)[dest] = parseDecimal(val);
       } else {
@@ -317,7 +323,13 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
 
     obj.rol = obj.rol ?? 0;
     obj.volumeKg = obj.volumeKg ?? 0;
-    obj.cogs = obj.cogs ?? 0;
+    obj.materiaPrima = obj.materiaPrima ?? 0;
+    obj.embalagem = obj.embalagem ?? 0;
+    obj.mod = obj.mod ?? 0;
+    obj.cif = obj.cif ?? 0;
+    obj.custoVariavel = (obj.materiaPrima ?? 0) + (obj.embalagem ?? 0);
+    obj.custoFixo = (obj.mod ?? 0) + (obj.cif ?? 0);
+    obj.cogs = obj.custoVariavel ?? 0;
     obj.margemBruta = obj.margemBruta ?? (obj.rol! - obj.cogs!);
     obj.frete = obj.frete ?? 0;
     obj.comissao = obj.comissao ?? 0;
