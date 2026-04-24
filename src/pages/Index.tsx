@@ -2,7 +2,6 @@ import { Topbar } from "@/components/pricing/Topbar";
 import { UploadZone } from "@/components/pricing/UploadZone";
 import { FilterGrid } from "@/components/pricing/FilterGrid";
 import { GlassCard } from "@/components/pricing/GlassCard";
-import { MissingMappingsAlert } from "@/components/pricing/MissingMappingsAlert";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { applyFilters, computeKPIs } from "@/lib/analytics";
@@ -65,8 +64,6 @@ export default function Index() {
           </>
         ) : (
           <>
-            <MissingMappingsAlert />
-
             <GlassCard className="grid grid-cols-2 gap-6 p-6 md:grid-cols-4">
               <Stat label="ROL Total" value={formatBRL(kpis.rol, { compact: true })} accent="text-primary" />
               <Stat
