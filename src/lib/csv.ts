@@ -229,6 +229,17 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       }
     }
 
+    // Split "Artigo (SKU)" — ex.: "100009 CHOC LEITE MELKEN 1X"
+    // → sku: "100009", skuDesc: "CHOC LEITE MELKEN 1X"
+    if (obj.sku) {
+      const m = obj.sku.match(/^\s*(\d{3,})\s*[-–—:.\s]+\s*(.+?)\s*$/);
+      if (m) {
+        obj.sku = m[1];
+        if (!obj.skuDesc) obj.skuDesc = m[2];
+      }
+    }
+
+
     const period = parsePeriod(obj.periodo as string);
     if (!period) {
       rejectedNoPeriod++;
