@@ -159,7 +159,7 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
       catAxisLabelFontSize: 11,
       valAxisLabelFontFace: "Aptos",
       valAxisLabelFontSize: 10,
-      valGridLine: { color: "D9DEE7", pt: 1 },
+      valGridLine: { color: "D9DEE7", size: 1 },
       showLegend: false,
       showTitle: false,
       showValue: true,
@@ -173,10 +173,10 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
     },
   );
 
-  const tableRows = [
+  const tableRows: PptxGenJS.TableRow[] = [
     [
-      { text: "Linha", options: { bold: true, color: "FFFFFF", fill: PPT_COLORS.ink, align: "center" } },
-      { text: "Valor", options: { bold: true, color: "FFFFFF", fill: PPT_COLORS.ink, align: "center" } },
+      { text: "Linha", options: { bold: true, color: "FFFFFF", fill: { color: PPT_COLORS.ink }, align: "center" } },
+      { text: "Valor", options: { bold: true, color: "FFFFFF", fill: { color: PPT_COLORS.ink }, align: "center" } },
     ],
     [
       { text: `Margem base (${result.baseLabel})` },
@@ -189,8 +189,8 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
     [{ text: "Efeito Comissão" }, { text: brl(result.commission), options: { align: "right" } }],
     [{ text: "Efeito Outros" }, { text: brl(result.others), options: { align: "right" } }],
     [
-      { text: `Margem atual (${result.currentLabel})`, options: { bold: true, fill: PPT_COLORS.surfaceAlt } },
-      { text: brl(result.current), options: { bold: true, align: "right", fill: PPT_COLORS.surfaceAlt } },
+      { text: `Margem atual (${result.currentLabel})`, options: { bold: true, fill: { color: PPT_COLORS.surfaceAlt } } },
+      { text: brl(result.current), options: { bold: true, align: "right", fill: { color: PPT_COLORS.surfaceAlt } } },
     ],
   ];
 
@@ -217,8 +217,8 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
     fontFace: "Aptos",
     fontSize: 9,
     color: PPT_COLORS.ink,
-    fill: PPT_COLORS.surface,
-    valign: "mid",
+    fill: { color: PPT_COLORS.surface },
+    valign: "middle",
   });
 }
 
@@ -272,7 +272,7 @@ function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: Effec
       catAxisLabelFontSize: 10,
       valAxisLabelFontFace: "Aptos",
       valAxisLabelFontSize: 9,
-      valGridLine: { color: "E5E7EB", pt: 1 },
+      valGridLine: { color: "E5E7EB", size: 1 },
       showLegend: false,
       showValue: true,
       dataLabelPosition: "outEnd",
@@ -287,8 +287,8 @@ function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: Effec
   const asTableRows = (title: string, items: PVMSkuDetail[], toneColor: string) => {
     const rows: PptxGenJS.TableRow[] = [
       [
-        { text: title, options: { bold: true, color: "FFFFFF", fill: toneColor } },
-        { text: "Impacto", options: { bold: true, color: "FFFFFF", fill: toneColor, align: "right" } },
+        { text: title, options: { bold: true, color: "FFFFFF", fill: { color: toneColor } } },
+        { text: "Impacto", options: { bold: true, color: "FFFFFF", fill: { color: toneColor }, align: "right" } },
       ],
     ];
 
@@ -321,8 +321,8 @@ function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: Effec
     fontFace: "Aptos",
     fontSize: 9,
     color: PPT_COLORS.ink,
-    fill: PPT_COLORS.surface,
-    valign: "mid",
+    fill: { color: PPT_COLORS.surface },
+    valign: "middle",
   });
 
   slide.addTable(asTableRows("Ofensores", offenders, PPT_COLORS.negative), {
@@ -336,8 +336,8 @@ function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: Effec
     fontFace: "Aptos",
     fontSize: 9,
     color: PPT_COLORS.ink,
-    fill: PPT_COLORS.surface,
-    valign: "mid",
+    fill: { color: PPT_COLORS.surface },
+    valign: "middle",
   });
 }
 
@@ -348,11 +348,9 @@ export async function exportBridgePvmPpt(result: PVMResult) {
   pptx.company = "Lovable";
   pptx.subject = "Bridge PVM";
   pptx.title = `Bridge PVM ${result.baseLabel} vs ${result.currentLabel}`;
-  pptx.lang = "pt-BR";
   pptx.theme = {
     headFontFace: "Aptos Display",
     bodyFontFace: "Aptos",
-    lang: "pt-BR",
   };
 
   addBridgeSummarySlide(pptx, result);
