@@ -14,10 +14,16 @@ interface PeriodAgg {
   volume: number;
   rol: number;
   cogs: number;
+  custoVariavel: number;
+  custoFixo: number;
   materiaPrima: number;
   embalagem: number;
+  mod: number;
+  cif: number;
   hasMP: boolean;
   hasEmb: boolean;
+  hasMod: boolean;
+  hasCif: boolean;
   frete: number;
   comissao: number;
   cm: number;
@@ -26,19 +32,24 @@ interface PeriodAgg {
 function aggregate(rs: PricingRow[]): PeriodAgg {
   const a: PeriodAgg = {
     volume: 0, rol: 0, cogs: 0,
-    materiaPrima: 0, embalagem: 0,
-    hasMP: false, hasEmb: false,
+    custoVariavel: 0, custoFixo: 0,
+    materiaPrima: 0, embalagem: 0, mod: 0, cif: 0,
+    hasMP: false, hasEmb: false, hasMod: false, hasCif: false,
     frete: 0, comissao: 0, cm: 0,
   };
   for (const r of rs) {
     a.volume += r.volumeKg;
     a.rol += r.rol;
     a.cogs += r.cogs;
+    a.custoVariavel += r.custoVariavel ?? 0;
+    a.custoFixo += r.custoFixo ?? 0;
     a.frete += r.frete ?? 0;
     a.comissao += r.comissao ?? 0;
     a.cm += r.contribMarginal;
     if (r.materiaPrima != null) { a.materiaPrima += r.materiaPrima; a.hasMP = true; }
     if (r.embalagem != null) { a.embalagem += r.embalagem; a.hasEmb = true; }
+    if (r.mod != null) { a.mod += r.mod; a.hasMod = true; }
+    if (r.cif != null) { a.cif += r.cif; a.hasCif = true; }
   }
   return a;
 }
@@ -58,10 +69,14 @@ const LINES: DreLine[] = [
   { label: "Volume (Kg)", kind: "kg", bold: true, get: (a) => a.volume },
   { label: "Receita Líquida", kind: "value", get: (a) => a.rol },
   { label: "ROL (R$/Kg)", kind: "perKg", bold: true, get: (a) => safe(a.rol, a.volume) },
-  { label: "Custo Variável", kind: "value", get: (a) => -Math.abs(a.cogs) },
-  { label: "Custo Variável (R$/Kg)", kind: "perKg", bold: true, get: (a) => -safe(Math.abs(a.cogs), a.volume) },
+  { label: "Custo Variável", kind: "value", get: (a) => -Math.abs(a.custoVariavel) },
+  { label: "Custo Variável (R$/Kg)", kind: "perKg", bold: true, get: (a) => -safe(Math.abs(a.custoVariavel), a.volume) },
   { label: "Matéria Prima Ajustado", kind: "value", get: (a) => a.hasMP ? -Math.abs(a.materiaPrima) : null },
   { label: "Embalagem Ajustado", kind: "value", get: (a) => a.hasEmb ? -Math.abs(a.embalagem) : null },
+  { label: "Custo Fixo", kind: "value", get: (a) => -Math.abs(a.custoFixo) },
+  { label: "Custo Fixo (R$/Kg)", kind: "perKg", bold: true, get: (a) => -safe(Math.abs(a.custoFixo), a.volume) },
+  { label: "MOD", kind: "value", get: (a) => a.hasMod ? -Math.abs(a.mod) : null },
+  { label: "CIF", kind: "value", get: (a) => a.hasCif ? -Math.abs(a.cif) : null },
   { label: "Frete sobre Vendas Ajustado", kind: "value", get: (a) => -Math.abs(a.frete) },
   { label: "Frete (R$/Kg)", kind: "perKg", get: (a) => -safe(Math.abs(a.frete), a.volume) },
   { label: "Comissão Repres Ajustado", kind: "value", get: (a) => -Math.abs(a.comissao) },
