@@ -92,7 +92,7 @@ function addCover(slide: PptxGenJS.Slide, result: PVMResult) {
 
   kpis.forEach((item, index) => {
     const x = 0.6 + index * 3.05;
-    slide.addShape(PptxGenJS.ShapeType.roundRect, {
+    slide.addShape("roundRect", {
       x,
       y: 1.5,
       w: 2.75,
@@ -142,7 +142,7 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
   });
 
   slide.addChart(
-    PptxGenJS.ChartType.bar,
+    "bar",
     [
       {
         name: "Impacto",
@@ -253,7 +253,7 @@ function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: Effec
   });
 
   slide.addChart(
-    PptxGenJS.ChartType.bar,
+    "bar",
     [
       {
         name: effect.label,
