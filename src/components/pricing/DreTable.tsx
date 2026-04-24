@@ -145,7 +145,7 @@ export function DreTable({ rows, months }: DreTableProps) {
               >
                 {line.label}
               </td>
-              {sortedMonths.map((m) => {
+              {filteredMonths.map((m) => {
                 const a = aggsByPeriod.get(m.periodo)!;
                 const v = line.get(a);
                 const isNeg = typeof v === "number" && v < 0;
