@@ -14,6 +14,7 @@ export interface PricingRow {
   canal?: string;
   categoria?: string;
   subcategoria?: string;
+  formato?: string;
   sku?: string;
   skuDesc?: string;
   cliente?: string;
@@ -55,6 +56,7 @@ export type FilterKey =
   | "canal"
   | "categoria"
   | "subcategoria"
+  | "formato"
   | "sku"
   | "regiao"
   | "mercado"

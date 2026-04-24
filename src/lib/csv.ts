@@ -246,6 +246,7 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     if (dp) {
       obj.categoria = dp.categoria || obj.categoria;
       obj.subcategoria = dp.subcategoria || obj.subcategoria;
+      obj.formato = dp.formato || obj.formato;
       obj.marca = dp.marca || obj.marca;
       obj.tecnologia = dp.tecnologia || obj.tecnologia;
       obj.mercado = dp.mercado || obj.mercado;
