@@ -18,7 +18,7 @@ export default function VisaoGeral() {
 
   const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
   const kpis = useMemo(() => computeKPIs(filtered, metric), [filtered, metric]);
-  const byCanal = useMemo(() => aggregateBy(filtered, metric, (r) => r.canal || "Sem canal"), [filtered, metric]);
+  const byCanal = useMemo(() => aggregateBy(filtered, metric, (r) => r.canalAjustado || "Sem canal"), [filtered, metric]);
   const bySku = useMemo(() => aggregateBy(filtered, metric, (r) => r.skuDesc || r.sku || "—"), [filtered, metric]);
 
   if (rows.length === 0) {
