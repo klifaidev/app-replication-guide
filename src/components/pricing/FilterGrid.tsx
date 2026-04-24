@@ -8,16 +8,16 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
 const FIELDS: { key: FilterKey; label: string }[] = [
-  { key: "marca", label: "Marca" },
-  { key: "canal", label: "Canal" },
-  { key: "categoria", label: "Categoria" },
-  { key: "subcategoria", label: "Subcategoria" },
-  { key: "sku", label: "SKU" },
+  { key: "categoria", label: "01. Categoria" },
+  { key: "marca", label: "02. Marca" },
+  { key: "subcategoria", label: "04. Formato" },
+  { key: "mercado", label: "05. Mercado" },
+  { key: "faixaPeso", label: "06. Faixa de Peso" },
+  { key: "sabor", label: "07. Sabor" },
+  { key: "canal", label: "Canal distrib." },
+  { key: "sku", label: "Artigo (SKU)" },
   { key: "regiao", label: "Região" },
-  { key: "mercado", label: "Mercado" },
-  { key: "sabor", label: "Sabor" },
   { key: "tecnologia", label: "Tecnologia" },
-  { key: "faixaPeso", label: "Faixa de Peso" },
 ];
 
 export function FilterGrid() {
