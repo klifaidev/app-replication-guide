@@ -3,6 +3,7 @@ import type { PricingRow } from "@/lib/types";
 import type { MonthInfo } from "@/lib/types";
 import { formatBRL, formatNum, formatPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { usePricing } from "@/store/pricing";
 
 interface DreTableProps {
   rows: PricingRow[];
