@@ -46,10 +46,18 @@ export function UploadZone({ compact = false }: { compact?: boolean }) {
             );
             if (!replace) continue;
           }
-          addParsed(parsed.rows, parsed.file, replace);
+          addParsed(parsed.rows, parsed.file, replace, parsed.missing);
+          const m = parsed.missing;
+          const missingTotal = m.skus.length + m.canais.length + m.regioes.length + m.ufs.length;
           toast.success(
             `${parsed.file.name}: ${parsed.rows.length.toLocaleString("pt-BR")} linhas em ${parsed.file.months.length} mês(es).`,
           );
+          if (missingTotal > 0) {
+            toast.warning(
+              `${missingTotal} valor(es) sem mapeamento no De Para. Veja o alerta no topo.`,
+              { duration: 8000 },
+            );
+          }
         }
       } catch (e) {
         console.error(e);
