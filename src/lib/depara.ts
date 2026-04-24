@@ -4,9 +4,10 @@ import deparaJson from "@/data/depara.json";
 
 export interface DeParaEntry {
   categoria: string;
-  subcategoria: string; // mapeado a partir de "Formato"
+  subcategoria: string;
   marca: string;
   tecnologia: string;
+  formato: string;
   mercado: string;
   faixaPeso: string;
   sabor: string;
