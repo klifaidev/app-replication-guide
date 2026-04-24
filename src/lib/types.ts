@@ -31,12 +31,16 @@ export interface PricingRow {
   rol: number;        // Receita Operacional Líquida
   volumeKg: number;
   cogs: number;       // Custo (CMV / CPV)
+  custoVariavel: number;
+  custoFixo: number;
   margemBruta: number;
   contribMarginal: number;
   frete: number;      // Frete sobre vendas
   comissao: number;   // Comissão representante
   materiaPrima?: number; // Matéria Prima Ajustado (componente do CPV)
   embalagem?: number;    // Embalagem Ajustado (componente do CPV)
+  mod?: number;          // MOD (componente do custo fixo)
+  cif?: number;          // CIF (componente do custo fixo)
 }
 
 export interface LoadedFile {

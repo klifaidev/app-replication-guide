@@ -8,6 +8,7 @@ import Index from "./pages/Index.tsx";
 import VisaoGeral from "./pages/VisaoGeral.tsx";
 import BridgePvm from "./pages/BridgePvm.tsx";
 import Canais from "./pages/Canais.tsx";
+import Custos from "./pages/Custos.tsx";
 import Abc from "./pages/Abc.tsx";
 import Detalhe from "./pages/Detalhe.tsx";
 import Upload from "./pages/Upload.tsx";
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/visao-geral" element={<VisaoGeral />} />
             <Route path="/bridge-pvm" element={<BridgePvm />} />
             <Route path="/canais" element={<Canais />} />
+            <Route path="/custos" element={<Custos />} />
             <Route path="/abc" element={<Abc />} />
             <Route path="/detalhe" element={<Detalhe />} />
             <Route path="/upload" element={<Upload />} />

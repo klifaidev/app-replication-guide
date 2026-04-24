@@ -1,0 +1,146 @@
+import { useMemo } from "react";
+import { Area, AreaChart, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine, XAxis, YAxis } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Topbar } from "@/components/pricing/Topbar";
+import { GlassCard } from "@/components/pricing/GlassCard";
+import { KpiCard } from "@/components/pricing/KpiCard";
+import { DataTable } from "@/components/pricing/DataTable";
+import { EmptyState } from "@/components/pricing/EmptyState";
+import { applyFilters, computeCostEvolution } from "@/lib/analytics";
+import { formatBRL, formatPct, formatTon } from "@/lib/format";
+import { usePricing } from "@/store/pricing";
+
+const chartConfig = {
+  custoVariavel: { label: "Custo Variável", color: "hsl(var(--warning))" },
+  custoFixo: { label: "Custo Fixo", color: "hsl(var(--accent))" },
+  custoTotal: { label: "Custo Total", color: "hsl(var(--primary))" },
+  custoVariavelPctRol: { label: "CV / ROL", color: "hsl(var(--warning))" },
+  custoFixoPctRol: { label: "CF / ROL", color: "hsl(var(--accent))" },
+  custoTotalPorKg: { label: "Custo Total / Kg", color: "hsl(var(--primary))" },
+} as const;
+
+export default function Custos() {
+  const rows = usePricing((s) => s.rows);
+  const filters = usePricing((s) => s.filters);
+  const selected = usePricing((s) => s.selectedPeriods);
+
+  const filtered = useMemo(() => applyFilters(rows, filters, selected), [rows, filters, selected]);
+  const evolution = useMemo(() => computeCostEvolution(filtered), [filtered]);
+
+  const totals = useMemo(() => {
+    return evolution.reduce(
+      (acc, row) => {
+        acc.rol += row.rol;
+        acc.volumeKg += row.volumeKg;
+        acc.custoVariavel += row.custoVariavel;
+        acc.custoFixo += row.custoFixo;
+        return acc;
+      },
+      { rol: 0, volumeKg: 0, custoVariavel: 0, custoFixo: 0 },
+    );
+  }, [evolution]);
+
+  const custoTotal = totals.custoVariavel + totals.custoFixo;
+  const custoVariavelPct = totals.rol > 0 ? totals.custoVariavel / totals.rol : 0;
+  const custoFixoPct = totals.rol > 0 ? totals.custoFixo / totals.rol : 0;
+  const custoTotalPorKg = totals.volumeKg > 0 ? custoTotal / totals.volumeKg : 0;
+
+  if (rows.length === 0) {
+    return (
+      <>
+        <Topbar title="Custos" />
+        <div className="px-8 py-6"><EmptyState /></div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Topbar title="Custos" subtitle="Evolutivo de custo variável e fixo com leitura analítica por ROL e por Kg" />
+      <div className="space-y-6 px-8 py-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label="Custo Variável" value={formatBRL(totals.custoVariavel, { compact: true })} subValue={formatPct(custoVariavelPct)} accent="amber" />
+          <KpiCard label="Custo Fixo" value={formatBRL(totals.custoFixo, { compact: true })} subValue={formatPct(custoFixoPct)} accent="violet" />
+          <KpiCard label="Custo Total" value={formatBRL(custoTotal, { compact: true })} subValue={formatBRL(custoTotalPorKg, { digits: 2 }) + "/kg"} accent="blue" glow="blue" />
+          <KpiCard label="Volume filtrado" value={formatTon(totals.volumeKg)} subValue={`${evolution.length} período(s)`} accent="green" />
+        </div>
+
+        <GlassCard glow="blue">
+          <header className="mb-4">
+            <h2 className="text-lg font-medium">Evolução absoluta de custos</h2>
+            <p className="text-xs text-muted-foreground">Área empilhada para leitura de composição e linha para total consolidado.</p>
+          </header>
+          <ChartContainer config={chartConfig} className="h-[360px] w-full">
+            <AreaChart data={evolution} margin={{ left: 8, right: 8, top: 12, bottom: 0 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" />
+              <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
+              <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatBRL(Number(v), { compact: true })} width={84} />
+              <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [formatBRL(Number(value)), chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)]} />} />
+              <Legend />
+              <Area type="monotone" dataKey="custoVariavel" stackId="custos" stroke="var(--color-custoVariavel)" fill="var(--color-custoVariavel)" fillOpacity={0.45} />
+              <Area type="monotone" dataKey="custoFixo" stackId="custos" stroke="var(--color-custoFixo)" fill="var(--color-custoFixo)" fillOpacity={0.35} />
+              <Line type="monotone" dataKey="custoTotal" stroke="var(--color-custoTotal)" strokeWidth={2.5} dot={false} />
+            </AreaChart>
+          </ChartContainer>
+        </GlassCard>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <GlassCard>
+            <header className="mb-4">
+              <h2 className="text-lg font-medium">Pressão de custo sobre a receita</h2>
+              <p className="text-xs text-muted-foreground">Percentual do ROL consumido por custo variável e fixo em cada período.</p>
+            </header>
+            <ChartContainer config={chartConfig} className="h-[320px] w-full">
+              <ComposedChart data={evolution} margin={{ left: 8, right: 8, top: 12, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatPct(Number(v), 0)} width={72} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [formatPct(Number(value)), chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)]} />} />
+                <ReferenceLine y={0} stroke="hsl(var(--border))" />
+                <Area type="monotone" dataKey="custoVariavelPctRol" stackId="pct" stroke="var(--color-custoVariavelPctRol)" fill="var(--color-custoVariavelPctRol)" fillOpacity={0.35} />
+                <Area type="monotone" dataKey="custoFixoPctRol" stackId="pct" stroke="var(--color-custoFixoPctRol)" fill="var(--color-custoFixoPctRol)" fillOpacity={0.25} />
+              </ComposedChart>
+            </ChartContainer>
+          </GlassCard>
+
+          <GlassCard>
+            <header className="mb-4">
+              <h2 className="text-lg font-medium">Eficiência por Kg</h2>
+              <p className="text-xs text-muted-foreground">Leitura mensal do custo unitário para separar efeito de diluição e pressão estrutural.</p>
+            </header>
+            <ChartContainer config={chartConfig} className="h-[320px] w-full">
+              <ComposedChart data={evolution} margin={{ left: 8, right: 8, top: 12, bottom: 0 }}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={24} />
+                <YAxis tickLine={false} axisLine={false} tickFormatter={(v) => formatBRL(Number(v), { digits: 2 })} width={96} />
+                <ChartTooltip content={<ChartTooltipContent formatter={(value, name) => [formatBRL(Number(value), { digits: 2 }), chartConfig[String(name) as keyof typeof chartConfig]?.label ?? String(name)]} />} />
+                <Line type="monotone" dataKey="custoVariavelPorKg" stroke="var(--color-custoVariavel)" strokeWidth={2.25} dot={false} />
+                <Line type="monotone" dataKey="custoFixoPorKg" stroke="var(--color-custoFixo)" strokeWidth={2.25} dot={false} />
+                <Line type="monotone" dataKey="custoTotalPorKg" stroke="var(--color-custoTotalPorKg)" strokeWidth={2.75} dot={false} />
+              </ComposedChart>
+            </ChartContainer>
+          </GlassCard>
+        </div>
+
+        <GlassCard>
+          <header className="mb-4">
+            <h2 className="text-lg font-medium">Detalhe mensal de custos</h2>
+            <p className="text-xs text-muted-foreground">Tabela de auditoria para validar composição, peso sobre a receita e custo unitário.</p>
+          </header>
+          <DataTable
+            rows={evolution as unknown as Record<string, unknown>[]}
+            columns={[
+              { key: "label", label: "Período", align: "left", format: (v) => <span className="font-medium">{String(v)}</span> },
+              { key: "custoVariavel", label: "Custo Var.", align: "right", format: (v) => formatBRL(Number(v), { compact: true }) },
+              { key: "custoFixo", label: "Custo Fixo", align: "right", format: (v) => formatBRL(Number(v), { compact: true }) },
+              { key: "custoTotal", label: "Custo Total", align: "right", format: (v) => formatBRL(Number(v), { compact: true }) },
+              { key: "custoVariavelPctRol", label: "CV / ROL", align: "right", format: (v) => formatPct(Number(v)) },
+              { key: "custoFixoPctRol", label: "CF / ROL", align: "right", format: (v) => formatPct(Number(v)) },
+              { key: "custoTotalPorKg", label: "Custo Total / Kg", align: "right", format: (v) => formatBRL(Number(v), { digits: 2 }) },
+            ]}
+          />
+        </GlassCard>
+      </div>
+    </>
+  );
+}

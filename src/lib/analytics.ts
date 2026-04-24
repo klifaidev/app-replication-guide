@@ -52,6 +52,8 @@ export interface AggRow {
   margemPct: number;
   volumeKg: number;
   rolPorKg: number;
+  custoVariavel: number;
+  custoFixo: number;
 }
 
 export function aggregateBy(
@@ -59,13 +61,15 @@ export function aggregateBy(
   metric: Metric,
   keyFn: (r: PricingRow) => string,
 ): AggRow[] {
-  const map = new Map<string, { rol: number; margem: number; volumeKg: number }>();
+  const map = new Map<string, { rol: number; margem: number; volumeKg: number; custoVariavel: number; custoFixo: number }>();
   for (const r of rows) {
     const k = keyFn(r) || "—";
-    const cur = map.get(k) ?? { rol: 0, margem: 0, volumeKg: 0 };
+    const cur = map.get(k) ?? { rol: 0, margem: 0, volumeKg: 0, custoVariavel: 0, custoFixo: 0 };
     cur.rol += r.rol;
     cur.margem += measureOf(r, metric);
     cur.volumeKg += r.volumeKg;
+    cur.custoVariavel += r.custoVariavel ?? 0;
+    cur.custoFixo += r.custoFixo ?? 0;
     map.set(k, cur);
   }
   return Array.from(map.entries())
@@ -76,8 +80,72 @@ export function aggregateBy(
       margemPct: v.rol > 0 ? v.margem / v.rol : 0,
       volumeKg: v.volumeKg,
       rolPorKg: v.volumeKg > 0 ? v.rol / v.volumeKg : 0,
+      custoVariavel: v.custoVariavel,
+      custoFixo: v.custoFixo,
     }))
     .sort((a, b) => b.rol - a.rol);
+}
+
+export interface CostEvolutionRow {
+  periodo: string;
+  label: string;
+  ano: number;
+  mes: number;
+  rol: number;
+  volumeKg: number;
+  custoVariavel: number;
+  custoFixo: number;
+  custoTotal: number;
+  custoVariavelPctRol: number;
+  custoFixoPctRol: number;
+  custoTotalPctRol: number;
+  custoVariavelPorKg: number;
+  custoFixoPorKg: number;
+  custoTotalPorKg: number;
+}
+
+export function computeCostEvolution(rows: PricingRow[]): CostEvolutionRow[] {
+  const map = new Map<string, CostEvolutionRow>();
+  for (const r of rows) {
+    const cur = map.get(r.periodo) ?? {
+      periodo: r.periodo,
+      label: `${String(r.mes).padStart(2, "0")}/${String(r.ano).slice(-2)}`,
+      ano: r.ano,
+      mes: r.mes,
+      rol: 0,
+      volumeKg: 0,
+      custoVariavel: 0,
+      custoFixo: 0,
+      custoTotal: 0,
+      custoVariavelPctRol: 0,
+      custoFixoPctRol: 0,
+      custoTotalPctRol: 0,
+      custoVariavelPorKg: 0,
+      custoFixoPorKg: 0,
+      custoTotalPorKg: 0,
+    };
+    cur.rol += r.rol;
+    cur.volumeKg += r.volumeKg;
+    cur.custoVariavel += r.custoVariavel ?? 0;
+    cur.custoFixo += r.custoFixo ?? 0;
+    map.set(r.periodo, cur);
+  }
+
+  return Array.from(map.values())
+    .map((row) => {
+      const custoTotal = row.custoVariavel + row.custoFixo;
+      return {
+        ...row,
+        custoTotal,
+        custoVariavelPctRol: row.rol > 0 ? row.custoVariavel / row.rol : 0,
+        custoFixoPctRol: row.rol > 0 ? row.custoFixo / row.rol : 0,
+        custoTotalPctRol: row.rol > 0 ? custoTotal / row.rol : 0,
+        custoVariavelPorKg: row.volumeKg > 0 ? row.custoVariavel / row.volumeKg : 0,
+        custoFixoPorKg: row.volumeKg > 0 ? row.custoFixo / row.volumeKg : 0,
+        custoTotalPorKg: row.volumeKg > 0 ? custoTotal / row.volumeKg : 0,
+      };
+    })
+    .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
 }
 
 export interface PVMSkuDetail {
