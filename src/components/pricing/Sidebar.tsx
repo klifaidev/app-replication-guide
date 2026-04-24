@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
-import { BarChart3, Coins, Database, Home, LineChart, Network, TableProperties, TrendingUp } from "lucide-react";
+import { AlertTriangle, BarChart3, Coins, Database, Home, LineChart, Network, TableProperties, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 
 const dashItems = [
@@ -19,9 +19,14 @@ const dashItems = [
 export function Sidebar() {
   const metric = usePricing((s) => s.metric);
   const setMetric = usePricing((s) => s.setMetric);
+  const missing = usePricing((s) => s.missing);
   const monthsCount = useMonthsInfo().length;
 
   const cm = useMemo(() => metric === "cm", [metric]);
+  const missingCount = useMemo(
+    () => missing.skus.length + missing.canais.length + missing.regioes.length + missing.ufs.length,
+    [missing],
+  );
 
   return (
     <aside className="flex h-screen w-[230px] shrink-0 flex-col border-r border-border/40 bg-sidebar/60 backdrop-blur-2xl">
@@ -70,10 +75,11 @@ export function Sidebar() {
               <span className="flex items-center gap-2.5">
                 <Database className="h-4 w-4" />
                 Upload / Bases
+                {missingCount > 0 && <AlertTriangle className="h-3.5 w-3.5 text-warning" />}
               </span>
-              {monthsCount > 0 && (
+              {(monthsCount > 0 || missingCount > 0) && (
                 <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold">
-                  {monthsCount}
+                  {missingCount > 0 ? `${monthsCount} · !` : monthsCount}
                 </Badge>
               )}
             </NavLink>

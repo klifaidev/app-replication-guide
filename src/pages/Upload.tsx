@@ -1,5 +1,6 @@
 import { Topbar } from "@/components/pricing/Topbar";
 import { GlassCard } from "@/components/pricing/GlassCard";
+import { MissingMappingsAlert } from "@/components/pricing/MissingMappingsAlert";
 import { UploadZone } from "@/components/pricing/UploadZone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,8 @@ export default function Upload() {
     <>
       <Topbar title="Upload / Bases" subtitle="Gerencie os arquivos e meses carregados" />
       <div className="space-y-6 px-8 py-6">
+        <MissingMappingsAlert />
+
         <GlassCard>
           <UploadZone />
         </GlassCard>
