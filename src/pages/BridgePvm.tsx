@@ -3,17 +3,38 @@ import { GlassCard } from "@/components/pricing/GlassCard";
 import { KpiCard } from "@/components/pricing/KpiCard";
 import { Waterfall } from "@/components/pricing/Waterfall";
 import { EmptyState } from "@/components/pricing/EmptyState";
-import { DreTable } from "@/components/pricing/DreTable";
 import { usePricing } from "@/store/pricing";
 import { useFyList, useMonthsInfo } from "@/store/selectors";
-import { applyFilters, calcPVM } from "@/lib/analytics";
+import { applyFilters, calcPVM, type PVMSkuDetail } from "@/lib/analytics";
 import { exportPvmCsv } from "@/lib/exportCsv";
 import { formatBRL } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ArrowRight, Calendar, CalendarDays, Download } from "lucide-react";
+import { ArrowRight, Calendar, CalendarDays, Download, TrendingDown, TrendingUp } from "lucide-react";
 import { useEffect, useMemo } from "react";
+
+const EFFECTS: Array<{
+  key: keyof Pick<PVMSkuDetail, "volumeEffect" | "priceEffect" | "costEffect">;
+  label: string;
+  subtitle: string;
+}> = [
+  {
+    key: "volumeEffect",
+    label: "Efeito Volume",
+    subtitle: "Impacto da variação de volume sobre a margem.",
+  },
+  {
+    key: "priceEffect",
+    label: "Efeito Preço",
+    subtitle: "Impacto da realização de preço no período comparado.",
+  },
+  {
+    key: "costEffect",
+    label: "Efeito Custo Variável",
+    subtitle: "Ganhos e pressões vindos do custo variável unitário.",
+  },
+];
 
 export default function BridgePvm() {
   const rows = usePricing((s) => s.rows);
@@ -171,18 +192,20 @@ export default function BridgePvm() {
               </header>
               <Waterfall data={result} />
             </GlassCard>
+
+            <div className="grid gap-4 xl:grid-cols-3">
+              {EFFECTS.map((effect) => (
+                <EffectRankingCard
+                  key={effect.key}
+                  title={effect.label}
+                  subtitle={effect.subtitle}
+                  details={result.skuDetails}
+                  effectKey={effect.key}
+                />
+              ))}
+            </div>
           </>
         )}
-
-        <GlassCard>
-          <header className="mb-4">
-            <h2 className="text-lg font-medium">DRE por Período</h2>
-            <p className="text-xs text-muted-foreground">
-              Visão consolidada por mês — valores aplicam os filtros ativos.
-            </p>
-          </header>
-          <DreTable rows={filtered} months={months} />
-        </GlassCard>
       </div>
     </>
   );
@@ -219,5 +242,105 @@ function PeriodSelect({
         </SelectContent>
       </Select>
     </div>
+  );
+}
+
+function EffectRankingCard({
+  title,
+  subtitle,
+  details,
+  effectKey,
+}: {
+  title: string;
+  subtitle: string;
+  details: PVMSkuDetail[];
+  effectKey: keyof Pick<PVMSkuDetail, "volumeEffect" | "priceEffect" | "costEffect">;
+}) {
+  const heroes = [...details]
+    .filter((item) => item[effectKey] > 0)
+    .sort((a, b) => b[effectKey] - a[effectKey])
+    .slice(0, 5);
+
+  const offenders = [...details]
+    .filter((item) => item[effectKey] < 0)
+    .sort((a, b) => a[effectKey] - b[effectKey])
+    .slice(0, 5);
+
+  return (
+    <GlassCard className="space-y-4">
+      <header>
+        <h2 className="text-lg font-medium">{title}</h2>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </header>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+        <EffectList
+          title="Heróis"
+          icon={TrendingUp}
+          items={heroes}
+          effectKey={effectKey}
+          emptyLabel="Sem impactos positivos relevantes no recorte atual."
+          tone="positive"
+        />
+        <EffectList
+          title="Ofensores"
+          icon={TrendingDown}
+          items={offenders}
+          effectKey={effectKey}
+          emptyLabel="Sem impactos negativos relevantes no recorte atual."
+          tone="negative"
+        />
+      </div>
+    </GlassCard>
+  );
+}
+
+function EffectList({
+  title,
+  icon: Icon,
+  items,
+  effectKey,
+  emptyLabel,
+  tone,
+}: {
+  title: string;
+  icon: typeof TrendingUp;
+  items: PVMSkuDetail[];
+  effectKey: keyof Pick<PVMSkuDetail, "volumeEffect" | "priceEffect" | "costEffect">;
+  emptyLabel: string;
+  tone: "positive" | "negative";
+}) {
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <Icon className={tone === "positive" ? "h-4 w-4 text-primary" : "h-4 w-4 text-destructive"} />
+        {title}
+      </div>
+
+      {items.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border/60 bg-secondary/20 px-3 py-4 text-xs text-muted-foreground">
+          {emptyLabel}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {items.map((item, index) => (
+            <div
+              key={`${title}-${effectKey}-${item.sku}`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-secondary/20 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  #{index + 1}
+                </div>
+                <div className="truncate text-sm font-medium text-foreground">{item.sku}</div>
+              </div>
+              <div className={tone === "positive" ? "text-sm font-semibold text-primary" : "text-sm font-semibold text-destructive"}>
+                {formatBRL(item[effectKey], { compact: true })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
