@@ -102,7 +102,7 @@ export function DreTable({ rows, months }: DreTableProps) {
     return map;
   }, [rows, filteredMonths]);
 
-  if (sortedMonths.length === 0) {
+  if (filteredMonths.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         Nenhum período disponível para montar o DRE.
@@ -118,7 +118,7 @@ export function DreTable({ rows, months }: DreTableProps) {
             <th className="sticky left-0 z-10 min-w-[260px] border-b border-border/40 bg-card/80 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
               Valores
             </th>
-            {sortedMonths.map((m) => (
+            {filteredMonths.map((m) => (
               <th
                 key={m.periodo}
                 className="border-b border-border/40 bg-card/40 px-3 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
