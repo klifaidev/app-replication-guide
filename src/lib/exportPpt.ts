@@ -312,30 +312,65 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
       { text: `Margem atual (${result.currentLabel})`, options: { bold: true, fill: { color: PPT_COLORS.surfaceAlt } } },
       { text: brl(result.current), options: { bold: true, align: "right", fill: { color: PPT_COLORS.surfaceAlt } } },
     ],
-  ];
+}
 
-  slide.addText("Resumo editável", {
-    x: 6.45,
-    y: 2.95,
-    w: 2.8,
-    h: 0.3,
+function addBridgeTableSlide(pptx: PptxGenJS, result: PVMResult) {
+  const slide = pptx.addSlide();
+  slide.background = { color: "FFFFFF" };
+
+  slide.addText("Bridge PVM — Resumo editável", {
+    x: 0.6,
+    y: 0.45,
+    w: 9,
+    h: 0.4,
     fontFace: "Aptos Display",
-    fontSize: 16,
+    fontSize: 22,
     bold: true,
     color: PPT_COLORS.ink,
     margin: 0,
   });
+  slide.addText(`${result.baseLabel} → ${result.currentLabel}`, {
+    x: 0.6,
+    y: 0.9,
+    w: 6,
+    h: 0.3,
+    fontFace: "Aptos",
+    fontSize: 11,
+    color: PPT_COLORS.muted,
+    margin: 0,
+  });
+
+  const tableRows: PptxGenJS.TableRow[] = [
+    [
+      { text: "Linha", options: { bold: true, color: "FFFFFF", fill: { color: PPT_COLORS.ink }, align: "center" } },
+      { text: "Valor", options: { bold: true, color: "FFFFFF", fill: { color: PPT_COLORS.ink }, align: "center" } },
+    ],
+    [
+      { text: `Margem base (${result.baseLabel})` },
+      { text: brl(result.base), options: { align: "right" } },
+    ],
+    [{ text: "Efeito Volume" }, { text: brl(result.volume), options: { align: "right" } }],
+    [{ text: "Efeito Preço" }, { text: brl(result.price), options: { align: "right" } }],
+    [{ text: "Efeito Custo Variável" }, { text: brl(result.cost), options: { align: "right" } }],
+    [{ text: "Efeito Frete" }, { text: brl(result.freight), options: { align: "right" } }],
+    [{ text: "Efeito Comissão" }, { text: brl(result.commission), options: { align: "right" } }],
+    [{ text: "Efeito Outros" }, { text: brl(result.others), options: { align: "right" } }],
+    [
+      { text: `Margem atual (${result.currentLabel})`, options: { bold: true, fill: { color: PPT_COLORS.surfaceAlt } } },
+      { text: brl(result.current), options: { bold: true, align: "right", fill: { color: PPT_COLORS.surfaceAlt } } },
+    ],
+  ];
 
   slide.addTable(tableRows, {
-    x: 6.45,
-    y: 3.35,
-    w: 2.9,
-    h: 3.15,
-    colW: [1.85, 1.05],
+    x: 2.5,
+    y: 1.5,
+    w: 5,
+    h: 4.8,
+    colW: [3, 2],
     border: { pt: 1, color: PPT_COLORS.line },
-    margin: 0.05,
+    margin: 0.08,
     fontFace: "Aptos",
-    fontSize: 9,
+    fontSize: 11,
     color: PPT_COLORS.ink,
     fill: { color: PPT_COLORS.surface },
     valign: "middle",
