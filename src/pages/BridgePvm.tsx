@@ -189,7 +189,7 @@ export default function BridgePvm() {
                   onClick={async () => {
                     try {
                       setExportingPpt(true);
-                      await exportBridgePvmPpt(result);
+                      await exportBridgePvmPpt(result, filtered);
                       toast.success("PPTX exportado com gráficos e tabelas editáveis.");
                     } catch (error) {
                       console.error(error);
