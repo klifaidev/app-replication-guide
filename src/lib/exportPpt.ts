@@ -141,110 +141,184 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
     margin: 0,
   });
 
-  // Waterfall manual com colunas empilhadas: invisível (base) + visível (delta).
-  // Totais (base e atual) = barra cheia preta. Variações = verde se positivo, vermelho se negativo.
+  // Waterfall fiel ao app: barras flutuantes via stacked column com 3 séries:
+  //   pad inferior (invisível) + valor visível + pad superior (invisível).
+  // Isso reproduz exatamente a geometria start→end de cada step do componente Waterfall.tsx.
   type Step = { label: string; value: number; type: "total" | "delta" };
   const steps: Step[] = [
-    { label: `Margem ${result.baseLabel}`, value: result.base, type: "total" },
+    { label: result.baseLabel, value: result.base, type: "total" },
     { label: "Volume", value: result.volume, type: "delta" },
     { label: "Preço", value: result.price, type: "delta" },
     { label: "Custo Var.", value: result.cost, type: "delta" },
     { label: "Frete", value: result.freight, type: "delta" },
     { label: "Comissão", value: result.commission, type: "delta" },
     { label: "Outros", value: result.others, type: "delta" },
-    { label: `Margem ${result.currentLabel}`, value: result.current, type: "total" },
+    { label: result.currentLabel, value: result.current, type: "total" },
   ];
 
-  // Calcula a base invisível e a porção visível para cada coluna.
-  const invisible: number[] = [];
-  const positives: number[] = [];
-  const negatives: number[] = [];
-  const totals: number[] = [];
-
+  // Calcula start/end de cada barra (igual ao Waterfall.tsx)
+  const geom: Array<{ start: number; end: number; value: number; type: "total" | "delta" }> = [];
   let running = 0;
   steps.forEach((s) => {
     if (s.type === "total") {
-      invisible.push(0);
-      positives.push(0);
-      negatives.push(0);
-      totals.push(s.value);
+      geom.push({ start: 0, end: s.value, value: s.value, type: "total" });
       running = s.value;
-    } else if (s.value >= 0) {
-      invisible.push(running);
-      positives.push(s.value);
-      negatives.push(0);
-      totals.push(0);
-      running += s.value;
     } else {
-      const abs = Math.abs(s.value);
-      invisible.push(running - abs);
-      positives.push(0);
-      negatives.push(abs);
-      totals.push(0);
-      running -= abs;
+      const end = running + s.value;
+      geom.push({ start: running, end, value: s.value, type: "delta" });
+      running = end;
+    }
+  });
+
+  // Min/max com padding 10% (mesmo do app)
+  const allVals = geom.flatMap((g) => [g.start, g.end, 0]);
+  const minV = Math.min(...allVals);
+  const maxV = Math.max(...allVals);
+  const range = maxV - minV || 1;
+  const yMin = minV - range * 0.1;
+  const yMax = maxV + range * 0.1;
+
+  // 5 séries empilhadas: padBottom (invisível) + total + positivo + negativo + padTop (invisível)
+  const padBottom: number[] = [];
+  const valTotal: number[] = [];
+  const valPositive: number[] = [];
+  const valNegative: number[] = [];
+  const padTop: number[] = [];
+
+  geom.forEach((g) => {
+    const lo = Math.min(g.start, g.end);
+    const hi = Math.max(g.start, g.end);
+    const barH = hi - lo;
+    padBottom.push(lo - yMin);
+    padTop.push(yMax - hi);
+
+    if (g.type === "total") {
+      valTotal.push(barH);
+      valPositive.push(0);
+      valNegative.push(0);
+    } else if (g.value >= 0) {
+      valTotal.push(0);
+      valPositive.push(barH);
+      valNegative.push(0);
+    } else {
+      valTotal.push(0);
+      valPositive.push(0);
+      valNegative.push(barH);
     }
   });
 
   const labels = steps.map((s) => s.label);
-  // Rótulos: mostramos o valor real (com sinal) onde a barra é visível, vazio onde não.
-  const labelFor = (i: number) => {
-    const s = steps[i];
-    if (s.type === "total") return brlCompact(s.value);
-    return brlCompact(s.value);
-  };
+
+  // Posição/tamanho do gráfico (em polegadas) — usado também para posicionar labels custom
+  const chartX = 0.4;
+  const chartY = 3.25;
+  const chartW = 9.2;
+  const chartH = 3.45;
 
   slide.addChart(
     "bar",
     [
-      {
-        name: "_base",
-        labels,
-        values: invisible,
-      },
-      {
-        name: "Aumento",
-        labels,
-        values: positives,
-      },
-      {
-        name: "Redução",
-        labels,
-        values: negatives,
-      },
-      {
-        name: "Total",
-        labels,
-        values: totals,
-      },
+      { name: "_padBottom", labels, values: padBottom },
+      { name: "Total", labels, values: valTotal },
+      { name: "Aumento", labels, values: valPositive },
+      { name: "Redução", labels, values: valNegative },
+      { name: "_padTop", labels, values: padTop },
     ],
     {
-      x: 0.6,
-      y: 3.35,
-      w: 5.55,
-      h: 3.25,
+      x: chartX,
+      y: chartY,
+      w: chartW,
+      h: chartH,
       barDir: "col",
       barGrouping: "stacked",
+      barGapWidthPct: 60,
+      chartColors: ["FFFFFF", "000000", PPT_COLORS.positive, PPT_COLORS.negative, "FFFFFF"],
+      chartColorsOpacity: 100,
       catAxisLabelFontFace: "Aptos",
-      catAxisLabelFontSize: 9,
-      catAxisLabelRotate: -25,
-      valAxisLabelFontFace: "Aptos",
-      valAxisLabelFontSize: 9,
-      valGridLine: { color: "E5E7EB", size: 1 },
+      catAxisLabelFontSize: 10,
+      catAxisLabelColor: PPT_COLORS.muted,
+      valAxisHidden: true,
+      valGridLine: { style: "none" },
+      catGridLine: { style: "none" },
       showLegend: false,
       showTitle: false,
-      showValue: true,
-      chartColors: ["FFFFFF", PPT_COLORS.positive, PPT_COLORS.negative, "000000"],
-      chartColorsOpacity: 100,
-      dataLabelColor: PPT_COLORS.ink,
-      dataLabelPosition: "outEnd",
-      dataLabelFontFace: "Aptos",
-      dataLabelFontSize: 9,
-      dataLabelFormatCode: '[<-1000000]"-R$ "0.0,,"M";[<0]"-R$ "0.0,"k";[>=1000000]"R$ "0.0,,"M";"R$ "0.0,"k"',
+      showValue: false, // labels vão como text boxes overlay para controle total
       showSerName: false,
       showValAxisTitle: false,
       showCatAxisTitle: false,
+      valAxisMinVal: yMin,
+      valAxisMaxVal: yMax,
     },
   );
+
+  // Labels das barras desenhadas como text boxes acima de cada coluna.
+  const plotPadTop = 0.15;
+  const plotPadBottom = 0.4;
+  const plotH = chartH - plotPadTop - plotPadBottom;
+  const plotTopY = chartY + plotPadTop;
+  const colCount = steps.length;
+  const colSlot = chartW / colCount;
+  const labelH = 0.22;
+  const labelW = colSlot * 0.95;
+
+  geom.forEach((g, i) => {
+    const s = steps[i];
+    const hi = Math.max(g.start, g.end);
+    const yInPlot = plotTopY + (1 - (hi - yMin) / (yMax - yMin)) * plotH;
+    const labelY = Math.max(chartY + 0.02, yInPlot - labelH - 0.04);
+    const cx = chartX + i * colSlot + colSlot / 2;
+    const text =
+      s.type === "total"
+        ? brlCompact(s.value)
+        : `${s.value >= 0 ? "+" : ""}${brlCompact(s.value)}`;
+    const color =
+      s.type === "total"
+        ? PPT_COLORS.ink
+        : s.value >= 0
+          ? PPT_COLORS.positive
+          : PPT_COLORS.negative;
+
+    slide.addText(text, {
+      x: cx - labelW / 2,
+      y: labelY,
+      w: labelW,
+      h: labelH,
+      fontFace: "Aptos",
+      fontSize: 9,
+      bold: true,
+      color,
+      align: "center",
+      valign: "bottom",
+      margin: 0,
+    });
+  });
+}
+
+function addBridgeTableSlide(pptx: PptxGenJS, result: PVMResult) {
+  const slide = pptx.addSlide();
+  slide.background = { color: "FFFFFF" };
+
+  slide.addText("Bridge PVM — Resumo editável", {
+    x: 0.6,
+    y: 0.45,
+    w: 9,
+    h: 0.4,
+    fontFace: "Aptos Display",
+    fontSize: 22,
+    bold: true,
+    color: PPT_COLORS.ink,
+    margin: 0,
+  });
+  slide.addText(`${result.baseLabel} → ${result.currentLabel}`, {
+    x: 0.6,
+    y: 0.9,
+    w: 6,
+    h: 0.3,
+    fontFace: "Aptos",
+    fontSize: 11,
+    color: PPT_COLORS.muted,
+    margin: 0,
+  });
 
   const tableRows: PptxGenJS.TableRow[] = [
     [
@@ -267,28 +341,16 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
     ],
   ];
 
-  slide.addText("Resumo editável", {
-    x: 6.45,
-    y: 2.95,
-    w: 2.8,
-    h: 0.3,
-    fontFace: "Aptos Display",
-    fontSize: 16,
-    bold: true,
-    color: PPT_COLORS.ink,
-    margin: 0,
-  });
-
   slide.addTable(tableRows, {
-    x: 6.45,
-    y: 3.35,
-    w: 2.9,
-    h: 3.15,
-    colW: [1.85, 1.05],
+    x: 2.5,
+    y: 1.5,
+    w: 5,
+    h: 4.8,
+    colW: [3, 2],
     border: { pt: 1, color: PPT_COLORS.line },
-    margin: 0.05,
+    margin: 0.08,
     fontFace: "Aptos",
-    fontSize: 9,
+    fontSize: 11,
     color: PPT_COLORS.ink,
     fill: { color: PPT_COLORS.surface },
     valign: "middle",
@@ -426,6 +488,7 @@ export async function exportBridgePvmPpt(result: PVMResult) {
   };
 
   addBridgeSummarySlide(pptx, result);
+  addBridgeTableSlide(pptx, result);
   EFFECT_CONFIG.forEach((effect) => addEffectSlide(pptx, result, effect));
 
   await pptx.writeFile({
