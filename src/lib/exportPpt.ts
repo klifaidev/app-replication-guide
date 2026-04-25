@@ -377,8 +377,8 @@ function addOverviewDreBridgeSlide(
     rowsTbl.push(cells);
   });
 
-  const headerH = 0.22;
-  const rowH = (tableH - headerH) / lines.length;
+  const headerH = 0.24;
+  const rowH = 0.21; // altura fixa por linha (16 linhas × 0.21 ≈ 3.36")
 
   slide.addTable(rowsTbl, {
     x: tableX,
@@ -390,6 +390,7 @@ function addOverviewDreBridgeSlide(
     fontFace: "Arial",
     fontSize: 8,
     valign: "middle",
+    autoPage: false,
   });
 
   // Bordas vermelhas/verdes externas em linhas-chave (Volume / ROL R$Kg /
