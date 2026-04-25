@@ -488,6 +488,7 @@ export async function exportBridgePvmPpt(result: PVMResult) {
   };
 
   addBridgeSummarySlide(pptx, result);
+  addBridgeTableSlide(pptx, result);
   EFFECT_CONFIG.forEach((effect) => addEffectSlide(pptx, result, effect));
 
   await pptx.writeFile({
