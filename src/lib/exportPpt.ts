@@ -141,13 +141,80 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
     margin: 0,
   });
 
+  // Waterfall manual com colunas empilhadas: invisível (base) + visível (delta).
+  // Totais (base e atual) = barra cheia preta. Variações = verde se positivo, vermelho se negativo.
+  type Step = { label: string; value: number; type: "total" | "delta" };
+  const steps: Step[] = [
+    { label: `Margem ${result.baseLabel}`, value: result.base, type: "total" },
+    { label: "Volume", value: result.volume, type: "delta" },
+    { label: "Preço", value: result.price, type: "delta" },
+    { label: "Custo Var.", value: result.cost, type: "delta" },
+    { label: "Frete", value: result.freight, type: "delta" },
+    { label: "Comissão", value: result.commission, type: "delta" },
+    { label: "Outros", value: result.others, type: "delta" },
+    { label: `Margem ${result.currentLabel}`, value: result.current, type: "total" },
+  ];
+
+  // Calcula a base invisível e a porção visível para cada coluna.
+  const invisible: number[] = [];
+  const positives: number[] = [];
+  const negatives: number[] = [];
+  const totals: number[] = [];
+
+  let running = 0;
+  steps.forEach((s) => {
+    if (s.type === "total") {
+      invisible.push(0);
+      positives.push(0);
+      negatives.push(0);
+      totals.push(s.value);
+      running = s.value;
+    } else if (s.value >= 0) {
+      invisible.push(running);
+      positives.push(s.value);
+      negatives.push(0);
+      totals.push(0);
+      running += s.value;
+    } else {
+      const abs = Math.abs(s.value);
+      invisible.push(running - abs);
+      positives.push(0);
+      negatives.push(abs);
+      totals.push(0);
+      running -= abs;
+    }
+  });
+
+  const labels = steps.map((s) => s.label);
+  // Rótulos: mostramos o valor real (com sinal) onde a barra é visível, vazio onde não.
+  const labelFor = (i: number) => {
+    const s = steps[i];
+    if (s.type === "total") return brlCompact(s.value);
+    return brlCompact(s.value);
+  };
+
   slide.addChart(
     "bar",
     [
       {
-        name: "Impacto",
-        labels: ["Volume", "Preço", "Custo Var.", "Frete", "Comissão", "Outros"],
-        values: [result.volume, result.price, result.cost, result.freight, result.commission, result.others],
+        name: "_base",
+        labels,
+        values: invisible,
+      },
+      {
+        name: "Aumento",
+        labels,
+        values: positives,
+      },
+      {
+        name: "Redução",
+        labels,
+        values: negatives,
+      },
+      {
+        name: "Total",
+        labels,
+        values: totals,
       },
     ],
     {
@@ -155,17 +222,24 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
       y: 3.35,
       w: 5.55,
       h: 3.25,
+      barDir: "col",
+      barGrouping: "stacked",
       catAxisLabelFontFace: "Aptos",
-      catAxisLabelFontSize: 11,
+      catAxisLabelFontSize: 9,
+      catAxisLabelRotate: -25,
       valAxisLabelFontFace: "Aptos",
-      valAxisLabelFontSize: 10,
-      valGridLine: { color: "D9DEE7", size: 1 },
+      valAxisLabelFontSize: 9,
+      valGridLine: { color: "E5E7EB", size: 1 },
       showLegend: false,
       showTitle: false,
       showValue: true,
-      chartColors: [PPT_COLORS.base],
+      chartColors: ["FFFFFF", PPT_COLORS.positive, PPT_COLORS.negative, "000000"],
+      chartColorsOpacity: 100,
       dataLabelColor: PPT_COLORS.ink,
       dataLabelPosition: "outEnd",
+      dataLabelFontFace: "Aptos",
+      dataLabelFontSize: 9,
+      dataLabelFormatCode: '[<-1000000]"-R$ "0.0,,"M";[<0]"-R$ "0.0,"k";[>=1000000]"R$ "0.0,,"M";"R$ "0.0,"k"',
       showSerName: false,
       showValAxisTitle: false,
       showCatAxisTitle: false,
