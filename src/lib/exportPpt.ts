@@ -273,7 +273,6 @@ function addOverviewDreBridgeSlide(
   const tableX = 0.85;
   const tableY = 0.95;
   const tableW = 12.1;
-  const tableH = 3.45;
   const labelColW = 2.05;
   const dataW = tableW - labelColW;
   const colCount = months.length || 1;
