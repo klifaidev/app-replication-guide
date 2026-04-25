@@ -292,26 +292,6 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
       margin: 0,
     });
   });
-
-  const tableRows: PptxGenJS.TableRow[] = [
-    [
-      { text: "Linha", options: { bold: true, color: "FFFFFF", fill: { color: PPT_COLORS.ink }, align: "center" } },
-      { text: "Valor", options: { bold: true, color: "FFFFFF", fill: { color: PPT_COLORS.ink }, align: "center" } },
-    ],
-    [
-      { text: `Margem base (${result.baseLabel})` },
-      { text: brl(result.base), options: { align: "right" } },
-    ],
-    [{ text: "Efeito Volume" }, { text: brl(result.volume), options: { align: "right" } }],
-    [{ text: "Efeito Preço" }, { text: brl(result.price), options: { align: "right" } }],
-    [{ text: "Efeito Custo Variável" }, { text: brl(result.cost), options: { align: "right" } }],
-    [{ text: "Efeito Frete" }, { text: brl(result.freight), options: { align: "right" } }],
-    [{ text: "Efeito Comissão" }, { text: brl(result.commission), options: { align: "right" } }],
-    [{ text: "Efeito Outros" }, { text: brl(result.others), options: { align: "right" } }],
-    [
-      { text: `Margem atual (${result.currentLabel})`, options: { bold: true, fill: { color: PPT_COLORS.surfaceAlt } } },
-      { text: brl(result.current), options: { bold: true, align: "right", fill: { color: PPT_COLORS.surfaceAlt } } },
-    ],
 }
 
 function addBridgeTableSlide(pptx: PptxGenJS, result: PVMResult) {
