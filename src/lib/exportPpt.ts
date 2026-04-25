@@ -209,6 +209,12 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
 
   const labels = steps.map((s) => s.label);
 
+  // Posição/tamanho do gráfico (em polegadas) — usado também para posicionar labels custom
+  const chartX = 0.4;
+  const chartY = 3.25;
+  const chartW = 9.2;
+  const chartH = 3.45;
+
   slide.addChart(
     "bar",
     [
@@ -219,17 +225,15 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
       { name: "_padTop", labels, values: padTop },
     ],
     {
-      x: 0.4,
-      y: 3.25,
-      w: 9.2,
-      h: 3.45,
+      x: chartX,
+      y: chartY,
+      w: chartW,
+      h: chartH,
       barDir: "col",
       barGrouping: "stacked",
       barGapWidthPct: 60,
-      // Cores por série: pad (branco invisível), total (preto), positivo (verde), negativo (vermelho), pad (branco)
       chartColors: ["FFFFFF", "000000", PPT_COLORS.positive, PPT_COLORS.negative, "FFFFFF"],
       chartColorsOpacity: 100,
-      // Eixo Y oculto (no app só há grid horizontal sutil)
       catAxisLabelFontFace: "Aptos",
       catAxisLabelFontSize: 10,
       catAxisLabelColor: PPT_COLORS.muted,
@@ -238,14 +242,7 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
       catGridLine: { style: "none" },
       showLegend: false,
       showTitle: false,
-      // Rótulos só nas 3 séries visíveis; pads ficam sem label
-      showValue: [false, true, true, true, false],
-      dataLabelPosition: "ctr",
-      dataLabelFontFace: "Aptos",
-      dataLabelFontSize: 10,
-      dataLabelFontBold: true,
-      dataLabelColor: "FFFFFF",
-      dataLabelFormatCode: '[<0]"-R$ "0.0,,"M";[>=1000000]"R$ "0.0,,"M";"R$ "0.0,"k"',
+      showValue: false, // labels vão como text boxes overlay para controle total
       showSerName: false,
       showValAxisTitle: false,
       showCatAxisTitle: false,
@@ -253,6 +250,48 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
       valAxisMaxVal: yMax,
     },
   );
+
+  // Labels das barras desenhadas como text boxes acima de cada coluna.
+  const plotPadTop = 0.15;
+  const plotPadBottom = 0.4;
+  const plotH = chartH - plotPadTop - plotPadBottom;
+  const plotTopY = chartY + plotPadTop;
+  const colCount = steps.length;
+  const colSlot = chartW / colCount;
+  const labelH = 0.22;
+  const labelW = colSlot * 0.95;
+
+  geom.forEach((g, i) => {
+    const s = steps[i];
+    const hi = Math.max(g.start, g.end);
+    const yInPlot = plotTopY + (1 - (hi - yMin) / (yMax - yMin)) * plotH;
+    const labelY = Math.max(chartY + 0.02, yInPlot - labelH - 0.04);
+    const cx = chartX + i * colSlot + colSlot / 2;
+    const text =
+      s.type === "total"
+        ? brlCompact(s.value)
+        : `${s.value >= 0 ? "+" : ""}${brlCompact(s.value)}`;
+    const color =
+      s.type === "total"
+        ? PPT_COLORS.ink
+        : s.value >= 0
+          ? PPT_COLORS.positive
+          : PPT_COLORS.negative;
+
+    slide.addText(text, {
+      x: cx - labelW / 2,
+      y: labelY,
+      w: labelW,
+      h: labelH,
+      fontFace: "Aptos",
+      fontSize: 9,
+      bold: true,
+      color,
+      align: "center",
+      valign: "bottom",
+      margin: 0,
+    });
+  });
 
   const tableRows: PptxGenJS.TableRow[] = [
     [
