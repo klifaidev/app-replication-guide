@@ -378,30 +378,32 @@ function addOverviewDreBridgeSlide(
     rowsTbl.push(cells);
   });
 
+  const headerH = 0.22;
+  const rowH = (tableH - headerH) / lines.length;
+
   slide.addTable(rowsTbl, {
     x: tableX,
     y: tableY,
     w: tableW,
-    h: tableH,
     colW: [labelColW, ...Array(colCount).fill(colW)],
+    rowH: [headerH, ...Array(lines.length).fill(rowH)],
     border: { pt: 0.5, color: "FFFFFF" },
     fontFace: "Arial",
     fontSize: 8,
     valign: "middle",
   });
 
-  // Bordas vermelhas externas em linhas chave (Volume / Contrib. Marginal)
-  // — desenhadas como retângulos vazios sobre a tabela.
-  const rowHeights = tableH / (lines.length + 1); // +1 header
+  // Bordas vermelhas/verdes externas em linhas-chave (Volume / ROL R$Kg /
+  // Contrib. Marginal) — retângulos vazios desenhados sobre a tabela.
   const drawBox = (rowIdx0: number, color: string) => {
-    const y = tableY + rowHeights * (rowIdx0 + 1); // +1 pelo header
+    const y = tableY + headerH + rowH * rowIdx0;
     slide.addShape("rect", {
       x: tableX + labelColW - 0.02,
-      y: y - 0.01,
+      y: y - 0.005,
       w: dataW + 0.04,
-      h: rowHeights + 0.02,
+      h: rowH + 0.01,
       fill: { type: "none" },
-      line: { color, width: 1.5 },
+      line: { color, width: 1.25 },
     });
   };
   // Volume = linha 0; ROL R$/Kg = linha 2; Contrib Marginal = linha 13
