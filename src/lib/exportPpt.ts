@@ -141,108 +141,116 @@ function addBridgeSummarySlide(pptx: PptxGenJS, result: PVMResult) {
     margin: 0,
   });
 
-  // Waterfall manual com colunas empilhadas: invisível (base) + visível (delta).
-  // Totais (base e atual) = barra cheia preta. Variações = verde se positivo, vermelho se negativo.
+  // Waterfall fiel ao app: barras flutuantes via stacked column com 3 séries:
+  //   pad inferior (invisível) + valor visível + pad superior (invisível).
+  // Isso reproduz exatamente a geometria start→end de cada step do componente Waterfall.tsx.
   type Step = { label: string; value: number; type: "total" | "delta" };
   const steps: Step[] = [
-    { label: `Margem ${result.baseLabel}`, value: result.base, type: "total" },
+    { label: result.baseLabel, value: result.base, type: "total" },
     { label: "Volume", value: result.volume, type: "delta" },
     { label: "Preço", value: result.price, type: "delta" },
     { label: "Custo Var.", value: result.cost, type: "delta" },
     { label: "Frete", value: result.freight, type: "delta" },
     { label: "Comissão", value: result.commission, type: "delta" },
     { label: "Outros", value: result.others, type: "delta" },
-    { label: `Margem ${result.currentLabel}`, value: result.current, type: "total" },
+    { label: result.currentLabel, value: result.current, type: "total" },
   ];
 
-  // Calcula a base invisível e a porção visível para cada coluna.
-  const invisible: number[] = [];
-  const positives: number[] = [];
-  const negatives: number[] = [];
-  const totals: number[] = [];
-
+  // Calcula start/end de cada barra (igual ao Waterfall.tsx)
+  const geom: Array<{ start: number; end: number; value: number; type: "total" | "delta" }> = [];
   let running = 0;
   steps.forEach((s) => {
     if (s.type === "total") {
-      invisible.push(0);
-      positives.push(0);
-      negatives.push(0);
-      totals.push(s.value);
+      geom.push({ start: 0, end: s.value, value: s.value, type: "total" });
       running = s.value;
-    } else if (s.value >= 0) {
-      invisible.push(running);
-      positives.push(s.value);
-      negatives.push(0);
-      totals.push(0);
-      running += s.value;
     } else {
-      const abs = Math.abs(s.value);
-      invisible.push(running - abs);
-      positives.push(0);
-      negatives.push(abs);
-      totals.push(0);
-      running -= abs;
+      const end = running + s.value;
+      geom.push({ start: running, end, value: s.value, type: "delta" });
+      running = end;
+    }
+  });
+
+  // Min/max com padding 10% (mesmo do app)
+  const allVals = geom.flatMap((g) => [g.start, g.end, 0]);
+  const minV = Math.min(...allVals);
+  const maxV = Math.max(...allVals);
+  const range = maxV - minV || 1;
+  const yMin = minV - range * 0.1;
+  const yMax = maxV + range * 0.1;
+
+  // 5 séries empilhadas: padBottom (invisível) + total + positivo + negativo + padTop (invisível)
+  const padBottom: number[] = [];
+  const valTotal: number[] = [];
+  const valPositive: number[] = [];
+  const valNegative: number[] = [];
+  const padTop: number[] = [];
+
+  geom.forEach((g) => {
+    const lo = Math.min(g.start, g.end);
+    const hi = Math.max(g.start, g.end);
+    const barH = hi - lo;
+    padBottom.push(lo - yMin);
+    padTop.push(yMax - hi);
+
+    if (g.type === "total") {
+      valTotal.push(barH);
+      valPositive.push(0);
+      valNegative.push(0);
+    } else if (g.value >= 0) {
+      valTotal.push(0);
+      valPositive.push(barH);
+      valNegative.push(0);
+    } else {
+      valTotal.push(0);
+      valPositive.push(0);
+      valNegative.push(barH);
     }
   });
 
   const labels = steps.map((s) => s.label);
-  // Rótulos: mostramos o valor real (com sinal) onde a barra é visível, vazio onde não.
-  const labelFor = (i: number) => {
-    const s = steps[i];
-    if (s.type === "total") return brlCompact(s.value);
-    return brlCompact(s.value);
-  };
 
   slide.addChart(
     "bar",
     [
-      {
-        name: "_base",
-        labels,
-        values: invisible,
-      },
-      {
-        name: "Aumento",
-        labels,
-        values: positives,
-      },
-      {
-        name: "Redução",
-        labels,
-        values: negatives,
-      },
-      {
-        name: "Total",
-        labels,
-        values: totals,
-      },
+      { name: "_padBottom", labels, values: padBottom },
+      { name: "Total", labels, values: valTotal },
+      { name: "Aumento", labels, values: valPositive },
+      { name: "Redução", labels, values: valNegative },
+      { name: "_padTop", labels, values: padTop },
     ],
     {
-      x: 0.6,
-      y: 3.35,
-      w: 5.55,
-      h: 3.25,
+      x: 0.4,
+      y: 3.25,
+      w: 9.2,
+      h: 3.45,
       barDir: "col",
       barGrouping: "stacked",
+      barGapWidthPct: 60,
+      // Cores por série: pad (branco invisível), total (preto), positivo (verde), negativo (vermelho), pad (branco)
+      chartColors: ["FFFFFF", "000000", PPT_COLORS.positive, PPT_COLORS.negative, "FFFFFF"],
+      chartColorsOpacity: 100,
+      // Eixo Y oculto (no app só há grid horizontal sutil)
       catAxisLabelFontFace: "Aptos",
-      catAxisLabelFontSize: 9,
-      catAxisLabelRotate: -25,
-      valAxisLabelFontFace: "Aptos",
-      valAxisLabelFontSize: 9,
-      valGridLine: { color: "E5E7EB", size: 1 },
+      catAxisLabelFontSize: 10,
+      catAxisLabelColor: PPT_COLORS.muted,
+      valAxisHidden: true,
+      valGridLine: { style: "none" },
+      catGridLine: { style: "none" },
       showLegend: false,
       showTitle: false,
-      showValue: true,
-      chartColors: ["FFFFFF", PPT_COLORS.positive, PPT_COLORS.negative, "000000"],
-      chartColorsOpacity: 100,
-      dataLabelColor: PPT_COLORS.ink,
-      dataLabelPosition: "outEnd",
+      // Rótulos só nas 3 séries visíveis; pads ficam sem label
+      showValue: [false, true, true, true, false],
+      dataLabelPosition: "ctr",
       dataLabelFontFace: "Aptos",
-      dataLabelFontSize: 9,
-      dataLabelFormatCode: '[<-1000000]"-R$ "0.0,,"M";[<0]"-R$ "0.0,"k";[>=1000000]"R$ "0.0,,"M";"R$ "0.0,"k"',
+      dataLabelFontSize: 10,
+      dataLabelFontBold: true,
+      dataLabelColor: "FFFFFF",
+      dataLabelFormatCode: '[<0]"-R$ "0.0,,"M";[>=1000000]"R$ "0.0,,"M";"R$ "0.0,"k"',
       showSerName: false,
       showValAxisTitle: false,
       showCatAxisTitle: false,
+      valAxisMinVal: yMin,
+      valAxisMaxVal: yMax,
     },
   );
 
