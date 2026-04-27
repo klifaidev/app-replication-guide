@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
-import { AlertTriangle, BarChart3, Coins, Database, FileSpreadsheet, Home, LineChart, Network, TableProperties, TrendingUp } from "lucide-react";
+import { AlertTriangle, BarChart3, Coins, Database, FileSpreadsheet, Home, KanbanSquare, LineChart, Network, TableProperties, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 
 const dashItems = [
@@ -15,6 +15,10 @@ const dashItems = [
   { to: "/custos", label: "Custos", icon: Coins },
   { to: "/abc", label: "ABC Heróis", icon: LineChart },
   { to: "/detalhe", label: "Tabela Detalhe", icon: TableProperties },
+];
+
+const workItems = [
+  { to: "/atividades", label: "Atividades", icon: KanbanSquare },
 ];
 
 export function Sidebar() {
@@ -53,6 +57,24 @@ export function Sidebar() {
               <NavLink
                 to={item.to}
                 end={item.end}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                activeClassName="bg-sidebar-accent text-sidebar-foreground !text-primary font-medium shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]"
+              >
+                <item.icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-6 px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
+          Workspace
+        </div>
+        <ul className="space-y-0.5">
+          {workItems.map((item) => (
+            <li key={item.to}>
+              <NavLink
+                to={item.to}
                 className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 activeClassName="bg-sidebar-accent text-sidebar-foreground !text-primary font-medium shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.15)]"
               >
