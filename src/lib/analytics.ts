@@ -150,6 +150,7 @@ export function computeCostEvolution(rows: PricingRow[]): CostEvolutionRow[] {
 
 export interface PVMSkuDetail {
   sku: string;
+  skuDesc?: string;
   status: "both" | "only_base" | "only_comp";
   volA: number;
   volB: number;
