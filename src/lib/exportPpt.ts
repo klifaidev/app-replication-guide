@@ -233,6 +233,9 @@ function addOverviewDreBridgeSlide(
   const slide = pptx.addSlide();
   slide.background = { color: "FFFFFF" };
 
+  // Rodapé Harald (precisa ser o PRIMEIRO elemento para ficar atrás dos demais)
+  addHaraldFooter(slide);
+
   // ---- Título ---------------------------------------------------------
   slide.addText("OVERVIEW DRE & BRIDGE", {
     x: 0.4,
@@ -244,16 +247,6 @@ function addOverviewDreBridgeSlide(
     bold: true,
     color: PPT_COLORS.haraldRed,
     margin: 0,
-  });
-
-  // ---- Rodapé: arco vermelho + logo Harald (imagem importada) ---------
-  slide.addImage({
-    data: haraldFooterPng,
-    x: 0,
-    y: 6.95,
-    w: 13.33,
-    h: 0.6,
-    sizing: { type: "cover", w: 13.33, h: 0.6 },
   });
 
   // ---- "DRE" lateral --------------------------------------------------
