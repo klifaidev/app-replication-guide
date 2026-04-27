@@ -1,4 +1,5 @@
 import PptxGenJS from "pptxgenjs";
+import JSZip from "jszip";
 import type { PVMResult, PVMSkuDetail } from "./analytics";
 import type { PricingRow } from "./types";
 import { monthLabel } from "./format";
