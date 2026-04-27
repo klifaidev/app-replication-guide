@@ -237,6 +237,13 @@ export function calcPVM(
   const a = aggSku(baseRows);
   const b = aggSku(compRows);
 
+  // Map of sku key → human-readable description (prefer comp period, fallback to base)
+  const descMap = new Map<string, string>();
+  for (const r of [...baseRows, ...compRows]) {
+    const k = r.sku || r.skuDesc || "—";
+    if (!descMap.has(k) && r.skuDesc) descMap.set(k, r.skuDesc);
+  }
+
   let baseTotal = 0, currentTotal = 0;
   for (const v of a.values()) { baseTotal += v.margem; }
   for (const v of b.values()) { currentTotal += v.margem; }
@@ -255,6 +262,7 @@ export function calcPVM(
 
     const detail: PVMSkuDetail = {
       sku,
+      skuDesc: descMap.get(sku),
       status: ra && rb ? "both" : ra ? "only_base" : "only_comp",
       volA: ra?.vol ?? 0,
       volB: rb?.vol ?? 0,
