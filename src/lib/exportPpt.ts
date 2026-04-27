@@ -4,6 +4,28 @@ import type { PVMResult, PVMSkuDetail } from "./analytics";
 import type { PricingRow } from "./types";
 import { monthLabel } from "./format";
 import haraldFooterPng from "@/assets/harald-footer.png";
+import haraldFooterBarPng from "@/assets/harald-footer-bar.png";
+
+// Slide widescreen 13.33" x 7.5". Imagem original 1222x78 (~15.67:1).
+// Altura calculada para preencher toda a largura mantendo proporção.
+const HARALD_FOOTER_W = 13.33;
+const HARALD_FOOTER_H = 0.85;
+const HARALD_FOOTER_Y = 7.5 - HARALD_FOOTER_H;
+
+/**
+ * Adiciona o rodapé Harald (arco vermelho + logo) em um slide.
+ * Deve ser chamada como PRIMEIRO addImage/addShape/addText do slide,
+ * para que fique atrás de todos os demais elementos.
+ */
+function addHaraldFooter(slide: PptxGenJS.Slide) {
+  slide.addImage({
+    data: haraldFooterBarPng,
+    x: 0,
+    y: HARALD_FOOTER_Y,
+    w: HARALD_FOOTER_W,
+    h: HARALD_FOOTER_H,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Paleta inspirada no slide "OVERVIEW DRE & BRIDGE" da Harald
