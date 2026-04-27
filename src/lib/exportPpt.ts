@@ -742,8 +742,115 @@ export async function exportBridgePvmPpt(result: PVMResult, rows: PricingRow[] =
   addBridgeTableSlide(pptx, result);
   EFFECT_CONFIG.forEach((effect) => addEffectSlide(pptx, result, effect));
 
-  await pptx.writeFile({
-    fileName: `bridge_pvm_${safeName(result.baseLabel)}_vs_${safeName(result.currentLabel)}.pptx`,
-    compression: true,
+  // Gera o PPTX em memória, agrupa elementos da bridge num único objeto
+  // (slide 1) e dispara o download.
+  const rawBlob = (await pptx.write({ outputType: "blob" })) as Blob;
+  const grouped = await groupBridgeElements(rawBlob);
+
+  const fileName = `bridge_pvm_${safeName(result.baseLabel)}_vs_${safeName(result.currentLabel)}.pptx`;
+  triggerDownload(grouped, fileName);
+}
+
+// ---------------------------------------------------------------------------
+// Pós-processamento: envolve todos os shapes/textos da bridge no slide 1
+// (cujo cNvPr@name começa com "bridge_") dentro de um único <p:grpSp>,
+// preservando suas posições absolutas. Resultado: um clique seleciona o
+// gráfico inteiro e o redimensionamento mantém todos os elementos alinhados.
+// ---------------------------------------------------------------------------
+async function groupBridgeElements(blob: Blob): Promise<Blob> {
+  const zip = await JSZip.loadAsync(blob);
+  const slidePath = "ppt/slides/slide1.xml";
+  const file = zip.file(slidePath);
+  if (!file) return blob;
+  const xml = await file.async("string");
+
+  // Extrai os elementos cujo nome começa com "bridge_". Tratamos <p:sp> e
+  // <p:grpSp> (defensivo) — todos os marcadores que adicionamos são <p:sp>.
+  const tagPattern = /<p:sp\b[\s\S]*?<\/p:sp>/g;
+  const matches: { full: string; index: number; length: number }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = tagPattern.exec(xml)) !== null) {
+    const full = m[0];
+    // Lê o name do cNvPr
+    const nameMatch = full.match(/<p:cNvPr\b[^>]*\bname="([^"]+)"/);
+    if (nameMatch && nameMatch[1].startsWith("bridge_")) {
+      matches.push({ full, index: m.index, length: full.length });
+    }
+  }
+
+  if (matches.length < 2) return blob; // nada a agrupar
+
+  // Calcula o bounding box (em EMU) somando os <a:off> e <a:ext> de cada sp.
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const offRe = /<a:off\s+x="(-?\d+)"\s+y="(-?\d+)"\s*\/>/;
+  const extRe = /<a:ext\s+cx="(\d+)"\s+cy="(\d+)"\s*\/>/;
+  for (const item of matches) {
+    const off = item.full.match(offRe);
+    const ext = item.full.match(extRe);
+    if (!off || !ext) continue;
+    const x = parseInt(off[1], 10);
+    const y = parseInt(off[2], 10);
+    const cx = parseInt(ext[1], 10);
+    const cy = parseInt(ext[2], 10);
+    if (x < minX) minX = x;
+    if (y < minY) minY = y;
+    if (x + cx > maxX) maxX = x + cx;
+    if (y + cy > maxY) maxY = y + cy;
+  }
+  if (!isFinite(minX) || !isFinite(minY)) return blob;
+  const grpX = minX;
+  const grpY = minY;
+  const grpCX = maxX - minX;
+  const grpCY = maxY - minY;
+
+  // Remove os matches do XML original (de trás pra frente para preservar índices)
+  let mutated = xml;
+  const sorted = [...matches].sort((a, b) => b.index - a.index);
+  for (const item of sorted) {
+    mutated = mutated.slice(0, item.index) + mutated.slice(item.index + item.length);
+  }
+
+  // Monta o <p:grpSp> com os elementos extraídos.
+  // chOff/chExt iguais a off/ext ⇒ sem transformação adicional nos filhos
+  // (o redimensionamento do grupo escala tudo proporcionalmente).
+  const childrenXml = matches.map((it) => it.full).join("");
+  const grpXml =
+    `<p:grpSp>` +
+      `<p:nvGrpSpPr>` +
+        `<p:cNvPr id="9001" name="BridgeGroup"/>` +
+        `<p:cNvGrpSpPr/>` +
+        `<p:nvPr/>` +
+      `</p:nvGrpSpPr>` +
+      `<p:grpSpPr>` +
+        `<a:xfrm>` +
+          `<a:off x="${grpX}" y="${grpY}"/>` +
+          `<a:ext cx="${grpCX}" cy="${grpCY}"/>` +
+          `<a:chOff x="${grpX}" y="${grpY}"/>` +
+          `<a:chExt cx="${grpCX}" cy="${grpCY}"/>` +
+        `</a:xfrm>` +
+      `</p:grpSpPr>` +
+      childrenXml +
+    `</p:grpSp>`;
+
+  // Insere o grupo logo antes do </p:spTree>
+  mutated = mutated.replace("</p:spTree>", `${grpXml}</p:spTree>`);
+
+  zip.file(slidePath, mutated);
+  return zip.generateAsync({
+    type: "blob",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    compression: "DEFLATE",
   });
+}
+
+function triggerDownload(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
