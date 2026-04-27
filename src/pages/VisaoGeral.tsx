@@ -21,12 +21,14 @@ const MES_NOMES = [
 ];
 
 function formatPeriodo(p: string): string {
-  // espera formato "YYYY-MM" ou "YYYYMM"
-  const m = p.match(/^(\d{4})[-/]?(\d{2})$/);
-  if (!m) return p;
-  const ano = m[1];
-  const mes = parseInt(m[2], 10);
-  return `${MES_NOMES[mes - 1] ?? m[2]}/${ano.slice(-2)}`;
+  // Aceita "MM.YYYY", "MMM.YYYY" (ex.: 005.2025), "YYYY-MM", "YYYYMM"
+  let mes = 0;
+  let ano = 0;
+  let m = p.match(/^0*(\d{1,2})[.\/-](\d{4})$/);
+  if (m) { mes = parseInt(m[1], 10); ano = parseInt(m[2], 10); }
+  else if ((m = p.match(/^(\d{4})[-/.]?(\d{2})$/))) { ano = parseInt(m[1], 10); mes = parseInt(m[2], 10); }
+  if (!mes || !ano) return p;
+  return `${MES_NOMES[mes - 1] ?? mes}/${String(ano).slice(-2)}`;
 }
 
 function periodoLabel(selected: string[] | null, allPeriods: string[]): string {
