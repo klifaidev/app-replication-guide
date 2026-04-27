@@ -4,6 +4,28 @@ import type { PVMResult, PVMSkuDetail } from "./analytics";
 import type { PricingRow } from "./types";
 import { monthLabel } from "./format";
 import haraldFooterPng from "@/assets/harald-footer.png";
+import haraldFooterBarPng from "@/assets/harald-footer-bar.png";
+
+// Slide widescreen 13.33" x 7.5". Imagem original 1222x78 (~15.67:1).
+// Altura calculada para preencher toda a largura mantendo proporção.
+const HARALD_FOOTER_W = 13.33;
+const HARALD_FOOTER_H = 0.85;
+const HARALD_FOOTER_Y = 7.5 - HARALD_FOOTER_H;
+
+/**
+ * Adiciona o rodapé Harald (arco vermelho + logo) em um slide.
+ * Deve ser chamada como PRIMEIRO addImage/addShape/addText do slide,
+ * para que fique atrás de todos os demais elementos.
+ */
+function addHaraldFooter(slide: PptxGenJS.Slide) {
+  slide.addImage({
+    data: haraldFooterBarPng,
+    x: 0,
+    y: HARALD_FOOTER_Y,
+    w: HARALD_FOOTER_W,
+    h: HARALD_FOOTER_H,
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Paleta inspirada no slide "OVERVIEW DRE & BRIDGE" da Harald
@@ -211,6 +233,9 @@ function addOverviewDreBridgeSlide(
   const slide = pptx.addSlide();
   slide.background = { color: "FFFFFF" };
 
+  // Rodapé Harald (precisa ser o PRIMEIRO elemento para ficar atrás dos demais)
+  addHaraldFooter(slide);
+
   // ---- Título ---------------------------------------------------------
   slide.addText("OVERVIEW DRE & BRIDGE", {
     x: 0.4,
@@ -222,16 +247,6 @@ function addOverviewDreBridgeSlide(
     bold: true,
     color: PPT_COLORS.haraldRed,
     margin: 0,
-  });
-
-  // ---- Rodapé: arco vermelho + logo Harald (imagem importada) ---------
-  slide.addImage({
-    data: haraldFooterPng,
-    x: 0,
-    y: 6.95,
-    w: 13.33,
-    h: 0.6,
-    sizing: { type: "cover", w: 13.33, h: 0.6 },
   });
 
   // ---- "DRE" lateral --------------------------------------------------
@@ -542,6 +557,7 @@ function addOverviewDreBridgeSlide(
 function addBridgeTableSlide(pptx: PptxGenJS, result: PVMResult) {
   const slide = pptx.addSlide();
   slide.background = { color: "FFFFFF" };
+  addHaraldFooter(slide);
 
   slide.addText("Bridge PVM — Resumo editável", {
     x: 0.6,
@@ -608,6 +624,7 @@ function addBridgeTableSlide(pptx: PptxGenJS, result: PVMResult) {
 function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: EffectKey; label: string; color: string }) {
   const slide = pptx.addSlide();
   slide.background = { color: "FFFFFF" };
+  addHaraldFooter(slide);
 
   const { heroes, offenders } = getEffectRankings(result.skuDetails, effect.key);
   const chartItems = [...heroes, ...offenders]
