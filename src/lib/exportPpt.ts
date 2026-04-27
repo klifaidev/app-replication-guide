@@ -480,6 +480,7 @@ function addOverviewDreBridgeSlide(
         h: Math.max(0.04, yBot - yTop),
         fill: { color: "000000" },
         line: { color: "000000", width: 0 },
+        objectName: `bridge_bar_${i}`,
       });
     } else {
       // Linha vermelha curta no topo do "patamar" do delta
@@ -492,14 +493,15 @@ function addOverviewDreBridgeSlide(
         h: 0.05,
         fill: { color: PPT_COLORS.haraldRed },
         line: { color: PPT_COLORS.haraldRed, width: 0 },
+        objectName: `bridge_bar_${i}`,
       });
     }
 
-    // Label numérico acima do topo da barra/linha
-    const valShown = Math.round(s.value / 1000); // milhares
+    // Label numérico acima do topo da barra/linha — milhares com 1 casa decimal
+    const valShown = s.value / 1000; // milhares
     const valText = s.type === "total"
-      ? fmtIntBR(valShown)
-      : fmtIntBR(Math.abs(valShown));
+      ? fmtDecimalBR(valShown, 1)
+      : fmtDecimalBR(Math.abs(valShown), 1);
     const topY = s.type === "total" ? yOf(Math.max(0, g.value)) : yOf(Math.max(g.start, g.end));
     slide.addText(valText, {
       x: cx - colSlot / 2,
@@ -512,6 +514,7 @@ function addOverviewDreBridgeSlide(
       align: "center",
       valign: "bottom",
       margin: 0,
+      objectName: `bridge_value_${i}`,
     });
 
     // Label da categoria (abaixo do plot)
@@ -526,6 +529,7 @@ function addOverviewDreBridgeSlide(
       align: "center",
       valign: "top",
       margin: 0,
+      objectName: `bridge_label_${i}`,
     });
   });
 }
