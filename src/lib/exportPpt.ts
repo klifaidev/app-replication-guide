@@ -557,6 +557,7 @@ function addOverviewDreBridgeSlide(
 function addBridgeTableSlide(pptx: PptxGenJS, result: PVMResult) {
   const slide = pptx.addSlide();
   slide.background = { color: "FFFFFF" };
+  addHaraldFooter(slide);
 
   slide.addText("Bridge PVM — Resumo editável", {
     x: 0.6,
@@ -623,6 +624,7 @@ function addBridgeTableSlide(pptx: PptxGenJS, result: PVMResult) {
 function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: EffectKey; label: string; color: string }) {
   const slide = pptx.addSlide();
   slide.background = { color: "FFFFFF" };
+  addHaraldFooter(slide);
 
   const { heroes, offenders } = getEffectRankings(result.skuDetails, effect.key);
   const chartItems = [...heroes, ...offenders]
