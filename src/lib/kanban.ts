@@ -70,14 +70,88 @@ export function newId(prefix = "k") {
 export function loadState(): KanbanState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
+    if (!raw) return seedTop3(defaultState());
     const parsed = JSON.parse(raw) as KanbanState;
-    if (!parsed.columns || !parsed.cards) return defaultState();
-    return parsed;
+    if (!parsed.columns || !parsed.cards) return seedTop3(defaultState());
+    return seedTop3(parsed);
   } catch {
-    return defaultState();
+    return seedTop3(defaultState());
   }
 }
+
+const SEED_FLAG = "harald.kanban.seed.top3.v1";
+
+/** One-time seed: popula "Top 3" com as atividades iniciais se ainda não foi feito. */
+function seedTop3(state: KanbanState): KanbanState {
+  try {
+    if (localStorage.getItem(SEED_FLAG) === "done") return state;
+  } catch {
+    return state;
+  }
+
+  const top3 = state.columns.find(
+    (c) => c.title.trim().toLowerCase() === "top 3",
+  );
+  if (!top3 || top3.cardIds.length > 0) {
+    try {
+      localStorage.setItem(SEED_FLAG, "done");
+    } catch {
+      /* noop */
+    }
+    return state;
+  }
+
+  const items: Array<Pick<KanbanCard, "title" | "description">> = [
+    {
+      title: "Puxar fórum para falar da planilha de SKUs Referência",
+    },
+    {
+      title: "Estruturar plano para continuar com Melken Zero e Vegano",
+      description:
+        "Avaliar se vale a pena continuar com o Melken Zero e o Vegano: construir uma apresentação, entender DRE, números, quanto tem de lote mínimo (com suprimentos - Reginaldo), ele vai falar de embalagem e Fernando Cândido para terceiros.",
+    },
+    {
+      title: "Direcionar Aline sobre as ordens a serem criadas",
+      description: "Alinhar com a Mari.",
+    },
+    {
+      title: "Criar proposta de Gestão de Categoria 2.0",
+      description:
+        "Estabelecer a divisão de categorias com a nova divisão da base de hierarquias, propor um período para entendimento das 360 categorias e propor um momento para estabelecimento de planos de ação para as principais dores das categorias.",
+    },
+    {
+      title: "Ajustar Dash com nova visão estrutura de dados",
+      description: "Projeto Hierarquias.",
+    },
+  ];
+
+  const now = new Date().toISOString();
+  const newCards: Record<string, KanbanCard> = { ...state.cards };
+  const newIds: string[] = [];
+  items.forEach((it) => {
+    const id = newId("card");
+    newCards[id] = {
+      id,
+      title: it.title,
+      description: it.description,
+      createdAt: now,
+    };
+    newIds.push(id);
+  });
+
+  const columns = state.columns.map((c) =>
+    c.id === top3.id ? { ...c, cardIds: [...c.cardIds, ...newIds] } : c,
+  );
+
+  try {
+    localStorage.setItem(SEED_FLAG, "done");
+  } catch {
+    /* noop */
+  }
+
+  return { cards: newCards, columns };
+}
+
 
 export function saveState(state: KanbanState) {
   try {
