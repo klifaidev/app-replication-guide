@@ -12,6 +12,7 @@ import Custos from "./pages/Custos.tsx";
 import Abc from "./pages/Abc.tsx";
 import Detalhe from "./pages/Detalhe.tsx";
 import Upload from "./pages/Upload.tsx";
+import Atividades from "./pages/Atividades.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const App = () => (
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/custos" element={<Custos />} />
           <Route path="/abc" element={<Abc />} />
           <Route path="/detalhe" element={<Detalhe />} />
+          <Route path="/atividades" element={<Atividades />} />
           <Route path="/upload" element={<Upload />} />
         </Route>
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
