@@ -347,7 +347,9 @@ function EffectList({
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((item, index) => (
+          {items.map((item, index) => {
+            const displayName = item.skuDesc?.trim() || item.sku;
+            return (
             <div
               key={`${title}-${effectKey}-${item.sku}`}
               className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-secondary/20 px-3 py-2"
@@ -356,13 +358,17 @@ function EffectList({
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   #{index + 1}
                 </div>
-                <div className="truncate text-sm font-medium text-foreground">{item.sku}</div>
+                <div className="truncate text-sm font-medium text-foreground" title={displayName}>{displayName}</div>
+                {item.skuDesc && item.skuDesc.trim() && (
+                  <div className="truncate text-[10px] text-muted-foreground">{item.sku}</div>
+                )}
               </div>
               <div className={tone === "positive" ? "text-sm font-semibold text-primary" : "text-sm font-semibold text-destructive"}>
                 {formatBRL(item[effectKey], { compact: true })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
