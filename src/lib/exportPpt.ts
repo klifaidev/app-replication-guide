@@ -263,6 +263,7 @@ function addOverviewDreBridgeSlide(
     align: "center",
     valign: "middle",
     margin: 0,
+    objectName: "bridge_side_label",
   });
 
   // ---- Tabela DRE mensal ---------------------------------------------
