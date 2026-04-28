@@ -762,6 +762,7 @@ function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: Effec
 // Entry point
 // ---------------------------------------------------------------------------
 export async function exportBridgePvmPpt(result: PVMResult, rows: PricingRow[] = []) {
+  await getHaraldFooterDataUri(); // pré-carrega o rodapé como base64
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE"; // 13.33 x 7.5 in
   pptx.author = "Lovable";
