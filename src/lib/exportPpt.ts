@@ -12,14 +12,32 @@ const HARALD_FOOTER_W = 13.33;
 const HARALD_FOOTER_H = 0.85;
 const HARALD_FOOTER_Y = 7.5 - HARALD_FOOTER_H;
 
+// PptxGenJS exige `data:` em base64 OU uma URL acessível em `path:`.
+// O import do Vite devolve apenas uma URL com hash, então pré-carregamos
+// a imagem como data URI uma única vez.
+let haraldFooterDataUri: string | null = null;
+async function getHaraldFooterDataUri(): Promise<string> {
+  if (haraldFooterDataUri) return haraldFooterDataUri;
+  const res = await fetch(haraldFooterBarPng);
+  const blob = await res.blob();
+  haraldFooterDataUri = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+  return haraldFooterDataUri;
+}
+
 /**
  * Adiciona o rodapé Harald (arco vermelho + logo) em um slide.
  * Deve ser chamada como PRIMEIRO addImage/addShape/addText do slide,
  * para que fique atrás de todos os demais elementos.
  */
 function addHaraldFooter(slide: PptxGenJS.Slide) {
+  if (!haraldFooterDataUri) return; // será adicionado após preload
   slide.addImage({
-    data: haraldFooterBarPng,
+    data: haraldFooterDataUri,
     x: 0,
     y: HARALD_FOOTER_Y,
     w: HARALD_FOOTER_W,
