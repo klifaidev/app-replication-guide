@@ -67,7 +67,15 @@ const HEADER_MAP: Record<string, string> = {
   cpv: "cpv",
   cmv: "cpv",
   custo: "cpv",
+  status: "status",
 };
+
+// Identifica linhas de Budget na coluna STATUS (ex.: "1.Budget Vendas").
+function isBudgetStatus(raw: unknown): boolean {
+  if (raw == null) return false;
+  const s = normHeader(String(raw)); // remove acentos, espaços, pontuação, lowercase
+  return s.includes("budgetvendas");
+}
 
 function dataToPeriod(raw: unknown): ReturnType<typeof parsePeriod> | null {
   if (raw == null || raw === "") return null;
@@ -126,10 +134,18 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
   const monthsSet = new Set<string>();
   let skippedNoPeriod = 0;
   let skippedZero = 0;
+  let skippedNotBudget = 0;
+  const hasStatusCol = Object.values(colKey).includes("status");
 
   for (const r of json) {
     const norm: Record<string, unknown> = {};
     for (const [col, key] of Object.entries(colKey)) norm[key] = r[col];
+
+    // Mantém SOMENTE linhas de Budget (STATUS = "1.Budget Vendas").
+    if (hasStatusCol && !isBudgetStatus(norm.status)) {
+      skippedNotBudget++;
+      continue;
+    }
 
     const p = dataToPeriod(norm.periodo);
     if (!p) { skippedNoPeriod++; continue; }
@@ -169,6 +185,11 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
     monthsSet.add(p.periodo);
   }
 
+  if (!hasStatusCol) {
+    warnings.push(`Coluna "STATUS" não encontrada — todas as linhas foram consideradas Budget.`);
+  } else if (skippedNotBudget) {
+    warnings.push(`${skippedNotBudget.toLocaleString("pt-BR")} linha(s) ignoradas (STATUS ≠ "1.Budget Vendas").`);
+  }
   if (skippedNoPeriod) warnings.push(`${skippedNoPeriod} linha(s) sem data válida foram ignoradas.`);
   if (skippedZero) warnings.push(`${skippedZero} linha(s) sem valores foram ignoradas.`);
 
