@@ -189,6 +189,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
       mercado: dep?.mercado,
       faixaPeso: dep?.faixaPeso,
       sabor: dep?.sabor,
+      inovacao: getInovacao(sku),
       volumeKg,
       receita,
       cm,
