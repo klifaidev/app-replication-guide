@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronUp, X, Copy, Check } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronUp, X, Copy, Check, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePricing } from "@/store/pricing";
 import { toast } from "sonner";
+import { exportMissingSkusXlsx } from "@/lib/exportMissingSkusXlsx";
 
 export function MissingMappingsAlert() {
   const missing = usePricing((s) => s.missing);
@@ -73,6 +74,24 @@ export function MissingMappingsAlert() {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              {missing.skus.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-warning hover:bg-warning/15 hover:text-warning"
+                  onClick={() => {
+                    try {
+                      exportMissingSkusXlsx(missing.skus);
+                      toast.success(`Planilha gerada com ${missing.skus.length} SKU(s).`);
+                    } catch {
+                      toast.error("Falha ao gerar planilha.");
+                    }
+                  }}
+                >
+                  <FileSpreadsheet className="mr-1 h-3 w-3" />
+                  Exportar SKUs (.xlsx)
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
