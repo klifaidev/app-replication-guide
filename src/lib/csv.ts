@@ -309,6 +309,9 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       else missingUfs.add(obj.uf);
     }
 
+    // De Para de Inovação — classifica SKU como "Inovação" ou "Regular".
+    obj.inovacao = getInovacao(obj.sku);
+
 
     const period = parsePeriod(obj.periodo as string);
     if (!period) {
