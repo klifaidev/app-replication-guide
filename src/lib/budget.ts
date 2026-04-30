@@ -15,6 +15,10 @@ export interface BudgetRow {
   ano: number;
   fy: string;
   fyNum: number;
+  /** STATUS bruto da linha (ex.: "1.Budget Vendas", "2.Real Vendas") */
+  status?: string;
+  /** Classificação derivada do STATUS: "budget" (1.Budget Vendas) | "real" (qualquer outro) */
+  kind: "budget" | "real";
   canal?: string;
   canalAjustado?: string; // derivado via De Para Comercial
   sku?: string;
@@ -30,9 +34,9 @@ export interface BudgetRow {
   inovacao?: string; // "Inovação" | "Regular"
   legado?: string;   // ex.: "1A", "2A", "3A"
   volumeKg: number;    // VOLUME
-  receita: number;     // RECEITA (ROL Budget)
-  cm: number;          // Contribuição Marginal Budget
-  cpv: number;         // CPV Budget
+  receita: number;     // RECEITA
+  cm: number;          // Contribuição Marginal
+  cpv: number;         // CPV
 }
 
 export interface BudgetFile {
