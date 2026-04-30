@@ -2,6 +2,7 @@ import { DreTable, type DrePeriodMode } from "@/components/pricing/DreTable";
 import { EmptyState } from "@/components/pricing/EmptyState";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { Topbar } from "@/components/pricing/Topbar";
+import { SkuExcludePicker } from "@/components/pricing/SkuExcludePicker";
 import { applyFilters } from "@/lib/analytics";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
@@ -14,8 +15,17 @@ export default function Dre() {
   const filters = usePricing((s) => s.filters);
   const months = useMonthsInfo();
   const [mode, setMode] = useState<DrePeriodMode>("month");
+  const [excludedSkus, setExcludedSkus] = useState<string[]>([]);
 
-  const filtered = useMemo(() => applyFilters(rows, filters, null), [rows, filters]);
+  const filtered = useMemo(() => {
+    const base = applyFilters(rows, filters, null);
+    if (excludedSkus.length === 0) return base;
+    const ex = new Set(excludedSkus);
+    return base.filter((r) => !r.sku || !ex.has(r.sku));
+  }, [rows, filters, excludedSkus]);
+
+  // Pool de SKUs disponíveis no picker — respeita filtros ativos (mas não a própria exclusão)
+  const pickerRows = useMemo(() => applyFilters(rows, filters, null), [rows, filters]);
 
   if (rows.length === 0) {
     return (
@@ -31,16 +41,28 @@ export default function Dre() {
       <Topbar title="DRE" subtitle="Consolidado por período com filtros ativos" />
       <div className="space-y-6 px-8 py-6">
         <GlassCard>
-          <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-medium">DRE por Período</h2>
               <p className="text-xs text-muted-foreground">
                 {mode === "month"
                   ? "Visão consolidada por mês — valores aplicam os filtros ativos."
                   : "Acumulado por ano fiscal (Abril → Março) — valores aplicam os filtros ativos."}
+                {excludedSkus.length > 0 && (
+                  <span className="ml-1 text-destructive">
+                    · {excludedSkus.length} SKU{excludedSkus.length > 1 ? "s" : ""} excluído{excludedSkus.length > 1 ? "s" : ""} do cálculo
+                  </span>
+                )}
               </p>
             </div>
-            <PeriodModeToggle mode={mode} onChange={setMode} />
+            <div className="flex flex-wrap items-start gap-2">
+              <SkuExcludePicker
+                rows={pickerRows}
+                excluded={excludedSkus}
+                onChange={setExcludedSkus}
+              />
+              <PeriodModeToggle mode={mode} onChange={setMode} />
+            </div>
           </header>
           <DreTable rows={filtered} months={months} mode={mode} />
         </GlassCard>
