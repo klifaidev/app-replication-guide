@@ -238,7 +238,6 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
 
   // Diagnostics counters
   let rejectedNoPeriod = 0;
-  let rejectedNoRol = 0;
   let firstFailureSample: Record<string, unknown> | null = null;
 
   // Detect missing critical columns
