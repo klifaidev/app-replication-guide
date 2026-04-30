@@ -135,12 +135,12 @@ export default function Budget() {
     return Array.from(map.values()).sort((a, b) => b.realRol + b.budRol - (a.realRol + a.budRol));
   }, [realFiltered, budgetFiltered, dim]);
 
-  if (realRows.length === 0 && budgetRows.length === 0) {
+  if (budgetRows.length === 0) {
     return (
       <>
         <Topbar title="Budget" subtitle="Real vs Orçamento" />
         <div className="px-8 py-6">
-          <EmptyState message="Envie a base Real e a base Budget na aba Upload / Bases para começar." />
+          <EmptyState message="Envie a base Budget (XLSX) na aba Upload / Bases para começar — ela contém tanto as linhas Real quanto as Budget." />
         </div>
       </>
     );
