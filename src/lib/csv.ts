@@ -236,14 +236,9 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     }
   }
 
-  // Detecta coluna STATUS (mesmo header normalizado para "status") para
-  // descartar linhas de Budget no parser de Real.
-  const statusHeader = allHeaders.find((h) => normHeader(h) === "status");
-
   // Diagnostics counters
   let rejectedNoPeriod = 0;
   let rejectedNoRol = 0;
-  let skippedBudget = 0;
   let firstFailureSample: Record<string, unknown> | null = null;
 
   // Detect missing critical columns
@@ -260,11 +255,6 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
   }
 
   for (const raw of result.data) {
-    // Filtra linhas de Budget (STATUS = "1.Budget Vendas") da base Real.
-    if (statusHeader && isBudgetStatus(raw[statusHeader])) {
-      skippedBudget++;
-      continue;
-    }
     const obj: Partial<PricingRow> = {};
     for (const [src, dest] of Object.entries(colMap)) {
       const val = raw[src];
