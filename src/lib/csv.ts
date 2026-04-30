@@ -267,6 +267,11 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
   }
 
   for (const raw of result.data) {
+    // Filtra linhas de Budget (STATUS = "1.Budget Vendas") da base Real.
+    if (statusHeader && isBudgetStatus(raw[statusHeader])) {
+      skippedBudget++;
+      continue;
+    }
     const obj: Partial<PricingRow> = {};
     for (const [src, dest] of Object.entries(colMap)) {
       const val = raw[src];
