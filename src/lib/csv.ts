@@ -411,6 +411,14 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
   if (result.errors.length) console.log("Erros do parser:", result.errors.slice(0, 5));
   console.groupEnd();
 
+  if (skippedBudget > 0) {
+    warnings.push(
+      `${skippedBudget.toLocaleString("pt-BR")} linha(s) de Budget (STATUS = "1.Budget Vendas") foram desconsideradas — ` +
+      `o parser de Real importa apenas linhas que NÃO sejam Budget. ` +
+      `${rows.length.toLocaleString("pt-BR")} linha(s) Real importadas.`,
+    );
+  }
+
   if (rows.length === 0) {
     const reasons: string[] = [];
     if (!mappedFields.has("periodo")) reasons.push("coluna de período não encontrada");
