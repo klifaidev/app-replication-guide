@@ -15,7 +15,7 @@ const dashItems = [
   { to: "/custos", label: "Custos", icon: Coins },
   { to: "/abc", label: "ABC Heróis", icon: LineChart },
   { to: "/budget", label: "Budget", icon: Target },
-  { to: "/detalhe", label: "Tabela Detalhe", icon: TableProperties },
+  { to: "/detalhe", label: "Tabela Dinâmica", icon: TableProperties },
 ];
 
 const workItems = [
