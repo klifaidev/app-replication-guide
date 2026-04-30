@@ -1,7 +1,7 @@
 import Papa from "papaparse";
 import type { LoadedFile, PricingRow } from "./types";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
-import { getDeParaBySku } from "./depara";
+import { getDeParaBySku, getMissingDeParaFields, type DeParaEntry } from "./depara";
 import { getInovacao, getLegado } from "./deparaInovacao";
 import {
   getCanalAjustado,
@@ -161,8 +161,18 @@ function detectDelimiter(sample: string): string {
   return counts[0].d || ";";
 }
 
+export interface MissingSkuItem {
+  sku: string;
+  descricao?: string;
+  /** Entry do De Para (parcial) — vazio quando o SKU nem existe no De Para. */
+  entry?: Partial<DeParaEntry>;
+  /** Campos do De Para que estão vazios para esse SKU. */
+  missingFields: (keyof DeParaEntry)[];
+}
+
 export interface MissingMappings {
-  skus: { sku: string; descricao?: string }[]; // SKUs sem De Para IA
+  /** SKUs com qualquer campo do De Para faltando (ausentes ou parcialmente preenchidos). */
+  skus: MissingSkuItem[];
   canais: string[];           // Canal distrib. sem De Para Comercial
   regioes: string[];          // Região sem De Para (UF/Mercado Ajustado)
   ufs: string[];              // UF sem De Para Regional
@@ -202,7 +212,8 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
   const monthsSet = new Set<string>();
 
   // Tracking de valores ausentes nos De Paras
-  const missingSkus = new Map<string, string | undefined>(); // sku -> desc
+  // SKUs pendentes (ausentes OU parcialmente preenchidos no De Para)
+  const missingSkus = new Map<string, MissingSkuItem>();
   const missingCanais = new Set<string>();
   const missingRegioes = new Set<string>();
   const missingUfs = new Set<string>();
@@ -280,10 +291,17 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       obj.faixaPeso = dp.faixaPeso || obj.faixaPeso;
       obj.sabor = dp.sabor || obj.sabor;
       obj.skuDesc = dp.skuDesc || obj.skuDesc;
-    } else if (obj.sku) {
-      // SKU presente na base mas ausente no De Para IA
-      if (!missingSkus.has(obj.sku)) {
-        missingSkus.set(obj.sku, obj.skuDesc);
+    }
+    // SKU pendente: ausente OU presente com algum campo vazio.
+    if (obj.sku) {
+      const missingFields = getMissingDeParaFields(obj.sku);
+      if (missingFields.length > 0 && !missingSkus.has(obj.sku)) {
+        missingSkus.set(obj.sku, {
+          sku: obj.sku,
+          descricao: obj.skuDesc,
+          entry: dp ?? undefined,
+          missingFields,
+        });
       }
     }
 
