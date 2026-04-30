@@ -326,11 +326,11 @@ export default function Upload() {
                 ))}
               </ul>
             )}
-          </GlassCard>
         </div>
 
-        <GlassCard>
-          <h3 className="mb-3 text-sm font-medium">Colunas esperadas no CSV (Real)</h3>
+        <ExportDeparasCard />
+
+
           <ul className="grid grid-cols-1 gap-1.5 text-xs text-muted-foreground md:grid-cols-2">
             {EXPECTED_COLS.map((c) => (
               <li key={c} className="flex items-start gap-2">
