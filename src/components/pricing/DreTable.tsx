@@ -105,9 +105,9 @@ function fmt(value: number | null, kind: RowKind) {
   return formatBRL(value, { digits: 0 });
 }
 
-export function DreTable({ rows, months }: DreTableProps) {
+export function DreTable({ rows, months, mode = "month" }: DreTableProps) {
   const selectedPeriods = usePricing((s) => s.selectedPeriods);
-  
+
   // Filter months based on selectedPeriods (null = all)
   const filteredMonths = useMemo(() => {
     const sorted = [...months].sort((a, b) =>
@@ -117,16 +117,47 @@ export function DreTable({ rows, months }: DreTableProps) {
     return sorted.filter((m) => selectedPeriods.includes(m.periodo));
   }, [months, selectedPeriods]);
 
-  const aggsByPeriod = useMemo(() => {
+  // Build columns + aggregations based on mode
+  const { columns, aggsByCol } = useMemo(() => {
     const map = new Map<string, PeriodAgg>();
-    for (const m of filteredMonths) {
-      const rs = rows.filter((r) => r.periodo === m.periodo);
-      map.set(m.periodo, aggregate(rs));
-    }
-    return map;
-  }, [rows, filteredMonths]);
+    const cols: PeriodCol[] = [];
 
-  if (filteredMonths.length === 0) {
+    if (mode === "fy") {
+      // Group selected months by fiscal year (Apr–Mar). Accumulated.
+      const byFy = new Map<string, MonthInfo[]>();
+      for (const m of filteredMonths) {
+        const arr = byFy.get(m.fy) ?? [];
+        arr.push(m);
+        byFy.set(m.fy, arr);
+      }
+      // Sort FYs by their first month (chronologically)
+      const fys = Array.from(byFy.entries()).sort((a, b) => {
+        const ma = a[1][0], mb = b[1][0];
+        return ma.ano !== mb.ano ? ma.ano - mb.ano : ma.mes - mb.mes;
+      });
+      for (const [fy, ms] of fys) {
+        const periods = new Set(ms.map((m) => m.periodo));
+        const rs = rows.filter((r) => periods.has(r.periodo));
+        const first = ms[0];
+        const last = ms[ms.length - 1];
+        const sub =
+          ms.length === 1
+            ? first.label
+            : `${first.label} → ${last.label} (${ms.length}m)`;
+        cols.push({ key: fy, label: fy, sublabel: sub });
+        map.set(fy, aggregate(rs));
+      }
+    } else {
+      for (const m of filteredMonths) {
+        const rs = rows.filter((r) => r.periodo === m.periodo);
+        cols.push({ key: m.periodo, label: m.label, sublabel: m.fy });
+        map.set(m.periodo, aggregate(rs));
+      }
+    }
+    return { columns: cols, aggsByCol: map };
+  }, [rows, filteredMonths, mode]);
+
+  if (columns.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         Nenhum período disponível para montar o DRE.
@@ -142,12 +173,17 @@ export function DreTable({ rows, months }: DreTableProps) {
             <th className="sticky left-0 z-10 min-w-[260px] border-b border-border/40 bg-card/80 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-primary backdrop-blur">
               Valores
             </th>
-            {filteredMonths.map((m) => (
+            {columns.map((c) => (
               <th
-                key={m.periodo}
+                key={c.key}
                 className="border-b border-border/40 bg-card/40 px-3 py-2.5 text-right text-[11px] font-medium uppercase tracking-wider text-muted-foreground"
               >
-                {m.label}
+                <div>{c.label}</div>
+                {c.sublabel && (
+                  <div className="mt-0.5 text-[9px] font-normal normal-case tracking-normal text-muted-foreground/70">
+                    {c.sublabel}
+                  </div>
+                )}
               </th>
             ))}
           </tr>
