@@ -234,3 +234,30 @@ export function aggregateBudget(rows: BudgetRow[]): BudgetTotals {
   }
   return { receita, volumeKg, cm, cpv };
 }
+
+// Filtros aplicáveis ao Budget.
+// SKU/Produto: todos os atributos vindos do De Para por SKU.
+// Comercial: APENAS canalAjustado (UF/Regional/Mercado Ajustado vêm da
+// Região do CSV Real e não existem na base Budget).
+export const BUDGET_FILTER_KEYS = new Set([
+  "categoria", "subcategoria", "marca", "tecnologia", "formato",
+  "mercado", "faixaPeso", "sabor", "sku",
+  "canalAjustado",
+]);
+
+export function applyBudgetFilters(
+  rows: BudgetRow[],
+  filters: Filters,
+  selectedPeriods: string[] | null,
+): BudgetRow[] {
+  return rows.filter((r) => {
+    if (selectedPeriods && selectedPeriods.length && !selectedPeriods.includes(r.periodo)) return false;
+    for (const [k, vals] of Object.entries(filters)) {
+      if (!vals || vals.length === 0) continue;
+      if (!BUDGET_FILTER_KEYS.has(k)) continue; // ignora filtros não suportados
+      const v = (r as unknown as Record<string, unknown>)[k] as string | undefined;
+      if (!v || !vals.includes(v)) return false;
+    }
+    return true;
+  });
+}
