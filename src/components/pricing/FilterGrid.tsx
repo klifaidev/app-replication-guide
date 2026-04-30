@@ -1,12 +1,10 @@
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { usePricing } from "@/store/pricing";
 import { uniqueValues, applyFilters } from "@/lib/analytics";
 import type { FilterKey, PricingRow } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { X, Package, Briefcase, Sparkles } from "lucide-react";
 import { getDeParaBySku } from "@/lib/depara";
+import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 
 // Filtros de SKU — atributos do produto vindos do De Para IA.
 const SKU_FIELDS: { key: FilterKey; label: string }[] = [
@@ -57,7 +55,7 @@ export function FilterGrid() {
   ) => {
     const opts = uniqueValues(baseRows, f.key as keyof PricingRow);
     if (opts.length === 0) return null;
-    const current = filters[f.key]?.[0] ?? "__all__";
+    const current = filters[f.key] ?? [];
 
     let optionItems: { value: string; label: string }[];
     if (f.key === "sku") {
@@ -79,18 +77,6 @@ export function FilterGrid() {
         .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
     }
 
-    const triggerDisplay =
-      f.key === "sku" && current !== "__all__"
-        ? optionItems.find((o) => o.value === current)?.label
-        : undefined;
-
-    const triggerClass =
-      variant === "comercial"
-        ? "h-9 border-success/40 bg-success/10 text-xs hover:bg-success/15 focus:ring-success/40"
-        : variant === "inovacao"
-          ? "h-9 border-accent/50 bg-accent/10 text-xs hover:bg-accent/15 focus:ring-accent/40"
-          : "h-9 border-border/50 bg-secondary/40 text-xs";
-
     const labelClass =
       variant === "comercial"
         ? "mb-1 block text-[11px] font-medium uppercase tracking-wider text-success"
@@ -101,26 +87,14 @@ export function FilterGrid() {
     return (
       <div key={f.key}>
         <label className={labelClass}>{f.label}</label>
-        <Select
-          value={current}
-          onValueChange={(v) => setFilter(f.key, v === "__all__" ? [] : [v])}
-        >
-          <SelectTrigger className={triggerClass}>
-            {triggerDisplay ? (
-              <span className="truncate">{triggerDisplay}</span>
-            ) : (
-              <SelectValue placeholder="Todos" />
-            )}
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            <SelectItem value="__all__">Todos</SelectItem>
-            {optionItems.map((o) => (
-              <SelectItem key={o.value} value={o.value} className="text-xs">
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelectFilter
+          options={optionItems}
+          selected={current}
+          onChange={(vals) => setFilter(f.key, vals)}
+          placeholder="Todos"
+          variant={variant}
+          showChips={f.key === "sku"}
+        />
       </div>
     );
   };
