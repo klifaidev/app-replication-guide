@@ -2,6 +2,7 @@ import Papa from "papaparse";
 import type { LoadedFile, PricingRow } from "./types";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
 import { getDeParaBySku } from "./depara";
+import { getInovacao } from "./deparaInovacao";
 import {
   getCanalAjustado,
   getUfFromRegiao,
@@ -307,6 +308,9 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
       if (regional) obj.regional = regional;
       else missingUfs.add(obj.uf);
     }
+
+    // De Para de Inovação — classifica SKU como "Inovação" ou "Regular".
+    obj.inovacao = getInovacao(obj.sku);
 
 
     const period = parsePeriod(obj.periodo as string);

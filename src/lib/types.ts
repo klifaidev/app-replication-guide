@@ -27,6 +27,7 @@ export interface PricingRow {
   sabor?: string;
   tecnologia?: string;
   faixaPeso?: string;
+  inovacao?: string; // "Inovação" | "Regular" — derivado do De Para de Inovação por SKU
   // Measures (R$, kg)
   rol: number;        // Receita Operacional Líquida
   volumeKg: number;
@@ -74,6 +75,7 @@ export type FilterKey =
   | "mercadoAjustado"
   | "sabor"
   | "tecnologia"
-  | "faixaPeso";
+  | "faixaPeso"
+  | "inovacao";
 
 export type Filters = Partial<Record<FilterKey, string[]>>;
