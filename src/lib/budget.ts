@@ -170,7 +170,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
     const cm = parseDecimal(norm.cm);
     const cpv = parseDecimal(norm.cpv);
 
-    if (volumeKg === 0 && receita === 0 && cm === 0) { skippedZero++; continue; }
+    // Importa todas as linhas com período válido — inclusive zeradas e negativas.
 
     // Sem coluna STATUS: assume Budget (compatibilidade com bases antigas).
     const kind: "budget" | "real" = !hasStatusCol || isBudgetStatus(statusRaw) ? "budget" : "real";
