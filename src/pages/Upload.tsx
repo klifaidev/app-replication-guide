@@ -3,6 +3,7 @@ import { GlassCard } from "@/components/pricing/GlassCard";
 import { MissingMappingsAlert } from "@/components/pricing/MissingMappingsAlert";
 import { UploadZone } from "@/components/pricing/UploadZone";
 import { BudgetUploadZone } from "@/components/pricing/BudgetUploadZone";
+import { ExportDeparasCard } from "@/components/pricing/ExportDeparasCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
@@ -327,6 +328,8 @@ export default function Upload() {
             )}
           </GlassCard>
         </div>
+
+        <ExportDeparasCard />
 
         <GlassCard>
           <h3 className="mb-3 text-sm font-medium">Colunas esperadas no CSV (Real)</h3>
