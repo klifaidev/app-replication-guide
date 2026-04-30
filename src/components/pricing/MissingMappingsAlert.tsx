@@ -1,15 +1,44 @@
-import { useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronUp, X, Copy, Check, FileSpreadsheet } from "lucide-react";
+import { useState, useMemo } from "react";
+import { AlertTriangle, ChevronDown, ChevronUp, X, Copy, Check, FileSpreadsheet, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePricing } from "@/store/pricing";
 import { toast } from "sonner";
 import { exportMissingSkusXlsx } from "@/lib/exportMissingSkusXlsx";
+import { formatNum, formatPct } from "@/lib/format";
+
+const isEmpty = (v?: string) => {
+  const s = (v ?? "").trim();
+  return !s || s.toUpperCase() === "TBD";
+};
 
 export function MissingMappingsAlert() {
   const missing = usePricing((s) => s.missing);
+  const rows = usePricing((s) => s.rows);
   const dismiss = usePricing((s) => s.dismissMissing);
   const [open, setOpen] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  const volStats = useMemo(() => {
+    if (rows.length === 0) return null;
+    let totalKg = 0;
+    let missingKg = 0;
+    const skuSet = new Set<string>();
+    for (const r of rows) {
+      totalKg += r.volumeKg || 0;
+      if (isEmpty(r.categoria) || isEmpty(r.subcategoria)) {
+        missingKg += r.volumeKg || 0;
+        if (r.sku) skuSet.add(r.sku);
+      }
+    }
+    if (missingKg <= 0) return null;
+    return {
+      totalKg,
+      missingKg,
+      missingTon: missingKg / 1000,
+      pct: totalKg > 0 ? missingKg / totalKg : 0,
+      skuCount: skuSet.size,
+    };
+  }, [rows]);
 
   const total =
     missing.skus.length +
@@ -121,6 +150,42 @@ export function MissingMappingsAlert() {
               </Button>
             </div>
           </div>
+
+          {volStats && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-warning/15 text-warning">
+                <Scale className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-warning">
+                  Impacto em volume — SKUs sem Categoria/Subcategoria
+                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  No período total carregado, esses SKUs movimentaram volume relevante.
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Volume</div>
+                  <div className="text-sm font-semibold tabular-nums">
+                    {formatNum(volStats.missingTon, 1)} t
+                  </div>
+                  <div className="text-[10px] text-muted-foreground tabular-nums">
+                    {formatNum(volStats.missingKg, 0)} kg
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">% do total</div>
+                  <div className="text-sm font-semibold tabular-nums text-warning">
+                    {formatPct(volStats.pct, 2)}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground tabular-nums">
+                    {volStats.skuCount} SKU(s)
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {open && (
             <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
