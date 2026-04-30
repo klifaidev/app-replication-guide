@@ -143,10 +143,7 @@ export default function Budget() {
       <>
         <Topbar title="Budget" subtitle="Real vs Orçamento" />
         <div className="px-8 py-6">
-          <EmptyState
-            title="Nenhum dado carregado"
-            description="Envie a base Real e a base Budget na aba Upload / Bases para começar."
-          />
+          <EmptyState message="Envie a base Real e a base Budget na aba Upload / Bases para começar." />
         </div>
       </>
     );
