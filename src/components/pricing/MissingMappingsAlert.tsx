@@ -106,14 +106,14 @@ export function MissingMappingsAlert() {
           <div className="flex items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-semibold text-warning">
-                {total > 0
-                  ? `${total} valor${total > 1 ? "es" : ""} sem mapeamento no De Para`
-                  : "Pendências de hierarquia no De Para"}
+                {missing.skus.length > 0
+                  ? `${missing.skus.length} SKU${missing.skus.length > 1 ? "s" : ""} pendente${missing.skus.length > 1 ? "s" : ""} no De Para`
+                  : total > 0
+                    ? `${total} valor${total > 1 ? "es" : ""} sem mapeamento no De Para`
+                    : "Pendências de hierarquia no De Para"}
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {total > 0
-                  ? "A base contém informações que não existem nos De Paras. Revise abaixo e me peça para adicioná-las."
-                  : "Existem SKUs com Categoria/Subcategoria em branco no De Para. Veja o impacto em volume abaixo."}
+                Inclui SKUs ausentes e SKUs presentes com algum campo em branco (categoria, subcategoria, marca, faixa de peso, etc.).
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
