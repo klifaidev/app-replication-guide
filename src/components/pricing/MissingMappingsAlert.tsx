@@ -1,15 +1,44 @@
-import { useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronUp, X, Copy, Check, FileSpreadsheet } from "lucide-react";
+import { useState, useMemo } from "react";
+import { AlertTriangle, ChevronDown, ChevronUp, X, Copy, Check, FileSpreadsheet, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePricing } from "@/store/pricing";
 import { toast } from "sonner";
 import { exportMissingSkusXlsx } from "@/lib/exportMissingSkusXlsx";
+import { formatNum, formatPct } from "@/lib/format";
+
+const isEmpty = (v?: string) => {
+  const s = (v ?? "").trim();
+  return !s || s.toUpperCase() === "TBD";
+};
 
 export function MissingMappingsAlert() {
   const missing = usePricing((s) => s.missing);
+  const rows = usePricing((s) => s.rows);
   const dismiss = usePricing((s) => s.dismissMissing);
   const [open, setOpen] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  const volStats = useMemo(() => {
+    if (rows.length === 0) return null;
+    let totalKg = 0;
+    let missingKg = 0;
+    const skuSet = new Set<string>();
+    for (const r of rows) {
+      totalKg += r.volumeKg || 0;
+      if (isEmpty(r.categoria) || isEmpty(r.subcategoria)) {
+        missingKg += r.volumeKg || 0;
+        if (r.sku) skuSet.add(r.sku);
+      }
+    }
+    if (missingKg <= 0) return null;
+    return {
+      totalKg,
+      missingKg,
+      missingTon: missingKg / 1000,
+      pct: totalKg > 0 ? missingKg / totalKg : 0,
+      skuCount: skuSet.size,
+    };
+  }, [rows]);
 
   const total =
     missing.skus.length +
