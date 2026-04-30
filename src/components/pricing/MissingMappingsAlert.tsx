@@ -46,7 +46,7 @@ export function MissingMappingsAlert() {
     missing.regioes.length +
     missing.ufs.length;
 
-  if (total === 0) return null;
+  if (total === 0 && !volStats) return null;
 
   const sections: { title: string; items: string[]; key: string }[] = [
     {
@@ -95,11 +95,14 @@ export function MissingMappingsAlert() {
           <div className="flex items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-semibold text-warning">
-                {total} valor{total > 1 ? "es" : ""} sem mapeamento no De Para
+                {total > 0
+                  ? `${total} valor${total > 1 ? "es" : ""} sem mapeamento no De Para`
+                  : "Pendências de hierarquia no De Para"}
               </h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                A base contém informações que não existem nos De Paras. Revise abaixo e me peça
-                para adicioná-las.
+                {total > 0
+                  ? "A base contém informações que não existem nos De Paras. Revise abaixo e me peça para adicioná-las."
+                  : "Existem SKUs com Categoria/Subcategoria em branco no De Para. Veja o impacto em volume abaixo."}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
