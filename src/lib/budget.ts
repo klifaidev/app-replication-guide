@@ -146,7 +146,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
   const rows: BudgetRow[] = [];
   const monthsSet = new Set<string>();
   let skippedNoPeriod = 0;
-  let skippedZero = 0;
+  
   let countBudget = 0;
   let countReal = 0;
   const hasStatusCol = Object.values(colKey).includes("status");
