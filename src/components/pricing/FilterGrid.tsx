@@ -159,9 +159,6 @@ export function FilterGrid() {
               Inovação
             </h4>
             <div className="h-px flex-1 bg-accent/20" />
-            <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-              Chave: <span className="font-medium text-accent/80">SKU</span> · Real & Budget
-            </span>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
             {INOVACAO_FIELDS.map((f) => renderField(f, "inovacao"))}
