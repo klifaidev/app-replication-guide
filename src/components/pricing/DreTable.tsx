@@ -5,9 +5,18 @@ import { formatBRL, formatNum, formatPct } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePricing } from "@/store/pricing";
 
+export type DrePeriodMode = "month" | "fy";
+
 interface DreTableProps {
   rows: PricingRow[];
   months: MonthInfo[];
+  mode?: DrePeriodMode;
+}
+
+interface PeriodCol {
+  key: string;
+  label: string;
+  sublabel?: string;
 }
 
 interface PeriodAgg {
