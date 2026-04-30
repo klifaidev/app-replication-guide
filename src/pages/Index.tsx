@@ -1,13 +1,13 @@
 import { Topbar } from "@/components/pricing/Topbar";
-import { UploadZone } from "@/components/pricing/UploadZone";
 import { FilterGrid } from "@/components/pricing/FilterGrid";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { applyFilters, computeKPIs } from "@/lib/analytics";
 import { formatBRL, formatNum, formatPct, formatTon } from "@/lib/format";
-import { Sparkles, BarChart3, TrendingUp, Database } from "lucide-react";
+import { Sparkles, BarChart3, TrendingUp, Database, ArrowRight, Upload as UploadIcon } from "lucide-react";
 import { useMemo } from "react";
+import { Link } from "react-router-dom";
 
 export default function Index() {
   const rows = usePricing((s) => s.rows);
@@ -46,7 +46,34 @@ export default function Index() {
                 </p>
               </div>
             </GlassCard>
-            <UploadZone />
+
+            <Link
+              to="/upload"
+              className="group relative block overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 via-card/40 to-accent/10 p-6 transition-all hover:border-primary/60 hover:shadow-glow"
+            >
+              <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/20 blur-3xl transition-opacity group-hover:opacity-80" />
+              <div className="relative flex items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/40 to-accent/20 text-primary shadow-glow">
+                    <UploadIcon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/80">
+                      Comece por aqui
+                    </div>
+                    <h3 className="mt-1 text-xl font-light tracking-tight">
+                      Ir para <span className="text-primary">Upload / Bases</span>
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Carregue seus CSVs mensais, planilha de Budget e gerencie suas bases.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/40 bg-primary/10 text-primary transition-transform group-hover:translate-x-1">
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </div>
+            </Link>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {[
