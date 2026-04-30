@@ -52,7 +52,7 @@ export function FilterGrid() {
 
   const renderField = (
     f: { key: FilterKey; label: string },
-    variant: "sku" | "comercial",
+    variant: "sku" | "comercial" | "inovacao",
   ) => {
     const opts = uniqueValues(baseRows, f.key as keyof PricingRow);
     if (opts.length === 0) return null;
@@ -86,12 +86,16 @@ export function FilterGrid() {
     const triggerClass =
       variant === "comercial"
         ? "h-9 border-success/40 bg-success/10 text-xs hover:bg-success/15 focus:ring-success/40"
-        : "h-9 border-border/50 bg-secondary/40 text-xs";
+        : variant === "inovacao"
+          ? "h-9 border-accent/50 bg-accent/10 text-xs hover:bg-accent/15 focus:ring-accent/40"
+          : "h-9 border-border/50 bg-secondary/40 text-xs";
 
     const labelClass =
       variant === "comercial"
         ? "mb-1 block text-[11px] font-medium uppercase tracking-wider text-success"
-        : "mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground";
+        : variant === "inovacao"
+          ? "mb-1 block text-[11px] font-medium uppercase tracking-wider text-accent"
+          : "mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground";
 
     return (
       <div key={f.key}>
@@ -142,6 +146,23 @@ export function FilterGrid() {
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {SKU_FIELDS.map((f) => renderField(f, "sku"))}
+        </div>
+      </section>
+
+      {/* Bloco Inovação — destacado na paleta de Inovação */}
+      <section className="rounded-lg border border-accent/30 bg-accent/5 p-3 shadow-[0_0_24px_-12px_hsl(var(--accent)/0.4)]">
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkles className="h-3.5 w-3.5 text-accent" />
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-accent">
+            Inovação
+          </h4>
+          <div className="h-px flex-1 bg-accent/20" />
+          <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+            Chave: <span className="font-medium text-accent/80">SKU</span> · Real & Budget
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          {INOVACAO_FIELDS.map((f) => renderField(f, "inovacao"))}
         </div>
       </section>
 
