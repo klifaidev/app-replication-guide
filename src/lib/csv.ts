@@ -146,11 +146,21 @@ const HEADER_MAP: Record<string, keyof PricingRow | "ignore"> = {
   maodeobraajustado: "mod",
   cif: "cif",
   cifajustado: "cif",
+  // STATUS — usada para separar linhas Real vs Budget no mesmo arquivo.
+  // No parser do Real, linhas com STATUS = "1.Budget Vendas" são descartadas.
+  status: "ignore",
   // explicit ignores (avoid noise in unmapped list)
   ctbmg: "ignore",                // "Ctb. Mg. %"
   gestorresp: "ignore",
   centro: "ignore",
 };
+
+// Identifica linhas de Budget na coluna STATUS (ex.: "1.Budget Vendas").
+function isBudgetStatus(raw: unknown): boolean {
+  if (raw == null) return false;
+  const s = String(raw).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  return s.includes("budgetvendas");
+}
 
 function detectDelimiter(sample: string): string {
   const counts = [";", ",", "\t", "|"].map((d) => ({
@@ -233,9 +243,14 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     }
   }
 
+  // Detecta coluna STATUS (mesmo header normalizado para "status") para
+  // descartar linhas de Budget no parser de Real.
+  const statusHeader = allHeaders.find((h) => normHeader(h) === "status");
+
   // Diagnostics counters
   let rejectedNoPeriod = 0;
   let rejectedNoRol = 0;
+  let skippedBudget = 0;
   let firstFailureSample: Record<string, unknown> | null = null;
 
   // Detect missing critical columns
@@ -252,6 +267,11 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
   }
 
   for (const raw of result.data) {
+    // Filtra linhas de Budget (STATUS = "1.Budget Vendas") da base Real.
+    if (statusHeader && isBudgetStatus(raw[statusHeader])) {
+      skippedBudget++;
+      continue;
+    }
     const obj: Partial<PricingRow> = {};
     for (const [src, dest] of Object.entries(colMap)) {
       const val = raw[src];
@@ -390,6 +410,14 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
   if (firstFailureSample) console.log("Exemplo de linha rejeitada:", firstFailureSample);
   if (result.errors.length) console.log("Erros do parser:", result.errors.slice(0, 5));
   console.groupEnd();
+
+  if (skippedBudget > 0) {
+    warnings.push(
+      `${skippedBudget.toLocaleString("pt-BR")} linha(s) de Budget (STATUS = "1.Budget Vendas") foram desconsideradas — ` +
+      `o parser de Real importa apenas linhas que NÃO sejam Budget. ` +
+      `${rows.length.toLocaleString("pt-BR")} linha(s) Real importadas.`,
+    );
+  }
 
   if (rows.length === 0) {
     const reasons: string[] = [];
