@@ -4,6 +4,7 @@
 // (mantém alinhamento com a base atual).
 import * as XLSX from "xlsx";
 import { getDeParaBySku } from "./depara";
+import { getInovacao } from "./deparaInovacao";
 import { getCanalAjustado } from "./deparaComercial";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
 import type { Filters } from "./types";
