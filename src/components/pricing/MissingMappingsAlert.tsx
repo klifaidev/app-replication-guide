@@ -46,7 +46,7 @@ export function MissingMappingsAlert() {
     missing.regioes.length +
     missing.ufs.length;
 
-  if (total === 0) return null;
+  if (total === 0 && !volStats) return null;
 
   const sections: { title: string; items: string[]; key: string }[] = [
     {
