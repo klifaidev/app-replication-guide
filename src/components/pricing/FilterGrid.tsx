@@ -147,6 +147,9 @@ export function FilterGrid() {
             Comercial
           </h4>
           <div className="h-px flex-1 bg-success/20" />
+          <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+            Budget usa apenas <span className="font-medium text-success/80">Canal Ajustado</span>
+          </span>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
           {COMERCIAL_FIELDS.map((f) => renderField(f, "comercial"))}
