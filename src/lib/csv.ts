@@ -146,21 +146,14 @@ const HEADER_MAP: Record<string, keyof PricingRow | "ignore"> = {
   maodeobraajustado: "mod",
   cif: "cif",
   cifajustado: "cif",
-  // STATUS — usada para separar linhas Real vs Budget no mesmo arquivo.
-  // No parser do Real, linhas com STATUS = "1.Budget Vendas" são descartadas.
+  // STATUS é apenas ignorada aqui (a separação Real/Budget acontece na aba Budget,
+  // a partir do XLSX de Budget — o CSV Real importa todas as linhas).
   status: "ignore",
   // explicit ignores (avoid noise in unmapped list)
   ctbmg: "ignore",                // "Ctb. Mg. %"
   gestorresp: "ignore",
   centro: "ignore",
 };
-
-// Identifica linhas de Budget na coluna STATUS (ex.: "1.Budget Vendas").
-function isBudgetStatus(raw: unknown): boolean {
-  if (raw == null) return false;
-  const s = String(raw).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-  return s.includes("budgetvendas");
-}
 
 function detectDelimiter(sample: string): string {
   const counts = [";", ",", "\t", "|"].map((d) => ({
