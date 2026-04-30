@@ -185,6 +185,11 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
     monthsSet.add(p.periodo);
   }
 
+  if (!hasStatusCol) {
+    warnings.push(`Coluna "STATUS" não encontrada — todas as linhas foram consideradas Budget.`);
+  } else if (skippedNotBudget) {
+    warnings.push(`${skippedNotBudget.toLocaleString("pt-BR")} linha(s) ignoradas (STATUS ≠ "1.Budget Vendas").`);
+  }
   if (skippedNoPeriod) warnings.push(`${skippedNoPeriod} linha(s) sem data válida foram ignoradas.`);
   if (skippedZero) warnings.push(`${skippedZero} linha(s) sem valores foram ignoradas.`);
 
