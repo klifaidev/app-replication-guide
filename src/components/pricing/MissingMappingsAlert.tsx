@@ -151,6 +151,42 @@ export function MissingMappingsAlert() {
             </div>
           </div>
 
+          {volStats && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-warning/30 bg-warning/5 px-3 py-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-warning/15 text-warning">
+                <Scale className="h-3.5 w-3.5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-warning">
+                  Impacto em volume — SKUs sem Categoria/Subcategoria
+                </div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  No período total carregado, esses SKUs movimentaram volume relevante.
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Volume</div>
+                  <div className="text-sm font-semibold tabular-nums">
+                    {formatNum(volStats.missingTon, 1)} t
+                  </div>
+                  <div className="text-[10px] text-muted-foreground tabular-nums">
+                    {formatNum(volStats.missingKg, 0)} kg
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">% do total</div>
+                  <div className="text-sm font-semibold tabular-nums text-warning">
+                    {formatPct(volStats.pct, 2)}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground tabular-nums">
+                    {volStats.skuCount} SKU(s)
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {open && (
             <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
               {sections.map((s) => (
