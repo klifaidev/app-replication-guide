@@ -27,6 +27,7 @@ export interface PricingRow {
   sabor?: string;
   tecnologia?: string;
   faixaPeso?: string;
+  inovacao?: string; // "Inovação" | "Regular" — derivado do De Para de Inovação por SKU
   // Measures (R$, kg)
   rol: number;        // Receita Operacional Líquida
   volumeKg: number;
