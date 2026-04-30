@@ -2,11 +2,16 @@ import { Topbar } from "@/components/pricing/Topbar";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { MissingMappingsAlert } from "@/components/pricing/MissingMappingsAlert";
 import { UploadZone } from "@/components/pricing/UploadZone";
+import { BudgetUploadZone } from "@/components/pricing/BudgetUploadZone";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
+import { useBudget, getBudgetMonthsInfo } from "@/store/budget";
 import { useMonthsInfo } from "@/store/selectors";
-import { Trash2, FileSpreadsheet, Calendar } from "lucide-react";
+import { Trash2, FileSpreadsheet, Calendar, CheckCircle2, AlertTriangle, Database, Target } from "lucide-react";
+import { monthLabel } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { useMemo } from "react";
 
 const EXPECTED_COLS = [
   "Periodo (ex.: 005.2025)",
@@ -18,27 +23,203 @@ const EXPECTED_COLS = [
   "Margem Bruta, Contribuição Marginal",
 ];
 
+interface FreshnessStatus {
+  status: "empty" | "current" | "stale";
+  lastLabel: string | null;
+  lastPeriodo: string | null;
+  monthsBehind: number;
+  expectedLabel: string;
+}
+
+function getFreshness(months: { mes: number; ano: number; periodo: string }[]): FreshnessStatus {
+  // "Mês atual" referência: o mês anterior ao corrente (dado real fecha no mês anterior).
+  // Para Budget é o mês corrente. Vamos usar o mês corrente como referência de "atualidade"
+  // e considerar tolerância de 1 mês para Real.
+  const now = new Date();
+  const expectedMes = now.getMonth() + 1;
+  const expectedAno = now.getFullYear();
+  const expectedLabel = monthLabel(expectedMes, expectedAno);
+
+  if (months.length === 0) {
+    return { status: "empty", lastLabel: null, lastPeriodo: null, monthsBehind: 0, expectedLabel };
+  }
+  const last = months[months.length - 1];
+  const lastLabel = monthLabel(last.mes, last.ano);
+  const monthsBehind = (expectedAno - last.ano) * 12 + (expectedMes - last.mes);
+  const status: FreshnessStatus["status"] = monthsBehind <= 0 ? "current" : "stale";
+  return { status, lastLabel, lastPeriodo: last.periodo, monthsBehind: Math.max(0, monthsBehind), expectedLabel };
+}
+
+function FreshnessBadge({ f }: { f: FreshnessStatus }) {
+  if (f.status === "empty") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+        <Calendar className="h-3 w-3" /> Sem dados
+      </span>
+    );
+  }
+  if (f.status === "current") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-500">
+        <CheckCircle2 className="h-3 w-3" /> Atualizado
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-[11px] font-medium text-warning">
+      <AlertTriangle className="h-3 w-3" />
+      Desatualizado · {f.monthsBehind} {f.monthsBehind === 1 ? "mês" : "meses"} atrás
+    </span>
+  );
+}
+
+function StatusHeroCard({
+  title,
+  subtitle,
+  icon: Icon,
+  freshness,
+  accent,
+  rightSlot,
+}: {
+  title: string;
+  subtitle: string;
+  icon: typeof Database;
+  freshness: FreshnessStatus;
+  accent: "primary" | "accent";
+  rightSlot?: React.ReactNode;
+}) {
+  const accentClasses =
+    accent === "primary"
+      ? "from-primary/15 to-primary/0 border-primary/20 [&_.acc]:text-primary [&_.acc-bg]:bg-primary/15"
+      : "from-accent/15 to-accent/0 border-accent/20 [&_.acc]:text-accent [&_.acc-bg]:bg-accent/15";
+
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border bg-gradient-to-br p-5",
+        accentClasses,
+      )}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="acc-bg flex h-10 w-10 items-center justify-center rounded-xl">
+            <Icon className="acc h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold tracking-tight">{title}</div>
+            <div className="text-[11px] text-muted-foreground">{subtitle}</div>
+          </div>
+        </div>
+        <FreshnessBadge f={freshness} />
+      </div>
+
+      <div className="mt-5 flex items-end justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Último mês carregado
+          </div>
+          <div className="mt-1 text-3xl font-semibold tracking-tight">
+            {freshness.lastLabel ?? "—"}
+          </div>
+          {freshness.status === "stale" && (
+            <div className="mt-1 text-[11px] text-warning">
+              Esperado: <span className="font-medium">{freshness.expectedLabel}</span>
+            </div>
+          )}
+          {freshness.status === "current" && (
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              Em dia com {freshness.expectedLabel}
+            </div>
+          )}
+        </div>
+        {rightSlot}
+      </div>
+    </div>
+  );
+}
+
 export default function Upload() {
   const files = usePricing((s) => s.files);
   const removeFile = usePricing((s) => s.removeFile);
   const clearAll = usePricing((s) => s.clearAll);
   const months = useMonthsInfo();
 
+  const budgetRows = useBudget((s) => s.rows);
+  const budgetFiles = useBudget((s) => s.files);
+  const removeBudgetFile = useBudget((s) => s.removeBudgetFile);
+  const clearBudget = useBudget((s) => s.clearBudget);
+  const budgetMonths = useMemo(() => getBudgetMonthsInfo(budgetRows), [budgetRows]);
+
+  const realFreshness = useMemo(() => getFreshness(months), [months]);
+  const budgetFreshness = useMemo(() => getFreshness(budgetMonths), [budgetMonths]);
+
   return (
     <>
-      <Topbar title="Upload / Bases" subtitle="Gerencie os arquivos e meses carregados" />
+      <Topbar title="Upload / Bases" subtitle="Gerencie os arquivos de dados Real e Budget" />
       <div className="space-y-6 px-8 py-6">
         <MissingMappingsAlert />
 
-        <GlassCard>
-          <UploadZone />
-        </GlassCard>
+        {/* Status hero — Real | Budget */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <StatusHeroCard
+            title="Base Real"
+            subtitle="Vendas, custos e margens efetivos"
+            icon={Database}
+            accent="primary"
+            freshness={realFreshness}
+            rightSlot={
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground">{months.length} mês(es)</div>
+                <div className="text-xs text-muted-foreground">{files.length} arquivo(s)</div>
+              </div>
+            }
+          />
+          <StatusHeroCard
+            title="Base Budget"
+            subtitle="Previsão orçamentária do ano"
+            icon={Target}
+            accent="accent"
+            freshness={budgetFreshness}
+            rightSlot={
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground">{budgetMonths.length} mês(es)</div>
+                <div className="text-xs text-muted-foreground">{budgetFiles.length} arquivo(s)</div>
+              </div>
+            }
+          />
+        </div>
 
+        {/* Upload zones lado a lado */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <GlassCard>
+            <header className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold">Upload — Base Real</h3>
+                <p className="text-[11px] text-muted-foreground">CSV mensal de vendas</p>
+              </div>
+              <Badge variant="secondary" className="text-[10px]">.csv</Badge>
+            </header>
+            <UploadZone />
+          </GlassCard>
+
+          <GlassCard>
+            <header className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold">Upload — Base Budget</h3>
+                <p className="text-[11px] text-muted-foreground">Excel anual com previsão por mês</p>
+              </div>
+              <Badge variant="secondary" className="text-[10px]">.xlsx</Badge>
+            </header>
+            <BudgetUploadZone />
+          </GlassCard>
+        </div>
+
+        {/* Meses + arquivos da base Real */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <GlassCard>
             <header className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-medium">
-                <Calendar className="mr-2 inline h-4 w-4" /> Meses carregados
+                <Calendar className="mr-2 inline h-4 w-4" /> Meses Real
               </h3>
               <Badge variant="secondary">{months.length}</Badge>
             </header>
@@ -60,7 +241,32 @@ export default function Upload() {
           <GlassCard>
             <header className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-medium">
-                <FileSpreadsheet className="mr-2 inline h-4 w-4" /> Arquivos
+                <Calendar className="mr-2 inline h-4 w-4" /> Meses Budget
+              </h3>
+              <Badge variant="secondary">{budgetMonths.length}</Badge>
+            </header>
+            {budgetMonths.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum mês de Budget carregado.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                {budgetMonths.map((m) => (
+                  <div key={m.periodo} className="rounded-lg border border-accent/20 bg-accent/5 p-3 text-center">
+                    <div className="text-sm font-semibold">{monthLabel(m.mes, m.ano)}</div>
+                    <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{m.fy}</div>
+                    <div className="mt-1 text-[10px] text-muted-foreground">{m.rowCount.toLocaleString("pt-BR")} linhas</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        </div>
+
+        {/* Arquivos */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <GlassCard>
+            <header className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-medium">
+                <FileSpreadsheet className="mr-2 inline h-4 w-4" /> Arquivos Real
               </h3>
               {files.length > 0 && (
                 <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={clearAll}>
@@ -80,12 +286,39 @@ export default function Upload() {
                         {f.rowCount.toLocaleString("pt-BR")} linhas · {f.months.length} mês(es)
                       </div>
                     </div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => removeFile(f.name)}
-                    >
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeFile(f.name)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </GlassCard>
+
+          <GlassCard>
+            <header className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-medium">
+                <FileSpreadsheet className="mr-2 inline h-4 w-4" /> Arquivos Budget
+              </h3>
+              {budgetFiles.length > 0 && (
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={clearBudget}>
+                  Limpar tudo
+                </Button>
+              )}
+            </header>
+            {budgetFiles.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum arquivo de Budget.</p>
+            ) : (
+              <ul className="space-y-2">
+                {budgetFiles.map((f) => (
+                  <li key={f.name} className="flex items-center justify-between rounded-lg border border-accent/20 bg-accent/5 px-3 py-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{f.name}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {f.rowCount.toLocaleString("pt-BR")} linhas · {f.months.length} mês(es)
+                      </div>
+                    </div>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeBudgetFile(f.name)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </li>
@@ -96,7 +329,7 @@ export default function Upload() {
         </div>
 
         <GlassCard>
-          <h3 className="mb-3 text-sm font-medium">Colunas esperadas no CSV</h3>
+          <h3 className="mb-3 text-sm font-medium">Colunas esperadas no CSV (Real)</h3>
           <ul className="grid grid-cols-1 gap-1.5 text-xs text-muted-foreground md:grid-cols-2">
             {EXPECTED_COLS.map((c) => (
               <li key={c} className="flex items-start gap-2">
