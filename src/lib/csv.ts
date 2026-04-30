@@ -243,9 +243,14 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     }
   }
 
+  // Detecta coluna STATUS (mesmo header normalizado para "status") para
+  // descartar linhas de Budget no parser de Real.
+  const statusHeader = allHeaders.find((h) => normHeader(h) === "status");
+
   // Diagnostics counters
   let rejectedNoPeriod = 0;
   let rejectedNoRol = 0;
+  let skippedBudget = 0;
   let firstFailureSample: Record<string, unknown> | null = null;
 
   // Detect missing critical columns
