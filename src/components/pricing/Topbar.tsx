@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
 import { cn } from "@/lib/utils";
+import { InnovationToggle } from "./InnovationToggle";
+import { Sparkles } from "lucide-react";
 
 interface TopbarProps {
   title: string;
@@ -36,16 +38,30 @@ export function Topbar({ title, subtitle }: TopbarProps) {
     setSelected([periodo]);
   };
 
+  const inovActive = usePricing((s) => s.filters.inovacao?.[0] === "Inovação");
+
   return (
     <header className="sticky top-0 z-20 border-b border-border/40 bg-background/60 px-8 py-4 backdrop-blur-2xl">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-gradient-primary">{title}</h1>
-          {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
+        <div className="flex items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight text-gradient-primary">{title}</h1>
+              {inovActive && (
+                <span className="inline-flex animate-fade-in items-center gap-1 rounded-full border border-accent/40 bg-accent/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent">
+                  <Sparkles className="h-3 w-3" />
+                  Modo Inovação
+                </span>
+              )}
+            </div>
+            {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
+          </div>
         </div>
 
+        <InnovationToggle />
+
         {months.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex w-full flex-wrap items-center gap-1.5">
             <Button
               size="sm"
               variant={allSelected ? "default" : "outline"}

@@ -84,6 +84,23 @@
     --sidebar-border: 240 15% 18%;
     --sidebar-ring: 217 91% 60%;
   }
+
+  /* ====== Modo Inovação ======
+     Ativado por <html data-mode="inovacao">. Apenas tokens de accent/primary
+     são reescritos: paleta violeta-magenta, mantendo legibilidade e estrutura.
+     Tudo o que usar hsl(var(--primary)) / accent / ring se transforma. */
+  :root[data-mode="inovacao"] {
+    --primary: 280 90% 65%;
+    --primary-glow: 295 95% 72%;
+    --primary-foreground: 240 30% 8%;
+    --accent: 295 85% 65%;
+    --ring: 280 90% 65%;
+    --sidebar-primary: 280 90% 65%;
+    --sidebar-ring: 280 90% 65%;
+
+    --gradient-bg: radial-gradient(ellipse at top left, hsl(280 50% 14%) 0%, hsl(245 35% 7%) 60%);
+    --shadow-glow: 0 0 40px hsl(280 90% 65% / 0.32);
+  }
 }
 
 @layer base {
@@ -102,7 +119,31 @@
     font-feature-settings: "cv11", "ss01";
     font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Display", "Inter", sans-serif;
     letter-spacing: -0.011em;
+    transition: background 700ms cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* Aurora — overlay sutil ativo no Modo Inovação. Não captura clique. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -20%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    background:
+      radial-gradient(40% 35% at 18% 22%, hsl(280 95% 62% / 0.28), transparent 60%),
+      radial-gradient(45% 40% at 82% 30%, hsl(195 95% 60% / 0.22), transparent 65%),
+      radial-gradient(50% 40% at 50% 90%, hsl(310 90% 60% / 0.20), transparent 60%);
+    filter: blur(60px) saturate(140%);
+    transition: opacity 700ms cubic-bezier(0.4, 0, 0.2, 1);
+    animation: aurora-drift 18s ease-in-out infinite alternate;
+  }
+  :root[data-mode="inovacao"] body::before {
+    opacity: 1;
+  }
+  /* garante que o conteúdo fique acima da aurora */
+  #root { position: relative; z-index: 1; }
+
 
   h1, h2, h3, h4 {
     letter-spacing: -0.025em;
@@ -166,3 +207,9 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+@keyframes aurora-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2%, -1.5%, 0) scale(1.05); }
+  100% { transform: translate3d(-2%, 1.5%, 0) scale(1.02); }
+}
+
