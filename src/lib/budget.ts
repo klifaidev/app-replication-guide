@@ -146,7 +146,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
   const rows: BudgetRow[] = [];
   const monthsSet = new Set<string>();
   let skippedNoPeriod = 0;
-  let skippedZero = 0;
+  
   let countBudget = 0;
   let countReal = 0;
   const hasStatusCol = Object.values(colKey).includes("status");
@@ -170,7 +170,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
     const cm = parseDecimal(norm.cm);
     const cpv = parseDecimal(norm.cpv);
 
-    if (volumeKg === 0 && receita === 0 && cm === 0) { skippedZero++; continue; }
+    // Importa todas as linhas com período válido — inclusive zeradas e negativas.
 
     // Sem coluna STATUS: assume Budget (compatibilidade com bases antigas).
     const kind: "budget" | "real" = !hasStatusCol || isBudgetStatus(statusRaw) ? "budget" : "real";
@@ -216,7 +216,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
     );
   }
   if (skippedNoPeriod) warnings.push(`${skippedNoPeriod} linha(s) sem data válida foram ignoradas.`);
-  if (skippedZero) warnings.push(`${skippedZero} linha(s) sem valores foram ignoradas.`);
+  
 
   return {
     rows,

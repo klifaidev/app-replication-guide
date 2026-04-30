@@ -238,7 +238,6 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
 
   // Diagnostics counters
   let rejectedNoPeriod = 0;
-  let rejectedNoRol = 0;
   let firstFailureSample: Record<string, unknown> | null = null;
 
   // Detect missing critical columns
@@ -361,20 +360,8 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     obj.comissao = obj.comissao ?? 0;
     obj.contribMarginal = obj.contribMarginal ?? (obj.margemBruta! - obj.frete! - obj.comissao!);
 
-    // Keep all rows with a valid period — including returns / negatives —
-    // so totals match the source report. Skip only fully-empty rows.
-    if (
-      (obj.rol ?? 0) === 0 &&
-      (obj.volumeKg ?? 0) === 0 &&
-      (obj.cogs ?? 0) === 0 &&
-      (obj.margemBruta ?? 0) === 0 &&
-      (obj.contribMarginal ?? 0) === 0
-    ) {
-      rejectedNoRol++;
-      if (!firstFailureSample) firstFailureSample = raw;
-      continue;
-    }
-
+    // Importa TODAS as linhas com período válido — inclusive negativos
+    // (devoluções, abatimentos) e linhas integralmente zeradas.
     monthsSet.add(period.periodo);
     rows.push(obj as PricingRow);
   }
@@ -388,20 +375,16 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
   console.log("Mapeamento aplicado:", colMap);
   console.log("Headers ignorados (sem mapeamento):", unmapped);
   console.log("Rejeitadas (período inválido):", rejectedNoPeriod);
-  console.log("Rejeitadas (ROL ≤ 0 ou ausente):", rejectedNoRol);
-  console.log("Linhas válidas:", rows.length);
+  console.log("Linhas importadas:", rows.length);
   if (firstFailureSample) console.log("Exemplo de linha rejeitada:", firstFailureSample);
   if (result.errors.length) console.log("Erros do parser:", result.errors.slice(0, 5));
   console.groupEnd();
-
-
 
   if (rows.length === 0) {
     const reasons: string[] = [];
     if (!mappedFields.has("periodo")) reasons.push("coluna de período não encontrada");
     if (!mappedFields.has("rol")) reasons.push("coluna de receita não encontrada");
     if (rejectedNoPeriod > 0) reasons.push(`${rejectedNoPeriod} linhas com período inválido`);
-    if (rejectedNoRol > 0) reasons.push(`${rejectedNoRol} linhas com ROL ≤ 0`);
     warnings.push(
       `Nenhuma linha válida. ${reasons.join("; ") || "Verifique o formato."}. Veja o console para detalhes.`,
     );
