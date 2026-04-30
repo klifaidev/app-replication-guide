@@ -205,13 +205,13 @@ export function DreTable({ rows, months, mode = "month" }: DreTableProps) {
               >
                 {line.label}
               </td>
-              {filteredMonths.map((m) => {
-                const a = aggsByPeriod.get(m.periodo)!;
+              {columns.map((c) => {
+                const a = aggsByCol.get(c.key)!;
                 const v = line.get(a);
                 const isNeg = typeof v === "number" && v < 0;
                 return (
                   <td
-                    key={m.periodo}
+                    key={c.key}
                     className={cn(
                       "border-b border-border/20 px-3 py-2 text-right tabular-nums",
                       line.bold && "font-semibold",
