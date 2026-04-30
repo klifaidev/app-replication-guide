@@ -67,7 +67,15 @@ const HEADER_MAP: Record<string, string> = {
   cpv: "cpv",
   cmv: "cpv",
   custo: "cpv",
+  status: "status",
 };
+
+// Identifica linhas de Budget na coluna STATUS (ex.: "1.Budget Vendas").
+function isBudgetStatus(raw: unknown): boolean {
+  if (raw == null) return false;
+  const s = normHeader(String(raw)); // remove acentos, espaços, pontuação, lowercase
+  return s.includes("budgetvendas");
+}
 
 function dataToPeriod(raw: unknown): ReturnType<typeof parsePeriod> | null {
   if (raw == null || raw === "") return null;
