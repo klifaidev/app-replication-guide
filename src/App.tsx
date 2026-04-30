@@ -9,6 +9,7 @@ import BridgePvm from "./pages/BridgePvm.tsx";
 import Dre from "./pages/Dre.tsx";
 import Canais from "./pages/Canais.tsx";
 import Custos from "./pages/Custos.tsx";
+import Budget from "./pages/Budget.tsx";
 import Abc from "./pages/Abc.tsx";
 import Detalhe from "./pages/Detalhe.tsx";
 import Upload from "./pages/Upload.tsx";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/dre" element={<Dre />} />
           <Route path="/canais" element={<Canais />} />
           <Route path="/custos" element={<Custos />} />
+          <Route path="/budget" element={<Budget />} />
           <Route path="/abc" element={<Abc />} />
           <Route path="/detalhe" element={<Detalhe />} />
           <Route path="/atividades" element={<Atividades />} />
