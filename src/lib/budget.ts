@@ -27,6 +27,7 @@ export interface BudgetRow {
   mercado?: string;
   faixaPeso?: string;
   sabor?: string;
+  inovacao?: string; // "Inovação" | "Regular"
   volumeKg: number;    // VOLUME
   receita: number;     // RECEITA (ROL Budget)
   cm: number;          // Contribuição Marginal Budget
