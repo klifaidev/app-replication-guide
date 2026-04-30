@@ -361,20 +361,8 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     obj.comissao = obj.comissao ?? 0;
     obj.contribMarginal = obj.contribMarginal ?? (obj.margemBruta! - obj.frete! - obj.comissao!);
 
-    // Keep all rows with a valid period — including returns / negatives —
-    // so totals match the source report. Skip only fully-empty rows.
-    if (
-      (obj.rol ?? 0) === 0 &&
-      (obj.volumeKg ?? 0) === 0 &&
-      (obj.cogs ?? 0) === 0 &&
-      (obj.margemBruta ?? 0) === 0 &&
-      (obj.contribMarginal ?? 0) === 0
-    ) {
-      rejectedNoRol++;
-      if (!firstFailureSample) firstFailureSample = raw;
-      continue;
-    }
-
+    // Importa TODAS as linhas com período válido — inclusive negativos
+    // (devoluções, abatimentos) e linhas integralmente zeradas.
     monthsSet.add(period.periodo);
     rows.push(obj as PricingRow);
   }
