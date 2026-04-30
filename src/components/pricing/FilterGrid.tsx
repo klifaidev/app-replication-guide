@@ -22,6 +22,12 @@ const SKU_FIELDS: { key: FilterKey; label: string }[] = [
   { key: "sku", label: "Artigo (SKU)" },
 ];
 
+// Filtros vinculados ao De Para de Inovação — destacados na paleta de Inovação.
+const INOVACAO_FIELDS: { key: FilterKey; label: string }[] = [
+  { key: "inovacao", label: "Inovação / Regular" },
+  { key: "legado", label: "Legado" },
+];
+
 // Filtros Comerciais — vindos do De Para IA V2.
 const COMERCIAL_FIELDS: { key: FilterKey; label: string }[] = [
   { key: "canalAjustado", label: "Canal Ajustado" },
