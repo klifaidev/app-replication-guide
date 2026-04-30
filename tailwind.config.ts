@@ -93,6 +93,11 @@ export default {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
         },
+        "progress-indeterminate": {
+          "0%":   { transform: "translateX(-100%) scaleX(0.4)" },
+          "50%":  { transform: "translateX(0%) scaleX(0.6)" },
+          "100%": { transform: "translateX(100%) scaleX(0.4)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",

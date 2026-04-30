@@ -123,29 +123,21 @@ export function DreTable({ rows, months, mode = "month" }: DreTableProps) {
     const cols: PeriodCol[] = [];
 
     if (mode === "fy") {
-      // Group selected months by fiscal year (Apr–Mar). Accumulated.
-      const byFy = new Map<string, MonthInfo[]>();
-      for (const m of filteredMonths) {
-        const arr = byFy.get(m.fy) ?? [];
-        arr.push(m);
-        byFy.set(m.fy, arr);
-      }
-      // Sort FYs by their first month (chronologically)
-      const fys = Array.from(byFy.entries()).sort((a, b) => {
-        const ma = a[1][0], mb = b[1][0];
-        return ma.ano !== mb.ano ? ma.ano - mb.ano : ma.mes - mb.mes;
-      });
-      for (const [fy, ms] of fys) {
-        const periods = new Set(ms.map((m) => m.periodo));
+      // Acumulado: uma única coluna somando todos os períodos filtrados.
+      if (filteredMonths.length > 0) {
+        const periods = new Set(filteredMonths.map((m) => m.periodo));
         const rs = rows.filter((r) => periods.has(r.periodo));
-        const first = ms[0];
-        const last = ms[ms.length - 1];
+        const first = filteredMonths[0];
+        const last = filteredMonths[filteredMonths.length - 1];
+        const fySpan = Array.from(new Set(filteredMonths.map((m) => m.fy)));
         const sub =
-          ms.length === 1
-            ? first.label
-            : `${first.label} → ${last.label} (${ms.length}m)`;
-        cols.push({ key: fy, label: fy, sublabel: sub });
-        map.set(fy, aggregate(rs));
+          filteredMonths.length === 1
+            ? `${first.label} · ${first.fy}`
+            : `${first.label} → ${last.label} · ${filteredMonths.length} meses${
+                fySpan.length > 1 ? ` · ${fySpan.join(" + ")}` : ` · ${fySpan[0]}`
+              }`;
+        cols.push({ key: "acumulado", label: "Acumulado", sublabel: sub });
+        map.set("acumulado", aggregate(rs));
       }
     } else {
       for (const m of filteredMonths) {

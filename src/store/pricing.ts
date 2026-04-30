@@ -38,14 +38,24 @@ interface PricingState {
 const EMPTY_MISSING: MissingMappings = { skus: [], canais: [], regioes: [], ufs: [] };
 
 function mergeMissing(a: MissingMappings, b: MissingMappings): MissingMappings {
-  const skuMap = new Map<string, string | undefined>();
+  const skuMap = new Map<string, MissingMappings["skus"][number]>();
   for (const it of [...a.skus, ...b.skus]) {
-    if (!skuMap.has(it.sku)) skuMap.set(it.sku, it.descricao);
+    const prev = skuMap.get(it.sku);
+    if (!prev) {
+      skuMap.set(it.sku, it);
+    } else {
+      // Mantém entry mais completa e união dos missingFields.
+      const mergedFields = Array.from(new Set([...prev.missingFields, ...it.missingFields]));
+      skuMap.set(it.sku, {
+        sku: it.sku,
+        descricao: prev.descricao ?? it.descricao,
+        entry: it.entry ?? prev.entry,
+        missingFields: mergedFields,
+      });
+    }
   }
   return {
-    skus: Array.from(skuMap.entries())
-      .map(([sku, descricao]) => ({ sku, descricao }))
-      .sort((x, y) => x.sku.localeCompare(y.sku)),
+    skus: Array.from(skuMap.values()).sort((x, y) => x.sku.localeCompare(y.sku)),
     canais: Array.from(new Set([...a.canais, ...b.canais])).sort(),
     regioes: Array.from(new Set([...a.regioes, ...b.regioes])).sort(),
     ufs: Array.from(new Set([...a.ufs, ...b.ufs])).sort(),

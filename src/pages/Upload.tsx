@@ -1,8 +1,7 @@
 import { Topbar } from "@/components/pricing/Topbar";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { MissingMappingsAlert } from "@/components/pricing/MissingMappingsAlert";
-import { UploadZone } from "@/components/pricing/UploadZone";
-import { BudgetUploadZone } from "@/components/pricing/BudgetUploadZone";
+import { UploadQueue } from "@/components/pricing/UploadQueue";
 import { ExportDeparasCard } from "@/components/pricing/ExportDeparasCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -190,30 +189,22 @@ export default function Upload() {
           />
         </div>
 
-        {/* Upload zones lado a lado */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <GlassCard>
-            <header className="mb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold">Upload — Base Real</h3>
-                <p className="text-[11px] text-muted-foreground">CSV mensal de vendas</p>
-              </div>
-              <Badge variant="secondary" className="text-[10px]">.csv</Badge>
-            </header>
-            <UploadZone />
-          </GlassCard>
-
-          <GlassCard>
-            <header className="mb-3 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold">Upload — Base Budget</h3>
-                <p className="text-[11px] text-muted-foreground">Excel anual com previsão por mês</p>
-              </div>
-              <Badge variant="secondary" className="text-[10px]">.xlsx</Badge>
-            </header>
-            <BudgetUploadZone />
-          </GlassCard>
-        </div>
+        {/* Upload em fila com botão Aplicar */}
+        <GlassCard>
+          <header className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Upload de bases</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Adicione vários arquivos (Real e Budget). O app só será atualizado quando você clicar em <span className="font-medium text-foreground">Aplicar</span>.
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              <Badge variant="secondary" className="text-[10px]">.csv (Real)</Badge>
+              <Badge variant="secondary" className="text-[10px]">.xlsx (Budget)</Badge>
+            </div>
+          </header>
+          <UploadQueue />
+        </GlassCard>
 
         {/* Meses + arquivos da base Real */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
