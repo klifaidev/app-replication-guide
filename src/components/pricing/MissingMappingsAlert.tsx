@@ -48,11 +48,22 @@ export function MissingMappingsAlert() {
 
   if (total === 0 && !volStats) return null;
 
+  const FIELDS_TOTAL = 9;
+  const skuItems = missing.skus.map((s) => {
+    const desc = s.descricao ?? s.entry?.skuDesc ?? "";
+    const filled = FIELDS_TOTAL - s.missingFields.length;
+    const tag =
+      s.missingFields.length === FIELDS_TOTAL
+        ? "ausente"
+        : `${filled}/${FIELDS_TOTAL} preenchido${filled === 1 ? "" : "s"}`;
+    return desc ? `${s.sku} — ${desc}  ·  ${tag}` : `${s.sku}  ·  ${tag}`;
+  });
+
   const sections: { title: string; items: string[]; key: string }[] = [
     {
       key: "skus",
-      title: "SKUs ausentes no De Para IA",
-      items: missing.skus.map((s) => (s.descricao ? `${s.sku} - ${s.descricao}` : s.sku)),
+      title: "SKUs pendentes no De Para IA",
+      items: skuItems,
     },
     {
       key: "canais",
