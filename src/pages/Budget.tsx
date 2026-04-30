@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
+import { applyBudgetFilters } from "@/lib/budget";
+import { applyFilters } from "@/lib/analytics";
 import { formatBRL, formatPct, monthLabel } from "@/lib/format";
 import { Target, TrendingDown, TrendingUp } from "lucide-react";
 import {
