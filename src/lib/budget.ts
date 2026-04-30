@@ -216,7 +216,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
     );
   }
   if (skippedNoPeriod) warnings.push(`${skippedNoPeriod} linha(s) sem data válida foram ignoradas.`);
-  if (skippedZero) warnings.push(`${skippedZero} linha(s) sem valores foram ignoradas.`);
+  
 
   return {
     rows,
