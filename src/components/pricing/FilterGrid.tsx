@@ -49,6 +49,7 @@ export function FilterGrid() {
   );
 
   const hasAny = Object.values(filters).some((v) => v && v.length);
+  const inovacaoMode = filters.inovacao?.[0] === "Inovação";
 
   const renderField = (
     f: { key: FilterKey; label: string },
@@ -149,22 +150,24 @@ export function FilterGrid() {
         </div>
       </section>
 
-      {/* Bloco Inovação — destacado na paleta de Inovação */}
-      <section className="rounded-lg border border-accent/30 bg-accent/5 p-3 shadow-[0_0_24px_-12px_hsl(var(--accent)/0.4)]">
-        <div className="mb-2 flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-accent" />
-          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-accent">
-            Inovação
-          </h4>
-          <div className="h-px flex-1 bg-accent/20" />
-          <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-            Chave: <span className="font-medium text-accent/80">SKU</span> · Real & Budget
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {INOVACAO_FIELDS.map((f) => renderField(f, "inovacao"))}
-        </div>
-      </section>
+      {/* Bloco Inovação — só aparece quando o Modo Inovação está ativo */}
+      {inovacaoMode && (
+        <section className="animate-in fade-in slide-in-from-top-2 rounded-lg border border-accent/30 bg-accent/5 p-3 shadow-[0_0_24px_-12px_hsl(var(--accent)/0.4)] duration-500">
+          <div className="mb-2 flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-accent" />
+            <h4 className="text-[11px] font-semibold uppercase tracking-wider text-accent">
+              Inovação
+            </h4>
+            <div className="h-px flex-1 bg-accent/20" />
+            <span className="text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
+              Chave: <span className="font-medium text-accent/80">SKU</span> · Real & Budget
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {INOVACAO_FIELDS.map((f) => renderField(f, "inovacao"))}
+          </div>
+        </section>
+      )}
 
       {/* Bloco Comercial */}
       <section className="rounded-lg border border-success/20 bg-success/5 p-3">
