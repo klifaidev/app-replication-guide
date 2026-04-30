@@ -1506,6 +1506,28 @@
     "sabor": "Meio Amargo",
     "skuDesc": "CHOC GTS BAHIA 53% UNIQUE 6X1,05KG"
   },
+  "102269": {
+    "categoria": "Base",
+    "subcategoria": "Chocolate em Pó",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
+  "102283": {
+    "categoria": "Base",
+    "subcategoria": "Cacau em Pó",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
   "102288": {
     "categoria": "Inclusão",
     "subcategoria": "Chip Tradicional",
@@ -6621,6 +6643,28 @@
     "sabor": "Meio Amargo",
     "skuDesc": "CHUNK N9 COMP MEIO AMARGO 862 1X10KG"
   },
+  "104150": {
+    "categoria": "Decoração",
+    "subcategoria": "Granulé",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
+  "104152": {
+    "categoria": "Decoração",
+    "subcategoria": "Granulé",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
   "104154": {
     "categoria": "Base",
     "subcategoria": "Chocolate em Pó",
@@ -6862,6 +6906,17 @@
     "faixaPeso": "20KG  e acima",
     "sabor": "Blend",
     "skuDesc": "CHOCOLATE BLEND 894 1X25KG"
+  },
+  "104191": {
+    "categoria": "Decoração",
+    "subcategoria": "Granulé",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
   },
   "104195": {
     "categoria": "Inclusão",
@@ -7115,6 +7170,17 @@
     "faixaPeso": "201 - 999g",
     "sabor": "Meio Amargo",
     "skuDesc": "MELKEN GRANULE CHOC 70% CACAU 12X400G"
+  },
+  "104320": {
+    "categoria": "Decoração",
+    "subcategoria": "Granulé",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
   },
   "104322": {
     "categoria": "Inclusão",
@@ -7567,6 +7633,28 @@
     "sabor": "Ao leite",
     "skuDesc": "RECHEIO AO LEITE CONFEITEIRO 6X2,3KG"
   },
+  "104441": {
+    "categoria": "Decoração",
+    "subcategoria": "Vermicelli",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
+  "104443": {
+    "categoria": "Decoração",
+    "subcategoria": "Vermicelli",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
   "104463": {
     "categoria": "Recheio",
     "subcategoria": "De Origem",
@@ -7831,6 +7919,17 @@
     "sabor": "Pistache",
     "skuDesc": "TOP CONFEITE SABOR PISTACHE 12X400G"
   },
+  "104549": {
+    "categoria": "Decoração",
+    "subcategoria": "Confeité",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
   "104550": {
     "categoria": "Cobertura",
     "subcategoria": "Fracionada Tradicional",
@@ -8073,6 +8172,28 @@
     "sabor": "Avelã",
     "skuDesc": "TOP CONFEITE SABOR FRAMBOESA 12X400G"
   },
+  "104647": {
+    "categoria": "Decoração",
+    "subcategoria": "Confeité",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
+  "104649": {
+    "categoria": "Decoração",
+    "subcategoria": "Confeité",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
   "104650": {
     "categoria": "Cobertura",
     "subcategoria": "Saborizada",
@@ -8194,6 +8315,17 @@
     "sabor": "",
     "skuDesc": ""
   },
+  "104716": {
+    "categoria": "Decoração",
+    "subcategoria": "Confeité",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
   "104717": {
     "categoria": "Acabamento",
     "subcategoria": "Ganache",
@@ -8208,6 +8340,28 @@
   "104718": {
     "categoria": "Acabamento",
     "subcategoria": "Ganache",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
+  "104719": {
+    "categoria": "Decoração",
+    "subcategoria": "Confeité",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
+  },
+  "104720": {
+    "categoria": "Decoração",
+    "subcategoria": "Confeité",
     "marca": "",
     "tecnologia": "",
     "formato": "",
@@ -8259,6 +8413,17 @@
     "faixaPeso": "10 – 19,99KG",
     "sabor": "Ao leite",
     "skuDesc": "CHIPS CHOC LEITE 1300-1400 1268 1X10KG"
+  },
+  "104732": {
+    "categoria": "Recheio",
+    "subcategoria": "Salgado",
+    "marca": "",
+    "tecnologia": "",
+    "formato": "",
+    "mercado": "",
+    "faixaPeso": "",
+    "sabor": "",
+    "skuDesc": ""
   },
   "104740": {
     "categoria": "Recheio",
