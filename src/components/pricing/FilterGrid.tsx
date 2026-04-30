@@ -93,7 +93,6 @@ export function FilterGrid() {
           onChange={(vals) => setFilter(f.key, vals)}
           placeholder="Todos"
           variant={variant}
-          showChips={f.key === "sku"}
         />
       </div>
     );
