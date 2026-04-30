@@ -411,7 +411,7 @@ export async function parseCsvFile(file: File): Promise<ParsedCsv> {
     },
     warnings,
     missing: {
-      skus: Array.from(missingSkus.entries()).map(([sku, descricao]) => ({ sku, descricao })),
+      skus: Array.from(missingSkus.values()).sort((a, b) => a.sku.localeCompare(b.sku)),
       canais: Array.from(missingCanais).sort(),
       regioes: Array.from(missingRegioes).sort(),
       ufs: Array.from(missingUfs).sort(),
