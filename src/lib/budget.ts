@@ -4,7 +4,7 @@
 // (mantém alinhamento com a base atual).
 import * as XLSX from "xlsx";
 import { getDeParaBySku } from "./depara";
-import { getInovacao } from "./deparaInovacao";
+import { getInovacao, getLegado } from "./deparaInovacao";
 import { getCanalAjustado } from "./deparaComercial";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
 import type { Filters } from "./types";
@@ -28,6 +28,7 @@ export interface BudgetRow {
   faixaPeso?: string;
   sabor?: string;
   inovacao?: string; // "Inovação" | "Regular"
+  legado?: string;   // ex.: "1A", "2A", "3A"
   volumeKg: number;    // VOLUME
   receita: number;     // RECEITA (ROL Budget)
   cm: number;          // Contribuição Marginal Budget
@@ -190,6 +191,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
       faixaPeso: dep?.faixaPeso,
       sabor: dep?.sabor,
       inovacao: getInovacao(sku),
+      legado: getLegado(sku),
       volumeKg,
       receita,
       cm,
@@ -244,7 +246,7 @@ export function aggregateBudget(rows: BudgetRow[]): BudgetTotals {
 // Região do CSV Real e não existem na base Budget).
 export const BUDGET_FILTER_KEYS = new Set([
   "categoria", "subcategoria", "marca", "tecnologia", "formato",
-  "mercado", "faixaPeso", "sabor", "sku", "inovacao",
+  "mercado", "faixaPeso", "sabor", "sku", "inovacao", "legado",
   "canalAjustado",
 ]);
 
