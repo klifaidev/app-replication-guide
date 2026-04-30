@@ -1,12 +1,10 @@
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { usePricing } from "@/store/pricing";
 import { uniqueValues, applyFilters } from "@/lib/analytics";
 import type { FilterKey, PricingRow } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { X, Package, Briefcase, Sparkles } from "lucide-react";
 import { getDeParaBySku } from "@/lib/depara";
+import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 
 // Filtros de SKU — atributos do produto vindos do De Para IA.
 const SKU_FIELDS: { key: FilterKey; label: string }[] = [
