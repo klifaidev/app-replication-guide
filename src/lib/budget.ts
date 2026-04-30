@@ -4,7 +4,9 @@
 // (mantém alinhamento com a base atual).
 import * as XLSX from "xlsx";
 import { getDeParaBySku } from "./depara";
+import { getCanalAjustado } from "./deparaComercial";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
+import type { Filters } from "./types";
 
 export interface BudgetRow {
   periodo: string;     // "005.2025"
@@ -13,13 +15,17 @@ export interface BudgetRow {
   fy: string;
   fyNum: number;
   canal?: string;
+  canalAjustado?: string; // derivado via De Para Comercial
   sku?: string;
   skuDesc?: string;
   categoria?: string;
   subcategoria?: string;
   marca?: string;
-  faixaPeso?: string;
+  tecnologia?: string;
   formato?: string;
+  mercado?: string;
+  faixaPeso?: string;
+  sabor?: string;
   volumeKg: number;    // VOLUME
   receita: number;     // RECEITA (ROL Budget)
   cm: number;          // Contribuição Marginal Budget
