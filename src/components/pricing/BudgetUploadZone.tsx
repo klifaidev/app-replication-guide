@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Upload as UploadIcon, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { parseBudgetFile } from "@/lib/budget";
 import { useBudget } from "@/store/budget";
@@ -11,7 +11,8 @@ export function BudgetUploadZone({ compact = false }: { compact?: boolean }) {
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
   const addBudget = useBudget((s) => s.addBudget);
-  const existingMonths = useBudget((s) => new Set(s.rows.map((r) => r.periodo)));
+  const budgetRows = useBudget((s) => s.rows);
+  const existingMonths = useMemo(() => new Set(budgetRows.map((r) => r.periodo)), [budgetRows]);
 
   const handleFiles = useCallback(
     async (files: FileList | File[]) => {
