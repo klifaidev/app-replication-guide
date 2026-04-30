@@ -134,10 +134,18 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
   const monthsSet = new Set<string>();
   let skippedNoPeriod = 0;
   let skippedZero = 0;
+  let skippedNotBudget = 0;
+  const hasStatusCol = Object.values(colKey).includes("status");
 
   for (const r of json) {
     const norm: Record<string, unknown> = {};
     for (const [col, key] of Object.entries(colKey)) norm[key] = r[col];
+
+    // Mantém SOMENTE linhas de Budget (STATUS = "1.Budget Vendas").
+    if (hasStatusCol && !isBudgetStatus(norm.status)) {
+      skippedNotBudget++;
+      continue;
+    }
 
     const p = dataToPeriod(norm.periodo);
     if (!p) { skippedNoPeriod++; continue; }
