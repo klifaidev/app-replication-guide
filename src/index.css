@@ -84,6 +84,23 @@
     --sidebar-border: 240 15% 18%;
     --sidebar-ring: 217 91% 60%;
   }
+
+  /* ====== Modo Inovação ======
+     Ativado por <html data-mode="inovacao">. Apenas tokens de accent/primary
+     são reescritos: paleta violeta-magenta, mantendo legibilidade e estrutura.
+     Tudo o que usar hsl(var(--primary)) / accent / ring se transforma. */
+  :root[data-mode="inovacao"] {
+    --primary: 280 90% 65%;
+    --primary-glow: 295 95% 72%;
+    --primary-foreground: 240 30% 8%;
+    --accent: 295 85% 65%;
+    --ring: 280 90% 65%;
+    --sidebar-primary: 280 90% 65%;
+    --sidebar-ring: 280 90% 65%;
+
+    --gradient-bg: radial-gradient(ellipse at top left, hsl(280 50% 14%) 0%, hsl(245 35% 7%) 60%);
+    --shadow-glow: 0 0 40px hsl(280 90% 65% / 0.32);
+  }
 }
 
 @layer base {
