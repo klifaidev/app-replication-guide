@@ -2,6 +2,7 @@ import Papa from "papaparse";
 import type { LoadedFile, PricingRow } from "./types";
 import { normHeader, parseDecimal, parsePeriod } from "./format";
 import { getDeParaBySku } from "./depara";
+import { getInovacao } from "./deparaInovacao";
 import {
   getCanalAjustado,
   getUfFromRegiao,
