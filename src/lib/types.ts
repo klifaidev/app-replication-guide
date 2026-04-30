@@ -75,6 +75,7 @@ export type FilterKey =
   | "mercadoAjustado"
   | "sabor"
   | "tecnologia"
-  | "faixaPeso";
+  | "faixaPeso"
+  | "inovacao";
 
 export type Filters = Partial<Record<FilterKey, string[]>>;
