@@ -18,6 +18,7 @@ const SKU_FIELDS: { key: FilterKey; label: string }[] = [
   { key: "mercado", label: "05. Mercado" },
   { key: "faixaPeso", label: "06. Faixa de Peso" },
   { key: "sabor", label: "07. Sabor" },
+  { key: "inovacao", label: "08. Inovação / Regular" },
   { key: "sku", label: "Artigo (SKU)" },
 ];
 
