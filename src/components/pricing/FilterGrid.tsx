@@ -5,7 +5,7 @@ import { usePricing } from "@/store/pricing";
 import { uniqueValues, applyFilters } from "@/lib/analytics";
 import type { FilterKey, PricingRow } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { X, Package, Briefcase } from "lucide-react";
+import { X, Package, Briefcase, Sparkles } from "lucide-react";
 import { getDeParaBySku } from "@/lib/depara";
 
 // Filtros de SKU — atributos do produto vindos do De Para IA.
@@ -18,7 +18,6 @@ const SKU_FIELDS: { key: FilterKey; label: string }[] = [
   { key: "mercado", label: "05. Mercado" },
   { key: "faixaPeso", label: "06. Faixa de Peso" },
   { key: "sabor", label: "07. Sabor" },
-  { key: "inovacao", label: "08. Inovação / Regular" },
   { key: "sku", label: "Artigo (SKU)" },
 ];
 
