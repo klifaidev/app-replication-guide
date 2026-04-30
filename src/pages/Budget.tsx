@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { applyBudgetFilters } from "@/lib/budget";
-import { applyFilters } from "@/lib/analytics";
+
 import { formatBRL, formatPct, monthLabel } from "@/lib/format";
 import { Target, TrendingDown, TrendingUp } from "lucide-react";
 import {
@@ -55,34 +55,33 @@ function VarBadge({ v, invert = false }: { v: number; invert?: boolean }) {
 }
 
 export default function Budget() {
-  const realRows = usePricing((s) => s.rows);
   const selectedPeriods = usePricing((s) => s.selectedPeriods);
   const filters = usePricing((s) => s.filters);
   const budgetRows = useBudget((s) => s.rows);
 
   const [dim, setDim] = useState<Dim>("canal");
 
-  // Aplica os mesmos filtros do app (período + SKU + comercial) ao Real.
-  const realFiltered = useMemo(
-    () => applyFilters(realRows, filters, selectedPeriods),
-    [realRows, filters, selectedPeriods],
-  );
-  // Budget: SKU completo + APENAS canalAjustado do bloco comercial.
-  const budgetFiltered = useMemo(
+  // TODA a aba Budget é alimentada pelo arquivo XLSX de Budget.
+  // Real e Budget vêm da MESMA base, separados por STATUS:
+  //  - Budget = STATUS "1.Budget Vendas"          → row.kind === "budget"
+  //  - Real   = qualquer outro STATUS             → row.kind === "real"
+  const filteredAll = useMemo(
     () => applyBudgetFilters(budgetRows, filters, selectedPeriods),
     [budgetRows, filters, selectedPeriods],
   );
+  const realFiltered = useMemo(() => filteredAll.filter((r) => r.kind === "real"), [filteredAll]);
+  const budgetFiltered = useMemo(() => filteredAll.filter((r) => r.kind === "budget"), [filteredAll]);
 
   // Totais
   const totals = useMemo(() => {
     let realRol = 0, realCm = 0, realVol = 0;
-    for (const r of realFiltered) { realRol += r.rol; realCm += r.contribMarginal; realVol += r.volumeKg; }
+    for (const r of realFiltered) { realRol += r.receita; realCm += r.cm; realVol += r.volumeKg; }
     let budRol = 0, budCm = 0, budVol = 0;
     for (const r of budgetFiltered) { budRol += r.receita; budCm += r.cm; budVol += r.volumeKg; }
     return { realRol, realCm, realVol, budRol, budCm, budVol };
   }, [realFiltered, budgetFiltered]);
 
-  // Evolução mensal (todos os meses cobertos por qualquer base)
+  // Evolução mensal (todos os meses cobertos pela base Budget — Real + Budget)
   const monthly = useMemo(() => {
     const map = new Map<string, { periodo: string; mes: number; ano: number; realRol: number; budRol: number; realCm: number; budCm: number }>();
     const ensure = (periodo: string, mes: number, ano: number) => {
@@ -93,20 +92,20 @@ export default function Budget() {
       }
       return x;
     };
-    for (const r of realRows) {
-      const x = ensure(r.periodo, r.mes, r.ano);
-      x.realRol += r.rol;
-      x.realCm += r.contribMarginal;
-    }
     for (const r of budgetRows) {
       const x = ensure(r.periodo, r.mes, r.ano);
-      x.budRol += r.receita;
-      x.budCm += r.cm;
+      if (r.kind === "real") {
+        x.realRol += r.receita;
+        x.realCm += r.cm;
+      } else {
+        x.budRol += r.receita;
+        x.budCm += r.cm;
+      }
     }
     return Array.from(map.values())
       .sort((a, b) => a.ano - b.ano || a.mes - b.mes)
       .map((x) => ({ ...x, label: monthLabel(x.mes, x.ano) }));
-  }, [realRows, budgetRows]);
+  }, [budgetRows]);
 
   // Agregação por dimensão
   const byDim = useMemo<AggLine[]>(() => {
@@ -122,8 +121,8 @@ export default function Budget() {
     for (const r of realFiltered) {
       const k = (r as any)[dim] ?? "—";
       const x = get(String(k));
-      x.realRol += r.rol;
-      x.realCm += r.contribMarginal;
+      x.realRol += r.receita;
+      x.realCm += r.cm;
       x.realVol += r.volumeKg;
     }
     for (const r of budgetFiltered) {
@@ -136,12 +135,12 @@ export default function Budget() {
     return Array.from(map.values()).sort((a, b) => b.realRol + b.budRol - (a.realRol + a.budRol));
   }, [realFiltered, budgetFiltered, dim]);
 
-  if (realRows.length === 0 && budgetRows.length === 0) {
+  if (budgetRows.length === 0) {
     return (
       <>
         <Topbar title="Budget" subtitle="Real vs Orçamento" />
         <div className="px-8 py-6">
-          <EmptyState message="Envie a base Real e a base Budget na aba Upload / Bases para começar." />
+          <EmptyState message="Envie a base Budget (XLSX) na aba Upload / Bases para começar — ela contém tanto as linhas Real quanto as Budget." />
         </div>
       </>
     );

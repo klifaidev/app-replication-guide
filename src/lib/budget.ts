@@ -15,6 +15,10 @@ export interface BudgetRow {
   ano: number;
   fy: string;
   fyNum: number;
+  /** STATUS bruto da linha (ex.: "1.Budget Vendas", "2.Real Vendas") */
+  status?: string;
+  /** Classificação derivada do STATUS: "budget" (1.Budget Vendas) | "real" (qualquer outro) */
+  kind: "budget" | "real";
   canal?: string;
   canalAjustado?: string; // derivado via De Para Comercial
   sku?: string;
@@ -30,9 +34,9 @@ export interface BudgetRow {
   inovacao?: string; // "Inovação" | "Regular"
   legado?: string;   // ex.: "1A", "2A", "3A"
   volumeKg: number;    // VOLUME
-  receita: number;     // RECEITA (ROL Budget)
-  cm: number;          // Contribuição Marginal Budget
-  cpv: number;         // CPV Budget
+  receita: number;     // RECEITA
+  cm: number;          // Contribuição Marginal
+  cpv: number;         // CPV
 }
 
 export interface BudgetFile {
@@ -143,18 +147,13 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
   const monthsSet = new Set<string>();
   let skippedNoPeriod = 0;
   let skippedZero = 0;
-  let skippedNotBudget = 0;
+  let countBudget = 0;
+  let countReal = 0;
   const hasStatusCol = Object.values(colKey).includes("status");
 
   for (const r of json) {
     const norm: Record<string, unknown> = {};
     for (const [col, key] of Object.entries(colKey)) norm[key] = r[col];
-
-    // Mantém SOMENTE linhas de Budget (STATUS = "1.Budget Vendas").
-    if (hasStatusCol && !isBudgetStatus(norm.status)) {
-      skippedNotBudget++;
-      continue;
-    }
 
     const p = dataToPeriod(norm.periodo);
     if (!p) { skippedNoPeriod++; continue; }
@@ -162,6 +161,7 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
     const sku = norm.sku != null ? String(norm.sku).trim() : undefined;
     const canal = norm.canal ? String(norm.canal).trim() : undefined;
     const skuDescRaw = norm.skuDesc ? String(norm.skuDesc).trim() : undefined;
+    const statusRaw = norm.status != null ? String(norm.status).trim() : undefined;
 
     const dep = sku ? getDeParaBySku(sku) : null;
 
@@ -172,12 +172,18 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
 
     if (volumeKg === 0 && receita === 0 && cm === 0) { skippedZero++; continue; }
 
+    // Sem coluna STATUS: assume Budget (compatibilidade com bases antigas).
+    const kind: "budget" | "real" = !hasStatusCol || isBudgetStatus(statusRaw) ? "budget" : "real";
+    if (kind === "budget") countBudget++; else countReal++;
+
     rows.push({
       periodo: p.periodo,
       mes: p.mes,
       ano: p.ano,
       fy: p.fy,
       fyNum: p.fyNum,
+      status: statusRaw,
+      kind,
       canal,
       canalAjustado: getCanalAjustado(canal) ?? undefined,
       sku,
@@ -201,12 +207,12 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
   }
 
   if (!hasStatusCol) {
-    warnings.push(`Coluna "STATUS" não encontrada — todas as linhas foram consideradas Budget.`);
-  } else if (skippedNotBudget) {
+    warnings.push(`Coluna "STATUS" não encontrada — todas as linhas foram tratadas como Budget.`);
+  } else {
     warnings.push(
-      `${skippedNotBudget.toLocaleString("pt-BR")} linha(s) Real (STATUS ≠ "1.Budget Vendas") foram desconsideradas — ` +
-      `apenas linhas de Budget Vendas são carregadas nesta base. ` +
-      `${rows.length.toLocaleString("pt-BR")} linha(s) de Budget importadas.`,
+      `Importado: ${countBudget.toLocaleString("pt-BR")} linha(s) Budget (STATUS = "1.Budget Vendas") + ` +
+      `${countReal.toLocaleString("pt-BR")} linha(s) Real (demais STATUS). ` +
+      `A separação Real/Budget é aplicada na aba Budget.`,
     );
   }
   if (skippedNoPeriod) warnings.push(`${skippedNoPeriod} linha(s) sem data válida foram ignoradas.`);
