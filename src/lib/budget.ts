@@ -244,7 +244,7 @@ export function aggregateBudget(rows: BudgetRow[]): BudgetTotals {
 // Região do CSV Real e não existem na base Budget).
 export const BUDGET_FILTER_KEYS = new Set([
   "categoria", "subcategoria", "marca", "tecnologia", "formato",
-  "mercado", "faixaPeso", "sabor", "sku",
+  "mercado", "faixaPeso", "sabor", "sku", "inovacao",
   "canalAjustado",
 ]);
 
