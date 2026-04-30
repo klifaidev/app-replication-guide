@@ -57,24 +57,20 @@ function VarBadge({ v, invert = false }: { v: number; invert?: boolean }) {
 export default function Budget() {
   const realRows = usePricing((s) => s.rows);
   const selectedPeriods = usePricing((s) => s.selectedPeriods);
+  const filters = usePricing((s) => s.filters);
   const budgetRows = useBudget((s) => s.rows);
 
   const [dim, setDim] = useState<Dim>("canal");
 
-  // Período ativo: usar mesmo filtro de meses do app (selectedPeriods).
-  const activePeriods = useMemo(() => {
-    if (selectedPeriods && selectedPeriods.length > 0) return new Set(selectedPeriods);
-    return null;
-  }, [selectedPeriods]);
-
+  // Aplica os mesmos filtros do app (período + SKU + comercial) ao Real.
   const realFiltered = useMemo(
-    () => (activePeriods ? realRows.filter((r) => activePeriods.has(r.periodo)) : realRows),
-    [realRows, activePeriods],
+    () => applyFilters(realRows, filters, selectedPeriods),
+    [realRows, filters, selectedPeriods],
   );
-  // Budget compara apenas nos meses presentes no Real selecionado (apple-to-apple).
+  // Budget: SKU completo + APENAS canalAjustado do bloco comercial.
   const budgetFiltered = useMemo(
-    () => (activePeriods ? budgetRows.filter((r) => activePeriods.has(r.periodo)) : budgetRows),
-    [budgetRows, activePeriods],
+    () => applyBudgetFilters(budgetRows, filters, selectedPeriods),
+    [budgetRows, filters, selectedPeriods],
   );
 
   // Totais
