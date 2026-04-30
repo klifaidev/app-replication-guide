@@ -77,10 +77,7 @@ export function InnovationToggle() {
             )}
           >
             <Icon
-              className={cn(
-                "h-3.5 w-3.5 transition-transform duration-300",
-                active && isInov && "animate-pulse",
-              )}
+              className="h-3.5 w-3.5 transition-transform duration-300"
             />
             <span>{it.label}</span>
           </button>
