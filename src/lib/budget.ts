@@ -203,7 +203,11 @@ export async function parseBudgetFile(file: File): Promise<ParsedBudget> {
   if (!hasStatusCol) {
     warnings.push(`Coluna "STATUS" não encontrada — todas as linhas foram consideradas Budget.`);
   } else if (skippedNotBudget) {
-    warnings.push(`${skippedNotBudget.toLocaleString("pt-BR")} linha(s) ignoradas (STATUS ≠ "1.Budget Vendas").`);
+    warnings.push(
+      `${skippedNotBudget.toLocaleString("pt-BR")} linha(s) Real (STATUS ≠ "1.Budget Vendas") foram desconsideradas — ` +
+      `apenas linhas de Budget Vendas são carregadas nesta base. ` +
+      `${rows.length.toLocaleString("pt-BR")} linha(s) de Budget importadas.`,
+    );
   }
   if (skippedNoPeriod) warnings.push(`${skippedNoPeriod} linha(s) sem data válida foram ignoradas.`);
   if (skippedZero) warnings.push(`${skippedZero} linha(s) sem valores foram ignoradas.`);
