@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
 import { useBudget, getBudgetMonthsInfo } from "@/store/budget";
 import { useMonthsInfo } from "@/store/selectors";
-import { Trash2, FileSpreadsheet, Calendar, CheckCircle2, AlertTriangle, Database, Target } from "lucide-react";
+import { Trash2, FileSpreadsheet, Calendar, CheckCircle2, AlertTriangle, Database, Target, Sparkles } from "lucide-react";
 import { monthLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
+import { generateDemoData } from "@/lib/demoData";
+import { toast } from "sonner";
 
 const EXPECTED_COLS = [
   "Periodo (ex.: 005.2025)",
