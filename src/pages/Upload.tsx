@@ -174,6 +174,27 @@ export default function Upload() {
       <div className="space-y-6 px-8 py-6">
         <MissingMappingsAlert />
 
+        {/* Demo data — para apresentações */}
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-5 py-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold">Modo apresentação</div>
+              <div className="text-[11px] text-muted-foreground">
+                Carrega dados aleatórios (Real + Budget · 12 meses) para demonstrar todas as funcionalidades.
+                Substitui o que estiver carregado.
+              </div>
+            </div>
+          </div>
+          <Button onClick={handleLoadDemo} className="shrink-0 gap-2">
+            <Sparkles className="h-4 w-4" />
+            Carregar dados demo
+          </Button>
+        </div>
+
+
         {/* Status hero — Real | Budget */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <StatusHeroCard
