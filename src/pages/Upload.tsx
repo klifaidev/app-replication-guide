@@ -144,16 +144,29 @@ export default function Upload() {
   const files = usePricing((s) => s.files);
   const removeFile = usePricing((s) => s.removeFile);
   const clearAll = usePricing((s) => s.clearAll);
+  const addParsed = usePricing((s) => s.addParsed);
   const months = useMonthsInfo();
 
   const budgetRows = useBudget((s) => s.rows);
   const budgetFiles = useBudget((s) => s.files);
   const removeBudgetFile = useBudget((s) => s.removeBudgetFile);
   const clearBudget = useBudget((s) => s.clearBudget);
+  const addBudget = useBudget((s) => s.addBudget);
   const budgetMonths = useMemo(() => getBudgetMonthsInfo(budgetRows), [budgetRows]);
 
   const realFreshness = useMemo(() => getFreshness(months), [months]);
   const budgetFreshness = useMemo(() => getFreshness(budgetMonths), [budgetMonths]);
+
+  const handleLoadDemo = () => {
+    clearAll();
+    clearBudget();
+    const demo = generateDemoData();
+    addParsed(demo.realRows, demo.realFile, true, { skus: [], canais: [], regioes: [], ufs: [] });
+    addBudget(demo.budgetRows, demo.budgetFile, true);
+    toast.success("Dados de demonstração carregados", {
+      description: `${demo.realRows.length.toLocaleString("pt-BR")} linhas Real · ${demo.budgetRows.length.toLocaleString("pt-BR")} linhas Budget · ${demo.realFile.months.length} meses`,
+    });
+  };
 
   return (
     <>
