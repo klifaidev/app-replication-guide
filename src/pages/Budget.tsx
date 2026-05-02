@@ -343,23 +343,23 @@ export default function Budget() {
         {/* KPIs */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            label="Receita — Real vs Budget"
-            value={formatBRL(totals.realRol, { compact: true })}
-            subValue={`Budget ${formatBRL(totals.budRol, { compact: true })}`}
+            label="Receita — Real vs Budget (R$ Mi)"
+            value={fmtMiBR(totals.realRol)}
+            subValue={`Budget ${fmtMiBR(totals.budRol)}`}
             delta={isFinite(rolVar) ? rolVar : undefined}
             accent="blue"
           />
           <KpiCard
-            label="Contrib. Marginal"
-            value={formatBRL(totals.realCm, { compact: true })}
-            subValue={`Budget ${formatBRL(totals.budCm, { compact: true })}`}
+            label="Contrib. Marginal (R$ Mi)"
+            value={fmtMiBR(totals.realCm)}
+            subValue={`Budget ${fmtMiBR(totals.budCm)}`}
             delta={isFinite(cmVar) ? cmVar : undefined}
             accent="violet"
           />
           <KpiCard
-            label="Volume (kg)"
-            value={`${(totals.realVol / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`}
-            subValue={`Budget ${(totals.budVol / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`}
+            label="Volume (Tons)"
+            value={fmtTonsBR(totals.realVol)}
+            subValue={`Budget ${fmtTonsBR(totals.budVol)}`}
             delta={isFinite(volVar) ? volVar : undefined}
             accent="green"
           />
