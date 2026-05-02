@@ -904,8 +904,10 @@ export interface BudgetEvoRow {
   realVol: number; budVol: number;
 }
 
-const fmtMi = (v: number) => `${(v / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}`;
-const fmtTon = (v: number) => `${Math.round(v / 1000).toLocaleString("pt-BR")}`;
+// Formatos pt-BR alinhados ao padrão das apresentações da Harald:
+// inteiros com separador de milhar (ponto). Ex.: 4.341.
+const fmtMi = (v: number) => Math.round(v / 1_000_000).toLocaleString("pt-BR");
+const fmtTon = (v: number) => Math.round(v / 1000).toLocaleString("pt-BR");
 
 function plotLineRow(
   slide: PptxGenJS.Slide,
