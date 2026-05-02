@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { formatBRL, formatPct, monthLabel } from "@/lib/format";
 import { Download, Target, TrendingDown, TrendingUp } from "lucide-react";
 import {
-  Bar, BarChart, CartesianGrid, Legend, Line, LineChart,
+  Area, Bar, BarChart, CartesianGrid, ComposedChart, Line,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
@@ -67,40 +67,109 @@ interface EvoRow {
   realVol: number; budVol: number;
 }
 
+function ChartHeader({
+  title, subtitle, gapValue, gapLabel,
+}: { title: string; subtitle?: string; gapValue?: string; gapLabel?: string }) {
+  return (
+    <div className="mb-3 flex items-end justify-between gap-3">
+      <div>
+        <h4 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{title}</h4>
+        {subtitle && <p className="mt-0.5 text-[11px] text-muted-foreground/80">{subtitle}</p>}
+      </div>
+      <div className="flex items-center gap-3">
+        {gapValue !== undefined && (
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground/70">{gapLabel ?? "Gap acumulado"}</p>
+            <p className={cn(
+              "text-sm font-semibold tabular-nums",
+              gapValue.startsWith("-") ? "text-destructive" : "text-success",
+            )}>{gapValue}</p>
+          </div>
+        )}
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ background: "#E63946" }} />Real
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-0.5 w-3.5" style={{ background: "hsl(var(--foreground))" }} />Budget
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChartTooltip({ active, payload, label, fmt }: any) {
+  if (!active || !payload?.length) return null;
+  const real = payload.find((p: any) => p.dataKey?.toString().startsWith("real"));
+  const bud = payload.find((p: any) => p.dataKey?.toString().startsWith("bud"));
+  const rv = real?.value, bv = bud?.value;
+  let delta: string | null = null;
+  if (typeof rv === "number" && typeof bv === "number" && bv !== 0) {
+    const d = (rv - bv) / Math.abs(bv);
+    delta = `${d >= 0 ? "+" : ""}${(d * 100).toFixed(1)}%`;
+  }
+  return (
+    <div className="rounded-xl border border-border/60 bg-popover/95 px-3 py-2 text-xs shadow-2xl backdrop-blur-md">
+      <p className="mb-1.5 font-medium text-foreground">{label}</p>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-6">
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <span className="h-2 w-2 rounded-full" style={{ background: "#E63946" }} />Real
+          </span>
+          <span className="font-medium tabular-nums">{rv == null ? "—" : fmt(rv)}</span>
+        </div>
+        <div className="flex items-center justify-between gap-6">
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <span className="h-0.5 w-3" style={{ background: "hsl(var(--foreground))" }} />Budget
+          </span>
+          <span className="font-medium tabular-nums text-muted-foreground">{bv == null ? "—" : fmt(bv)}</span>
+        </div>
+        {delta && (
+          <div className="mt-1 flex items-center justify-between gap-6 border-t border-border/40 pt-1">
+            <span className="text-muted-foreground">Δ</span>
+            <span className={cn(
+              "font-semibold tabular-nums",
+              delta.startsWith("-") ? "text-destructive" : "text-success",
+            )}>{delta}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function EvoChart({
-  title, subtitle, data, realKey, budKey, fmt,
+  title, gapValue, data, realKey, budKey, fmt, gradientId,
 }: {
   title: string;
-  subtitle?: string;
+  gapValue?: string;
   data: EvoRow[];
   realKey: keyof EvoRow;
   budKey: keyof EvoRow;
   fmt: (v: number | null) => string;
+  gradientId: string;
 }) {
   return (
-    <div>
-      <div className="mb-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
-        {subtitle && <p className="text-[11px] font-medium text-foreground">{subtitle}</p>}
-      </div>
-      <div className="h-56">
+    <div className="rounded-xl border border-border/40 bg-secondary/20 p-4 transition-colors hover:bg-secondary/30">
+      <ChartHeader title={title} gapValue={gapValue} />
+      <div className="h-60">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-            <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => fmt(v)} width={70} />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 8, fontSize: 12,
-              }}
-              formatter={(v: number) => fmt(v)}
-            />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line type="monotone" dataKey={realKey as string} name="Real" stroke="#C8102E" strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
-            <Line type="monotone" dataKey={budKey as string} name="Budget" stroke="#000000" strokeWidth={2} strokeDasharray="6 4" dot={{ r: 3 }} connectNulls />
-          </LineChart>
+          <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E63946" stopOpacity={0.28} />
+                <stop offset="100%" stopColor="#E63946" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.35} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={(v) => fmt(v)} width={60} />
+            <Tooltip content={<ChartTooltip fmt={fmt} />} cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }} />
+            <Area type="monotone" dataKey={realKey as string} stroke="none" fill={`url(#${gradientId})`} connectNulls />
+            <Line type="monotone" dataKey={budKey as string} name="Budget" stroke="hsl(var(--foreground))" strokeWidth={1.5} strokeDasharray="5 4" dot={false} activeDot={{ r: 4, fill: "hsl(var(--foreground))" }} connectNulls />
+            <Line type="monotone" dataKey={realKey as string} name="Real" stroke="#E63946" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: "#E63946", stroke: "hsl(var(--background))", strokeWidth: 2 }} connectNulls />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
     </div>
@@ -110,31 +179,29 @@ function EvoChart({
 function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: number }) {
   const tonsFmt = (v: number) =>
     `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`;
+  const gapStr = `${accumVolGap >= 0 ? "+" : ""}${tonsFmt(accumVolGap)}`;
   return (
-    <div>
-      <div className="mb-2">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Volume (Kg)</h4>
-        <p className="text-[11px] font-medium text-foreground">
-          Gap acumulado Real vs Budget: {tonsFmt(accumVolGap)}
-        </p>
-      </div>
-      <div className="h-56">
+    <div className="rounded-xl border border-border/40 bg-secondary/20 p-4 transition-colors hover:bg-secondary/30">
+      <ChartHeader title="Volume (Kg)" gapValue={gapStr} />
+      <div className="h-60">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-            <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={tonsFmt} width={70} />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 8, fontSize: 12,
-              }}
-              formatter={(v: number) => tonsFmt(v)}
-            />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="realVol" name="Real" fill="#C8102E" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="budVol" name="Budget" fill="#000000" radius={[3, 3, 0, 0]} />
+          <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="22%">
+            <defs>
+              <linearGradient id="volReal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E63946" stopOpacity={1} />
+                <stop offset="100%" stopColor="#E63946" stopOpacity={0.55} />
+              </linearGradient>
+              <linearGradient id="volBud" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="hsl(var(--foreground))" stopOpacity={0.55} />
+                <stop offset="100%" stopColor="hsl(var(--foreground))" stopOpacity={0.2} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="2 4" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.35} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} tickFormatter={tonsFmt} width={60} />
+            <Tooltip content={<ChartTooltip fmt={tonsFmt} />} cursor={{ fill: "hsl(var(--foreground))", fillOpacity: 0.04 }} />
+            <Bar dataKey="realVol" name="Real" fill="url(#volReal)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="budVol" name="Budget" fill="url(#volBud)" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -343,11 +410,12 @@ export default function Budget() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <EvoChart
                 title="CM Absoluto (R$)"
-                subtitle={`Gap acumulado Real vs Budget: ${formatBRL(accumGap.cmGap, { compact: true })}`}
+                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${formatBRL(accumGap.cmGap, { compact: true })}`}
                 data={monthly}
                 realKey="realCm"
                 budKey="budCm"
-                fmt={(v) => formatBRL(v, { compact: true })}
+                fmt={(v) => formatBRL(v ?? 0, { compact: true })}
+                gradientId="gradCmAbs"
               />
               <EvoChart
                 title="CM % (sobre ROL)"
@@ -355,6 +423,7 @@ export default function Budget() {
                 realKey="realCmPct"
                 budKey="budCmPct"
                 fmt={(v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`)}
+                gradientId="gradCmPct"
               />
               <EvoChart
                 title="CM R$/Kg"
@@ -362,6 +431,7 @@ export default function Budget() {
                 realKey="realCmKg"
                 budKey="budCmKg"
                 fmt={(v) => (v == null ? "—" : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+                gradientId="gradCmKg"
               />
               <EvoVolChart
                 data={monthly}
