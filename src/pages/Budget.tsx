@@ -8,12 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { applyBudgetFilters } from "@/lib/budget";
+import { exportBudgetEvoPpt } from "@/lib/exportPpt";
+import { toast } from "sonner";
 
 import { formatBRL, formatPct, monthLabel } from "@/lib/format";
-import { Target, TrendingDown, TrendingUp } from "lucide-react";
+import { Download, Target, TrendingDown, TrendingUp } from "lucide-react";
 import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer,
-  Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Line, LineChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
