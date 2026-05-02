@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { formatBRL, formatPct, monthLabel } from "@/lib/format";
 import { Download, Target, TrendingDown, TrendingUp } from "lucide-react";
 import {
-  Bar, BarChart, CartesianGrid, Legend, Line, LineChart,
+  Area, Bar, BarChart, CartesianGrid, ComposedChart, Line,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
