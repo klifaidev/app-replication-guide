@@ -24,6 +24,15 @@ import { cn } from "@/lib/utils";
 
 type Dim = "canal" | "categoria" | "subcategoria" | "marca";
 
+// Formatos numéricos pt-BR (sem compactação "k/M") — alinhados ao padrão
+// usado nas apresentações mensais: separador de milhar com ponto, ex.: 4.341.
+const fmtIntBR = (v: number) =>
+  Math.round(v).toLocaleString("pt-BR");
+const fmtTonsBR = (kg: number) => `${fmtIntBR(kg / 1000)} t`;
+const fmtMiBR = (v: number) =>
+  `R$ ${(v / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Mi`;
+const fmtMilharBR = (v: number) => `${fmtIntBR(v / 1000)}`;
+
 interface AggLine {
   key: string;
   realRol: number;
@@ -178,7 +187,7 @@ function EvoChart({
 
 function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: number }) {
   const tonsFmt = (v: number) =>
-    `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`;
+    `${Math.round(v / 1000).toLocaleString("pt-BR")} t`;
   const gapStr = `${accumVolGap >= 0 ? "+" : ""}${tonsFmt(accumVolGap)}`;
   return (
     <div className="rounded-xl border border-border/40 bg-secondary/20 p-4 transition-colors hover:bg-secondary/30">
@@ -343,23 +352,23 @@ export default function Budget() {
         {/* KPIs */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            label="Receita — Real vs Budget"
-            value={formatBRL(totals.realRol, { compact: true })}
-            subValue={`Budget ${formatBRL(totals.budRol, { compact: true })}`}
+            label="Receita — Real vs Budget (R$ Mi)"
+            value={fmtMiBR(totals.realRol)}
+            subValue={`Budget ${fmtMiBR(totals.budRol)}`}
             delta={isFinite(rolVar) ? rolVar : undefined}
             accent="blue"
           />
           <KpiCard
-            label="Contrib. Marginal"
-            value={formatBRL(totals.realCm, { compact: true })}
-            subValue={`Budget ${formatBRL(totals.budCm, { compact: true })}`}
+            label="Contrib. Marginal (R$ Mi)"
+            value={fmtMiBR(totals.realCm)}
+            subValue={`Budget ${fmtMiBR(totals.budCm)}`}
             delta={isFinite(cmVar) ? cmVar : undefined}
             accent="violet"
           />
           <KpiCard
-            label="Volume (kg)"
-            value={`${(totals.realVol / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`}
-            subValue={`Budget ${(totals.budVol / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`}
+            label="Volume (Tons)"
+            value={fmtTonsBR(totals.realVol)}
+            subValue={`Budget ${fmtTonsBR(totals.budVol)}`}
             delta={isFinite(volVar) ? volVar : undefined}
             accent="green"
           />
@@ -409,12 +418,12 @@ export default function Budget() {
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <EvoChart
-                title="CM Absoluto (R$)"
-                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${formatBRL(accumGap.cmGap, { compact: true })}`}
+                title="CM Absoluto (R$ Mil)"
+                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${fmtMilharBR(accumGap.cmGap)}`}
                 data={monthly}
                 realKey="realCm"
                 budKey="budCm"
-                fmt={(v) => formatBRL(v ?? 0, { compact: true })}
+                fmt={(v) => fmtMilharBR(v ?? 0)}
                 gradientId="gradCmAbs"
               />
               <EvoChart
@@ -492,11 +501,11 @@ export default function Budget() {
                     return (
                       <TableRow key={row.key}>
                         <TableCell className="font-medium">{row.key}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatBRL(row.realRol, { compact: true })}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatBRL(row.budRol, { compact: true })}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtMiBR(row.realRol)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtMiBR(row.budRol)}</TableCell>
                         <TableCell className="text-right"><VarBadge v={dRol} /></TableCell>
-                        <TableCell className="text-right tabular-nums">{formatBRL(row.realCm, { compact: true })}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatBRL(row.budCm, { compact: true })}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtMiBR(row.realCm)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtMiBR(row.budCm)}</TableCell>
                         <TableCell className="text-right"><VarBadge v={dCm} /></TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
                           {row.budRol ? `${(ating * 100).toFixed(1)}%` : "—"}
