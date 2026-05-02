@@ -83,31 +83,60 @@ export default function Budget() {
     return { realRol, realCm, realVol, budRol, budCm, budVol };
   }, [realFiltered, budgetFiltered]);
 
-  // Evolução mensal (todos os meses cobertos pela base Budget — Real + Budget)
+  // Evolução mensal (todos os meses cobertos pela base Budget — Real + Budget).
+  // Inclui meses futuros que tenham apenas Budget (sem Real ainda realizado),
+  // garantindo a visão completa do orçado ao longo do horizonte.
   const monthly = useMemo(() => {
-    const map = new Map<string, { periodo: string; mes: number; ano: number; realRol: number; budRol: number; realCm: number; budCm: number }>();
+    type M = {
+      periodo: string; mes: number; ano: number; label: string;
+      realRol: number; budRol: number;
+      realCm: number; budCm: number;
+      realVol: number; budVol: number;
+      realCmPct: number | null; budCmPct: number | null;
+      realCmKg: number | null; budCmKg: number | null;
+    };
+    const map = new Map<string, M>();
     const ensure = (periodo: string, mes: number, ano: number) => {
       let x = map.get(periodo);
       if (!x) {
-        x = { periodo, mes, ano, realRol: 0, budRol: 0, realCm: 0, budCm: 0 };
+        x = {
+          periodo, mes, ano, label: monthLabel(mes, ano),
+          realRol: 0, budRol: 0, realCm: 0, budCm: 0, realVol: 0, budVol: 0,
+          realCmPct: null, budCmPct: null, realCmKg: null, budCmKg: null,
+        };
         map.set(periodo, x);
       }
       return x;
     };
-    for (const r of budgetRows) {
+    // Aplica filtros (exceto seleção de períodos) — meses futuros aparecem
+    // mesmo que não estejam selecionados nos filtros mensais.
+    const filteredNoPeriod = applyBudgetFilters(budgetRows, filters, null);
+    for (const r of filteredNoPeriod) {
       const x = ensure(r.periodo, r.mes, r.ano);
       if (r.kind === "real") {
-        x.realRol += r.receita;
-        x.realCm += r.cm;
+        x.realRol += r.receita; x.realCm += r.cm; x.realVol += r.volumeKg;
       } else {
-        x.budRol += r.receita;
-        x.budCm += r.cm;
+        x.budRol += r.receita; x.budCm += r.cm; x.budVol += r.volumeKg;
       }
     }
     return Array.from(map.values())
       .sort((a, b) => a.ano - b.ano || a.mes - b.mes)
-      .map((x) => ({ ...x, label: monthLabel(x.mes, x.ano) }));
-  }, [budgetRows]);
+      .map((x) => ({
+        ...x,
+        realCmPct: x.realRol ? x.realCm / x.realRol : null,
+        budCmPct: x.budRol ? x.budCm / x.budRol : null,
+        realCmKg: x.realVol ? x.realCm / x.realVol : null,
+        budCmKg: x.budVol ? x.budCm / x.budVol : null,
+      }));
+  }, [budgetRows, filters]);
+
+  // Acumulados Real vs Budget apenas onde há REAL (futuro só tem budget)
+  const accumGap = useMemo(() => {
+    const realMonths = monthly.filter((m) => m.realCm !== 0 || m.realVol !== 0);
+    const cmGap = realMonths.reduce((s, m) => s + (m.realCm - m.budCm), 0);
+    const volGap = realMonths.reduce((s, m) => s + (m.realVol - m.budVol), 0);
+    return { cmGap, volGap };
+  }, [monthly]);
 
   // Agregação por dimensão
   const byDim = useMemo<AggLine[]>(() => {
