@@ -907,6 +907,7 @@ export interface BudgetEvoRow {
 // Formatos pt-BR alinhados ao padrão das apresentações da Harald:
 // inteiros com separador de milhar (ponto). Ex.: 4.341.
 const fmtMi = (v: number) => Math.round(v / 1_000_000).toLocaleString("pt-BR");
+const fmtMilhar = (v: number) => Math.round(v / 1000).toLocaleString("pt-BR");
 const fmtTon = (v: number) => Math.round(v / 1000).toLocaleString("pt-BR");
 
 function plotLineRow(
