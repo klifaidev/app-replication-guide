@@ -24,6 +24,15 @@ import { cn } from "@/lib/utils";
 
 type Dim = "canal" | "categoria" | "subcategoria" | "marca";
 
+// Formatos numéricos pt-BR (sem compactação "k/M") — alinhados ao padrão
+// usado nas apresentações mensais: separador de milhar com ponto, ex.: 4.341.
+const fmtIntBR = (v: number) =>
+  Math.round(v).toLocaleString("pt-BR");
+const fmtTonsBR = (kg: number) => `${fmtIntBR(kg / 1000)} t`;
+const fmtMiBR = (v: number) =>
+  `R$ ${(v / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Mi`;
+const fmtMilharBR = (v: number) => `${fmtIntBR(v / 1000)}`;
+
 interface AggLine {
   key: string;
   realRol: number;
