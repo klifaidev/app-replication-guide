@@ -219,44 +219,68 @@ export default function Budget() {
           />
         </div>
 
-        {/* Evolução mensal */}
+        {/* Overview CM/VOL — 4 evolutivos Real vs Budget */}
         <GlassCard>
-          <header className="mb-4 flex items-center justify-between">
+          <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">
-                <Target className="mr-2 inline h-4 w-4 text-accent" /> Evolução mensal — Real vs Budget
+                <Target className="mr-2 inline h-4 w-4 text-accent" /> Overview CM/VOL — Real vs Budget
               </h3>
-              <p className="text-[11px] text-muted-foreground">Receita líquida por mês</p>
+              <p className="text-[11px] text-muted-foreground">
+                CM Absoluto, CM %, CM R$/Kg e Volume — meses futuros mostram apenas Budget.
+              </p>
             </div>
-            <Badge variant="secondary">{monthly.length} mês(es)</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{monthly.length} mês(es)</Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={async () => {
+                  try {
+                    await exportBudgetEvoPpt(monthly, accumGap);
+                    toast.success("PPTX gerado com os 4 evolutivos.");
+                  } catch (e) {
+                    console.error(e);
+                    toast.error("Falha ao gerar PPTX.");
+                  }
+                }}
+              >
+                <Download className="h-4 w-4" /> Exportar PPTX
+              </Button>
+            </div>
           </header>
+
           {monthly.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sem dados.</p>
           ) : (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthly}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    stroke="hsl(var(--muted-foreground))"
-                    tickFormatter={(v) => formatBRL(v, { compact: true })}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                    formatter={(v: number) => formatBRL(v, { compact: true })}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="budRol" name="Budget" fill="hsl(var(--accent))" opacity={0.55} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="realRol" name="Real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <EvoChart
+                title="CM Absoluto (R$)"
+                subtitle={`Gap acumulado Real vs Budget: ${formatBRL(accumGap.cmGap, { compact: true })}`}
+                data={monthly}
+                realKey="realCm"
+                budKey="budCm"
+                fmt={(v) => formatBRL(v, { compact: true })}
+              />
+              <EvoChart
+                title="CM % (sobre ROL)"
+                data={monthly}
+                realKey="realCmPct"
+                budKey="budCmPct"
+                fmt={(v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`)}
+              />
+              <EvoChart
+                title="CM R$/Kg"
+                data={monthly}
+                realKey="realCmKg"
+                budKey="budCmKg"
+                fmt={(v) => (v == null ? "—" : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              />
+              <EvoVolChart
+                data={monthly}
+                accumVolGap={accumGap.volGap}
+              />
             </div>
           )}
         </GlassCard>
