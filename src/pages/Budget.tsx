@@ -178,7 +178,7 @@ function EvoChart({
 
 function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: number }) {
   const tonsFmt = (v: number) =>
-    `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`;
+    `${Math.round(v / 1000).toLocaleString("pt-BR")} t`;
   const gapStr = `${accumVolGap >= 0 ? "+" : ""}${tonsFmt(accumVolGap)}`;
   return (
     <div className="rounded-xl border border-border/40 bg-secondary/20 p-4 transition-colors hover:bg-secondary/30">
