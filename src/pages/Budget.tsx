@@ -410,11 +410,12 @@ export default function Budget() {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <EvoChart
                 title="CM Absoluto (R$)"
-                subtitle={`Gap acumulado Real vs Budget: ${formatBRL(accumGap.cmGap, { compact: true })}`}
+                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${formatBRL(accumGap.cmGap, { compact: true })}`}
                 data={monthly}
                 realKey="realCm"
                 budKey="budCm"
-                fmt={(v) => formatBRL(v, { compact: true })}
+                fmt={(v) => formatBRL(v ?? 0, { compact: true })}
+                gradientId="gradCmAbs"
               />
               <EvoChart
                 title="CM % (sobre ROL)"
@@ -422,6 +423,7 @@ export default function Budget() {
                 realKey="realCmPct"
                 budKey="budCmPct"
                 fmt={(v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`)}
+                gradientId="gradCmPct"
               />
               <EvoChart
                 title="CM R$/Kg"
@@ -429,6 +431,7 @@ export default function Budget() {
                 realKey="realCmKg"
                 budKey="budCmKg"
                 fmt={(v) => (v == null ? "—" : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+                gradientId="gradCmKg"
               />
               <EvoVolChart
                 data={monthly}
