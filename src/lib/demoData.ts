@@ -196,6 +196,56 @@ export function generateDemoData(opts: GenerateOpts = {}): DemoBundle {
       });
     }
 
+    // REAL na base Budget: replica a Real do mês com pequena variação
+    // (necessário para o comparativo Real vs Budget na aba Budget,
+    //  que filtra ambos por STATUS na MESMA base).
+    const realBudgetRowsThisMonth = Math.floor(rowsPerMonth * 0.6);
+    for (let i = 0; i < realBudgetRowsThisMonth; i++) {
+      const sku = skus[Math.floor(rand() * skus.length)];
+      const dep = DEPARA[sku];
+      const canal = CANAIS[Math.floor(rand() * CANAIS.length)];
+      const canalAjustado = COMERCIAL.canalToCanalAjustado[canal];
+
+      const volumeBase = 55 + rand() * 1050;
+      const volumeKg = +(volumeBase * seasonMul * (0.92 + rand() * 0.16)).toFixed(2);
+      const precoBase =
+        dep.categoria === "Chocolate" ? 32 :
+        dep.categoria === "Cobertura" ? 26 :
+        dep.categoria === "Acabamento" ? 22 : 24;
+      const preco = precoBase * (0.88 + rand() * 0.28);
+      const receita = +(volumeKg * preco).toFixed(2);
+      const cpv = +(receita * (0.56 + rand() * 0.16)).toFixed(2);
+      const cm = +(receita * (0.27 + rand() * 0.1)).toFixed(2);
+
+      budgetRows.push({
+        periodo: p.periodo,
+        mes: p.mes,
+        ano: p.ano,
+        fy: p.fy,
+        fyNum: p.fyNum,
+        status: "2.Real Vendas",
+        kind: "real",
+        canal,
+        canalAjustado,
+        sku,
+        skuDesc: dep.skuDesc,
+        categoria: dep.categoria,
+        subcategoria: dep.subcategoria,
+        marca: dep.marca,
+        tecnologia: dep.tecnologia,
+        formato: dep.formato,
+        mercado: dep.mercado,
+        faixaPeso: dep.faixaPeso,
+        sabor: dep.sabor,
+        inovacao: getInovacao(sku),
+        legado: getLegado(sku),
+        volumeKg,
+        receita,
+        cm,
+        cpv,
+      });
+    }
+
     // BUDGET: ~8% acima da Real, agregado por SKU+canal (menos linhas)
     const budgetRowsThisMonth = Math.floor(rowsPerMonth * 0.6);
     for (let i = 0; i < budgetRowsThisMonth; i++) {
