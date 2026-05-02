@@ -409,12 +409,12 @@ export default function Budget() {
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <EvoChart
-                title="CM Absoluto (R$)"
-                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${formatBRL(accumGap.cmGap, { compact: true })}`}
+                title="CM Absoluto (R$ Mil)"
+                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${fmtMilharBR(accumGap.cmGap)}`}
                 data={monthly}
                 realKey="realCm"
                 budKey="budCm"
-                fmt={(v) => formatBRL(v ?? 0, { compact: true })}
+                fmt={(v) => fmtMilharBR(v ?? 0)}
                 gradientId="gradCmAbs"
               />
               <EvoChart
