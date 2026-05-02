@@ -501,11 +501,11 @@ export default function Budget() {
                     return (
                       <TableRow key={row.key}>
                         <TableCell className="font-medium">{row.key}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatBRL(row.realRol, { compact: true })}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatBRL(row.budRol, { compact: true })}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtMiBR(row.realRol)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtMiBR(row.budRol)}</TableCell>
                         <TableCell className="text-right"><VarBadge v={dRol} /></TableCell>
-                        <TableCell className="text-right tabular-nums">{formatBRL(row.realCm, { compact: true })}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatBRL(row.budCm, { compact: true })}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtMiBR(row.realCm)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtMiBR(row.budCm)}</TableCell>
                         <TableCell className="text-right"><VarBadge v={dCm} /></TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
                           {row.budRol ? `${(ating * 100).toFixed(1)}%` : "—"}
