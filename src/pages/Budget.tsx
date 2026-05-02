@@ -56,6 +56,92 @@ function VarBadge({ v, invert = false }: { v: number; invert?: boolean }) {
   );
 }
 
+// ---------------------------------------------------------------
+// Evolutivos: linha Real (vermelho cheio) + linha Budget (preto tracejado)
+// ---------------------------------------------------------------
+interface EvoRow {
+  label: string;
+  realCm: number; budCm: number;
+  realCmPct: number | null; budCmPct: number | null;
+  realCmKg: number | null; budCmKg: number | null;
+  realVol: number; budVol: number;
+}
+
+function EvoChart({
+  title, subtitle, data, realKey, budKey, fmt,
+}: {
+  title: string;
+  subtitle?: string;
+  data: EvoRow[];
+  realKey: keyof EvoRow;
+  budKey: keyof EvoRow;
+  fmt: (v: number | null) => string;
+}) {
+  return (
+    <div>
+      <div className="mb-2">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+        {subtitle && <p className="text-[11px] font-medium text-foreground">{subtitle}</p>}
+      </div>
+      <div className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => fmt(v)} width={70} />
+            <Tooltip
+              contentStyle={{
+                background: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: 8, fontSize: 12,
+              }}
+              formatter={(v: number) => fmt(v)}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Line type="monotone" dataKey={realKey as string} name="Real" stroke="#C8102E" strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
+            <Line type="monotone" dataKey={budKey as string} name="Budget" stroke="#000000" strokeWidth={2} strokeDasharray="6 4" dot={{ r: 3 }} connectNulls />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: number }) {
+  const tonsFmt = (v: number) =>
+    `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`;
+  return (
+    <div>
+      <div className="mb-2">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Volume (Kg)</h4>
+        <p className="text-[11px] font-medium text-foreground">
+          Gap acumulado Real vs Budget: {tonsFmt(accumVolGap)}
+        </p>
+      </div>
+      <div className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={tonsFmt} width={70} />
+            <Tooltip
+              contentStyle={{
+                background: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: 8, fontSize: 12,
+              }}
+              formatter={(v: number) => tonsFmt(v)}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="realVol" name="Real" fill="#C8102E" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="budVol" name="Budget" fill="#000000" radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 export default function Budget() {
   const selectedPeriods = usePricing((s) => s.selectedPeriods);
   const filters = usePricing((s) => s.filters);
