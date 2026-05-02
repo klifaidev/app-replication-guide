@@ -890,3 +890,254 @@ function triggerDownload(blob: Blob, fileName: string) {
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+// ===========================================================================
+// SLIDE — Overview CM/VOL (Budget): 4 evolutivos Real vs Budget
+// Réplica do slide mensal de resultado da Harald.
+// ===========================================================================
+export interface BudgetEvoRow {
+  label: string;
+  periodo: string;
+  realCm: number; budCm: number;
+  realCmPct: number | null; budCmPct: number | null;
+  realCmKg: number | null; budCmKg: number | null;
+  realVol: number; budVol: number;
+}
+
+const fmtMi = (v: number) => `${(v / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 1 })}`;
+const fmtTon = (v: number) => `${Math.round(v / 1000).toLocaleString("pt-BR")}`;
+
+function plotLineRow(
+  slide: PptxGenJS.Slide,
+  opts: {
+    x: number; y: number; w: number; h: number;
+    title: string;
+    headerNote?: string;
+    data: BudgetEvoRow[];
+    realGet: (r: BudgetEvoRow) => number | null;
+    budGet: (r: BudgetEvoRow) => number | null;
+    fmt: (v: number) => string;
+  },
+) {
+  const { x, y, w, h, title, headerNote, data, realGet, budGet, fmt } = opts;
+
+  slide.addText(title, {
+    x: x - 0.05, y, w: 0.7, h,
+    fontFace: "Arial", fontSize: 11, bold: true,
+    color: PPT_COLORS.haraldRed,
+    align: "center", valign: "middle", margin: 0,
+  });
+
+  if (headerNote) {
+    slide.addText(headerNote, {
+      x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
+      fontFace: "Arial", fontSize: 10, bold: true,
+      color: PPT_COLORS.haraldRed, align: "center", valign: "top", margin: 0,
+    });
+  }
+
+  const plotX = x + 0.7;
+  const plotY = y + 0.05;
+  const plotW = w - 0.75;
+  const plotH = h - 0.1;
+
+  const allVals: number[] = [];
+  data.forEach((r) => {
+    const a = realGet(r); const b = budGet(r);
+    if (a != null && isFinite(a)) allVals.push(a);
+    if (b != null && isFinite(b)) allVals.push(b);
+  });
+  if (allVals.length === 0) return;
+  let minV = Math.min(...allVals);
+  let maxV = Math.max(...allVals);
+  if (minV === maxV) { minV -= 1; maxV += 1; }
+  const pad = (maxV - minV) * 0.25;
+  const yMin = minV - pad; const yMax = maxV + pad;
+
+  const colW = plotW / Math.max(1, data.length);
+  const yOf = (v: number) => plotY + (1 - (v - yMin) / (yMax - yMin)) * plotH;
+  const xOf = (i: number) => plotX + colW * (i + 0.5);
+
+  data.forEach((r, i) => {
+    slide.addText(r.label, {
+      x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
+      fontFace: "Arial", fontSize: 7, color: PPT_COLORS.muted,
+      align: "center", valign: "top", margin: 0,
+    });
+  });
+
+  const drawSeg = (x1: number, y1: number, x2: number, y2: number, color: string, dashed: boolean) => {
+    slide.addShape("line", {
+      x: x1, y: y1, w: x2 - x1, h: y2 - y1,
+      line: { color, width: 1.75, dashType: dashed ? "dash" : "solid" },
+    });
+  };
+
+  const drawSeries = (
+    get: (r: BudgetEvoRow) => number | null,
+    color: string,
+    dashed: boolean,
+    labelColor: string,
+  ) => {
+    let prev: { x: number; y: number } | null = null;
+    data.forEach((r, i) => {
+      const v = get(r);
+      if (v == null || !isFinite(v)) { prev = null; return; }
+      const cx = xOf(i);
+      const cy = yOf(v);
+      if (prev) drawSeg(prev.x, prev.y, cx, cy, color, dashed);
+      slide.addShape("ellipse", {
+        x: cx - 0.04, y: cy - 0.04, w: 0.08, h: 0.08,
+        fill: { color }, line: { color, width: 0 },
+      });
+      slide.addText(fmt(v), {
+        x: cx - colW / 2, y: cy - 0.22, w: colW, h: 0.18,
+        fontFace: "Arial", fontSize: 7, bold: true, color: labelColor,
+        align: "center", valign: "bottom", margin: 0,
+      });
+      prev = { x: cx, y: cy };
+    });
+  };
+
+  drawSeries(realGet, PPT_COLORS.haraldRed, false, PPT_COLORS.haraldRed);
+  drawSeries(budGet, "000000", true, "000000");
+}
+
+function plotVolBars(
+  slide: PptxGenJS.Slide,
+  opts: { x: number; y: number; w: number; h: number; data: BudgetEvoRow[]; accumGapTons: number },
+) {
+  const { x, y, w, h, data, accumGapTons } = opts;
+  slide.addText("VOLUME", {
+    x: x - 0.05, y, w: 0.7, h,
+    fontFace: "Arial", fontSize: 11, bold: true, color: PPT_COLORS.haraldRed,
+    align: "center", valign: "middle", margin: 0,
+  });
+  slide.addText(`${accumGapTons.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} Tons`, {
+    x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
+    fontFace: "Arial", fontSize: 10, bold: true,
+    color: PPT_COLORS.haraldRed, align: "center", valign: "top", margin: 0,
+  });
+
+  const plotX = x + 0.7;
+  const plotY = y + 0.05;
+  const plotW = w - 0.75;
+  const plotH = h - 0.1;
+
+  const allVals: number[] = [];
+  data.forEach((r) => {
+    if (r.realVol) allVals.push(r.realVol);
+    if (r.budVol) allVals.push(r.budVol);
+  });
+  if (allVals.length === 0) return;
+  const maxV = Math.max(...allVals) * 1.25;
+  const yOf = (v: number) => plotY + (1 - v / maxV) * plotH;
+
+  const colW = plotW / Math.max(1, data.length);
+  const barW = colW * 0.36;
+
+  data.forEach((r, i) => {
+    const cx = plotX + colW * (i + 0.5);
+    if (r.realVol > 0) {
+      const yT = yOf(r.realVol);
+      slide.addShape("rect", {
+        x: cx - barW - 0.01, y: yT, w: barW, h: plotY + plotH - yT,
+        fill: { color: PPT_COLORS.haraldRed },
+        line: { color: PPT_COLORS.haraldRed, width: 0 },
+      });
+      slide.addText(fmtTon(r.realVol), {
+        x: cx - barW - 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
+        fontFace: "Arial", fontSize: 7, bold: true, color: PPT_COLORS.haraldRed,
+        align: "center", valign: "bottom", margin: 0,
+      });
+    }
+    if (r.budVol > 0) {
+      const yT = yOf(r.budVol);
+      slide.addShape("rect", {
+        x: cx + 0.01, y: yT, w: barW, h: plotY + plotH - yT,
+        fill: { color: "000000" },
+        line: { color: "000000", width: 0 },
+      });
+      slide.addText(fmtTon(r.budVol), {
+        x: cx + 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
+        fontFace: "Arial", fontSize: 7, bold: true, color: "000000",
+        align: "center", valign: "bottom", margin: 0,
+      });
+    }
+    slide.addText(r.label, {
+      x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
+      fontFace: "Arial", fontSize: 7, color: PPT_COLORS.muted,
+      align: "center", valign: "top", margin: 0,
+    });
+  });
+
+  slide.addShape("rect", { x: plotX + plotW - 1.4, y: y + h + 0.18, w: 0.18, h: 0.1, fill: { color: PPT_COLORS.haraldRed }, line: { color: PPT_COLORS.haraldRed, width: 0 } });
+  slide.addText("REAL", { x: plotX + plotW - 1.2, y: y + h + 0.13, w: 0.4, h: 0.18, fontFace: "Arial", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
+  slide.addShape("rect", { x: plotX + plotW - 0.7, y: y + h + 0.18, w: 0.18, h: 0.1, fill: { color: "000000" }, line: { color: "000000", width: 0 } });
+  slide.addText("BUDGET", { x: plotX + plotW - 0.5, y: y + h + 0.13, w: 0.5, h: 0.18, fontFace: "Arial", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
+}
+
+export async function exportBudgetEvoPpt(
+  monthly: BudgetEvoRow[],
+  accumGap: { cmGap: number; volGap: number },
+) {
+  await getHaraldFooterDataUri();
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE";
+  pptx.title = "Overview CM/VOL — Real vs Budget";
+
+  const slide = pptx.addSlide();
+  slide.background = { color: "FFFFFF" };
+  addHaraldFooter(slide);
+
+  slide.addText("Overview CM/VOL", {
+    x: 0.4, y: 0.2, w: 8, h: 0.5,
+    fontFace: "Arial", fontSize: 24, bold: true,
+    color: PPT_COLORS.haraldRed, margin: 0,
+  });
+
+  const rowH = 1.35;
+  const rowX = 0.35;
+  const rowW = 12.6;
+  let curY = 0.95;
+
+  plotLineRow(slide, {
+    x: rowX, y: curY, w: rowW, h: rowH,
+    title: "CM ABS",
+    headerNote: `${fmtMi(accumGap.cmGap)} Mi`,
+    data: monthly,
+    realGet: (r) => r.realCm || null,
+    budGet: (r) => r.budCm || null,
+    fmt: (v) => fmtMi(v),
+  });
+  curY += rowH;
+
+  plotLineRow(slide, {
+    x: rowX, y: curY, w: rowW, h: rowH,
+    title: "CM/%",
+    data: monthly,
+    realGet: (r) => r.realCmPct,
+    budGet: (r) => r.budCmPct,
+    fmt: (v) => `${(v * 100).toFixed(1)}%`,
+  });
+  curY += rowH;
+
+  plotLineRow(slide, {
+    x: rowX, y: curY, w: rowW, h: rowH,
+    title: "CM/Kg",
+    data: monthly,
+    realGet: (r) => r.realCmKg,
+    budGet: (r) => r.budCmKg,
+    fmt: (v) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  });
+  curY += rowH;
+
+  plotVolBars(slide, {
+    x: rowX, y: curY, w: rowW, h: rowH - 0.1,
+    data: monthly,
+    accumGapTons: accumGap.volGap / 1000,
+  });
+
+  const blob = (await pptx.write({ outputType: "blob" })) as Blob;
+  triggerDownload(blob, `overview_cm_vol_real_vs_budget.pptx`);
+}

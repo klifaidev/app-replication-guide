@@ -8,12 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { applyBudgetFilters } from "@/lib/budget";
+import { exportBudgetEvoPpt } from "@/lib/exportPpt";
+import { toast } from "sonner";
 
 import { formatBRL, formatPct, monthLabel } from "@/lib/format";
-import { Target, TrendingDown, TrendingUp } from "lucide-react";
+import { Download, Target, TrendingDown, TrendingUp } from "lucide-react";
 import {
-  Bar, BarChart, CartesianGrid, Cell, Legend, ResponsiveContainer,
-  Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Legend, Line, LineChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -54,6 +56,92 @@ function VarBadge({ v, invert = false }: { v: number; invert?: boolean }) {
   );
 }
 
+// ---------------------------------------------------------------
+// Evolutivos: linha Real (vermelho cheio) + linha Budget (preto tracejado)
+// ---------------------------------------------------------------
+interface EvoRow {
+  label: string;
+  realCm: number; budCm: number;
+  realCmPct: number | null; budCmPct: number | null;
+  realCmKg: number | null; budCmKg: number | null;
+  realVol: number; budVol: number;
+}
+
+function EvoChart({
+  title, subtitle, data, realKey, budKey, fmt,
+}: {
+  title: string;
+  subtitle?: string;
+  data: EvoRow[];
+  realKey: keyof EvoRow;
+  budKey: keyof EvoRow;
+  fmt: (v: number | null) => string;
+}) {
+  return (
+    <div>
+      <div className="mb-2">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h4>
+        {subtitle && <p className="text-[11px] font-medium text-foreground">{subtitle}</p>}
+      </div>
+      <div className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => fmt(v)} width={70} />
+            <Tooltip
+              contentStyle={{
+                background: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: 8, fontSize: 12,
+              }}
+              formatter={(v: number) => fmt(v)}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Line type="monotone" dataKey={realKey as string} name="Real" stroke="#C8102E" strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
+            <Line type="monotone" dataKey={budKey as string} name="Budget" stroke="#000000" strokeWidth={2} strokeDasharray="6 4" dot={{ r: 3 }} connectNulls />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: number }) {
+  const tonsFmt = (v: number) =>
+    `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} t`;
+  return (
+    <div>
+      <div className="mb-2">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Volume (Kg)</h4>
+        <p className="text-[11px] font-medium text-foreground">
+          Gap acumulado Real vs Budget: {tonsFmt(accumVolGap)}
+        </p>
+      </div>
+      <div className="h-56">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 12, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+            <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickFormatter={tonsFmt} width={70} />
+            <Tooltip
+              contentStyle={{
+                background: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: 8, fontSize: 12,
+              }}
+              formatter={(v: number) => tonsFmt(v)}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="realVol" name="Real" fill="#C8102E" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="budVol" name="Budget" fill="#000000" radius={[3, 3, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
 export default function Budget() {
   const selectedPeriods = usePricing((s) => s.selectedPeriods);
   const filters = usePricing((s) => s.filters);
@@ -81,31 +169,60 @@ export default function Budget() {
     return { realRol, realCm, realVol, budRol, budCm, budVol };
   }, [realFiltered, budgetFiltered]);
 
-  // Evolução mensal (todos os meses cobertos pela base Budget — Real + Budget)
+  // Evolução mensal (todos os meses cobertos pela base Budget — Real + Budget).
+  // Inclui meses futuros que tenham apenas Budget (sem Real ainda realizado),
+  // garantindo a visão completa do orçado ao longo do horizonte.
   const monthly = useMemo(() => {
-    const map = new Map<string, { periodo: string; mes: number; ano: number; realRol: number; budRol: number; realCm: number; budCm: number }>();
+    type M = {
+      periodo: string; mes: number; ano: number; label: string;
+      realRol: number; budRol: number;
+      realCm: number; budCm: number;
+      realVol: number; budVol: number;
+      realCmPct: number | null; budCmPct: number | null;
+      realCmKg: number | null; budCmKg: number | null;
+    };
+    const map = new Map<string, M>();
     const ensure = (periodo: string, mes: number, ano: number) => {
       let x = map.get(periodo);
       if (!x) {
-        x = { periodo, mes, ano, realRol: 0, budRol: 0, realCm: 0, budCm: 0 };
+        x = {
+          periodo, mes, ano, label: monthLabel(mes, ano),
+          realRol: 0, budRol: 0, realCm: 0, budCm: 0, realVol: 0, budVol: 0,
+          realCmPct: null, budCmPct: null, realCmKg: null, budCmKg: null,
+        };
         map.set(periodo, x);
       }
       return x;
     };
-    for (const r of budgetRows) {
+    // Aplica filtros (exceto seleção de períodos) — meses futuros aparecem
+    // mesmo que não estejam selecionados nos filtros mensais.
+    const filteredNoPeriod = applyBudgetFilters(budgetRows, filters, null);
+    for (const r of filteredNoPeriod) {
       const x = ensure(r.periodo, r.mes, r.ano);
       if (r.kind === "real") {
-        x.realRol += r.receita;
-        x.realCm += r.cm;
+        x.realRol += r.receita; x.realCm += r.cm; x.realVol += r.volumeKg;
       } else {
-        x.budRol += r.receita;
-        x.budCm += r.cm;
+        x.budRol += r.receita; x.budCm += r.cm; x.budVol += r.volumeKg;
       }
     }
     return Array.from(map.values())
       .sort((a, b) => a.ano - b.ano || a.mes - b.mes)
-      .map((x) => ({ ...x, label: monthLabel(x.mes, x.ano) }));
-  }, [budgetRows]);
+      .map((x) => ({
+        ...x,
+        realCmPct: x.realRol ? x.realCm / x.realRol : null,
+        budCmPct: x.budRol ? x.budCm / x.budRol : null,
+        realCmKg: x.realVol ? x.realCm / x.realVol : null,
+        budCmKg: x.budVol ? x.budCm / x.budVol : null,
+      }));
+  }, [budgetRows, filters]);
+
+  // Acumulados Real vs Budget apenas onde há REAL (futuro só tem budget)
+  const accumGap = useMemo(() => {
+    const realMonths = monthly.filter((m) => m.realCm !== 0 || m.realVol !== 0);
+    const cmGap = realMonths.reduce((s, m) => s + (m.realCm - m.budCm), 0);
+    const volGap = realMonths.reduce((s, m) => s + (m.realVol - m.budVol), 0);
+    return { cmGap, volGap };
+  }, [monthly]);
 
   // Agregação por dimensão
   const byDim = useMemo<AggLine[]>(() => {
@@ -188,44 +305,68 @@ export default function Budget() {
           />
         </div>
 
-        {/* Evolução mensal */}
+        {/* Overview CM/VOL — 4 evolutivos Real vs Budget */}
         <GlassCard>
-          <header className="mb-4 flex items-center justify-between">
+          <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold">
-                <Target className="mr-2 inline h-4 w-4 text-accent" /> Evolução mensal — Real vs Budget
+                <Target className="mr-2 inline h-4 w-4 text-accent" /> Overview CM/VOL — Real vs Budget
               </h3>
-              <p className="text-[11px] text-muted-foreground">Receita líquida por mês</p>
+              <p className="text-[11px] text-muted-foreground">
+                CM Absoluto, CM %, CM R$/Kg e Volume — meses futuros mostram apenas Budget.
+              </p>
             </div>
-            <Badge variant="secondary">{monthly.length} mês(es)</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{monthly.length} mês(es)</Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={async () => {
+                  try {
+                    await exportBudgetEvoPpt(monthly, accumGap);
+                    toast.success("PPTX gerado com os 4 evolutivos.");
+                  } catch (e) {
+                    console.error(e);
+                    toast.error("Falha ao gerar PPTX.");
+                  }
+                }}
+              >
+                <Download className="h-4 w-4" /> Exportar PPTX
+              </Button>
+            </div>
           </header>
+
           {monthly.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sem dados.</p>
           ) : (
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthly}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/30" />
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    stroke="hsl(var(--muted-foreground))"
-                    tickFormatter={(v) => formatBRL(v, { compact: true })}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                    formatter={(v: number) => formatBRL(v, { compact: true })}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="budRol" name="Budget" fill="hsl(var(--accent))" opacity={0.55} radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="realRol" name="Real" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <EvoChart
+                title="CM Absoluto (R$)"
+                subtitle={`Gap acumulado Real vs Budget: ${formatBRL(accumGap.cmGap, { compact: true })}`}
+                data={monthly}
+                realKey="realCm"
+                budKey="budCm"
+                fmt={(v) => formatBRL(v, { compact: true })}
+              />
+              <EvoChart
+                title="CM % (sobre ROL)"
+                data={monthly}
+                realKey="realCmPct"
+                budKey="budCmPct"
+                fmt={(v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`)}
+              />
+              <EvoChart
+                title="CM R$/Kg"
+                data={monthly}
+                realKey="realCmKg"
+                budKey="budCmKg"
+                fmt={(v) => (v == null ? "—" : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
+              />
+              <EvoVolChart
+                data={monthly}
+                accumVolGap={accumGap.volGap}
+              />
             </div>
           )}
         </GlassCard>
