@@ -60,6 +60,36 @@ import { exportSlideFlow } from "@/lib/exportPpt";
 import { cn } from "@/lib/utils";
 import type { Filters, FilterKey, PricingRow } from "@/lib/types";
 import type { BudgetRow } from "@/lib/budget";
+import { SlidePreview } from "@/components/pricing/SlidePreview";
+
+// ----------------------------------------------------------------------------
+// Smart defaults — calculados no momento de criar o slide a partir das bases
+// disponíveis. Bridge: mês anterior vs último mês. Budget Evo: primeiro mês
+// do FY anterior → último disponível.
+// ----------------------------------------------------------------------------
+function smartDefaults(
+  kind: SlideKind,
+  ctx: { months: { periodo: string; mes: number; ano: number }[]; budgetMonths: { periodo: string; mes: number; ano: number }[] },
+): Partial<SlideItem["config"]> | null {
+  if (kind === "bridge_pvm" && ctx.months.length >= 2) {
+    const last = ctx.months[ctx.months.length - 1];
+    const prev = ctx.months[ctx.months.length - 2];
+    return { mode: "month", base: prev.periodo, comp: last.periodo, filters: {} } as never;
+  }
+  if (kind === "budget_evo" && ctx.budgetMonths.length > 0) {
+    const last = ctx.budgetMonths[ctx.budgetMonths.length - 1];
+    const fyStart = last.mes >= 4 ? last.ano : last.ano - 1;
+    const prevFyStart = fyStart - 1;
+    const defaultStart = `${String(4).padStart(3, "0")}.${prevFyStart}`;
+    const has = ctx.budgetMonths.some((m) => m.periodo === defaultStart);
+    return {
+      start: has ? defaultStart : ctx.budgetMonths[0].periodo,
+      end: last.periodo,
+      filters: {},
+    } as never;
+  }
+  return null;
+}
 
 // ----------------------------------------------------------------------------
 // Helpers
