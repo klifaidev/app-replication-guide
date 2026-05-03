@@ -28,10 +28,9 @@ type Dim = "canal" | "categoria" | "subcategoria" | "marca";
 // usado nas apresentações mensais: separador de milhar com ponto, ex.: 4.341.
 const fmtIntBR = (v: number) =>
   Math.round(v).toLocaleString("pt-BR");
-const fmtTonsBR = (kg: number) => `${fmtIntBR(kg / 1000)} t`;
-const fmtMiBR = (v: number) =>
-  `R$ ${(v / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Mi`;
-const fmtMilharBR = (v: number) => `${fmtIntBR(v / 1000)}`;
+const fmtTonsBR = (tons: number) => `${fmtIntBR(tons)} t`;
+const fmtCurrencyBR = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 interface AggLine {
   key: string;
