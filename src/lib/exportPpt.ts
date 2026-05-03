@@ -284,10 +284,10 @@ function addOverviewDreBridgeSlide(
   });
 
   // ---- "BRIDGE" lateral (centralizado verticalmente com a bridge) ------
-  // Bridge: y=4.85 → 6.75  (centro ≈ 5.8)
+  // Bridge: y=4.95 → 6.35  (centro ≈ 5.65)
   slide.addText("BRIDGE", {
     x: -0.25,
-    y: 5.6,
+    y: 5.45,
     w: 1.2,
     h: 0.4,
     fontFace: "Calibri",
