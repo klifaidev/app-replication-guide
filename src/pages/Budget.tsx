@@ -186,7 +186,7 @@ function EvoChart({
 
 function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: number }) {
   const tonsFmt = (v: number) =>
-    `${Math.round(v / 1000).toLocaleString("pt-BR")} t`;
+    `${Math.round(v).toLocaleString("pt-BR")} t`;
   const gapStr = `${accumVolGap >= 0 ? "+" : ""}${tonsFmt(accumVolGap)}`;
   return (
     <div className="rounded-xl border border-border/40 bg-secondary/20 p-4 transition-colors hover:bg-secondary/30">
@@ -351,16 +351,16 @@ export default function Budget() {
         {/* KPIs */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            label="Receita — Real vs Budget (R$ Mi)"
-            value={fmtMiBR(totals.realRol)}
-            subValue={`Budget ${fmtMiBR(totals.budRol)}`}
+            label="Receita — Real vs Budget"
+            value={fmtCurrencyBR(totals.realRol)}
+            subValue={`Budget ${fmtCurrencyBR(totals.budRol)}`}
             delta={isFinite(rolVar) ? rolVar : undefined}
             accent="blue"
           />
           <KpiCard
-            label="Contrib. Marginal (R$ Mi)"
-            value={fmtMiBR(totals.realCm)}
-            subValue={`Budget ${fmtMiBR(totals.budCm)}`}
+            label="Contrib. Marginal"
+            value={fmtCurrencyBR(totals.realCm)}
+            subValue={`Budget ${fmtCurrencyBR(totals.budCm)}`}
             delta={isFinite(cmVar) ? cmVar : undefined}
             accent="violet"
           />
