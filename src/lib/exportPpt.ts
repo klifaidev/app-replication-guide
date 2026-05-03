@@ -413,8 +413,8 @@ function addOverviewDreBridgeSlide(
     rowsTbl.push(cells);
   });
 
-  const headerH = 0.26;
-  const rowH = 0.22; // altura fixa por linha
+  const headerH = 0.22;
+  const rowH = 0.20; // altura fixa por linha (compactada para não invadir a bridge)
 
   slide.addTable(rowsTbl, {
     x: tableX,
