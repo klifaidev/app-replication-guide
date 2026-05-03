@@ -116,21 +116,20 @@ const fmtPctBR = (v: number, digits = 1) => {
   })}%`;
 };
 
-const brl = (value: number) =>
-  value.toLocaleString("pt-BR", {
+// Moeda absoluta no padrão das apresentações Harald: "R$ 1.234.567" (sem
+// sufixos compactos, milhar com ponto, sem casas decimais).
+const brl = (value: number) => {
+  if (!isFinite(value)) return "—";
+  return value.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
-
-const brlCompact = (value: number) => {
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `R$ ${(value / 1_000_000_000).toFixed(2)}B`;
-  if (abs >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(2)}M`;
-  if (abs >= 1_000) return `R$ ${(value / 1_000).toFixed(1)}k`;
-  return brl(value);
 };
+
+// Mantido por compatibilidade — agora idêntico ao `brl` (sem compactar).
+const brlCompact = (value: number) => brl(value);
 
 function safeName(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]+/g, "_");
@@ -326,20 +325,20 @@ function addOverviewDreBridgeSlide(
   };
 
   const lines: Line[] = [
-    { label: "Volume (Tons)", get: (m) => m.volumeKg / 1000, fmt: (v) => fmtDecimalBR(v, 0).replace(/\./g, ".").replace(/,00$/, ""), boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
-    { label: "Receita Operacional Líquida", get: (m) => m.rol / 1000, fmt: (v) => fmtIntBR(v), noHeat: true },
+    { label: "Volume (Tons)", get: (m) => m.volumeKg / 1000, fmt: (v) => fmtIntBR(v), boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
+    { label: "Receita Operacional Líquida", get: (m) => m.rol, fmt: (v) => fmtIntBR(v), noHeat: true },
     { label: "ROL (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.rol / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), boxed: true, boxColor: PPT_COLORS.heatGreenStrong },
-    { label: "Custo Variável", get: (m) => -m.custoVariavel / 1000, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
+    { label: "Custo Variável", get: (m) => -m.custoVariavel, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
     { label: "Custo Variável (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.custoVariavel / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
-    { label: "Matéria Prima", get: (m) => -m.materiaPrima / 1000, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
-    { label: "Soma de CIF", get: (m) => m.somaCif / 1000, fmt: (v) => fmtIntBR(v), noHeat: true },
-    { label: "Embalagem", get: (m) => -m.embalagem / 1000, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
-    { label: "Frete sobre Vendas", get: (m) => -m.freteSobreVendas / 1000, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
+    { label: "Matéria Prima", get: (m) => -m.materiaPrima, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
+    { label: "Soma de CIF", get: (m) => m.somaCif, fmt: (v) => fmtIntBR(v), noHeat: true },
+    { label: "Embalagem", get: (m) => -m.embalagem, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
+    { label: "Frete sobre Vendas", get: (m) => -m.freteSobreVendas, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
     { label: "Frete (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.freteSobreVendas / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
-    { label: "Comissão Repres", get: (m) => -m.comissaoRepres / 1000, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
+    { label: "Comissão Repres", get: (m) => -m.comissaoRepres, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
     { label: "Comissão (%/ROL)", get: (m) => (m.rol > 0 ? -m.comissaoRepres / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), invert: true },
     { label: "Comissão (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.comissaoRepres / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
-    { label: "Contrib. Marginal", get: (m) => m.contribMarginal / 1000, fmt: (v) => fmtIntBR(v), bold: true, boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
+    { label: "Contrib. Marginal", get: (m) => m.contribMarginal, fmt: (v) => fmtIntBR(v), bold: true, boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
     { label: "Contrib. Marginal (%/ROL)", get: (m) => (m.rol > 0 ? m.contribMarginal / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), noHeat: true },
     { label: "Contrib. Marginal (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.contribMarginal / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2) },
   ];
@@ -532,11 +531,10 @@ function addOverviewDreBridgeSlide(
       });
     }
 
-    // Label numérico acima do topo da barra/linha — milhares com 1 casa decimal
-    const valShown = s.value / 1000; // milhares
+    // Label numérico acima do topo da barra/linha — valor absoluto pt-BR
     const valText = s.type === "total"
-      ? fmtDecimalBR(valShown, 1)
-      : fmtDecimalBR(Math.abs(valShown), 1);
+      ? fmtIntBR(s.value)
+      : fmtSignedIntBR(s.value);
     const topY = s.type === "total" ? yOf(Math.max(0, g.value)) : yOf(Math.max(g.start, g.end));
     slide.addText(valText, {
       x: cx - colSlot / 2,
