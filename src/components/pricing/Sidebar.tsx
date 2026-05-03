@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { usePricing } from "@/store/pricing";
 import { useMonthsInfo } from "@/store/selectors";
-import { AlertTriangle, BarChart3, Coins, Database, FileSpreadsheet, Home, KanbanSquare, LineChart, Network, TableProperties, Target, TrendingUp } from "lucide-react";
+import { AlertTriangle, BarChart3, Coins, Database, FileSpreadsheet, Home, KanbanSquare, LineChart, Network, Presentation, TableProperties, Target, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 
 const dashItems = [
@@ -20,6 +20,7 @@ const dashItems = [
 
 const workItems = [
   { to: "/atividades", label: "Atividades", icon: KanbanSquare },
+  { to: "/slides", label: "Slides (Beta)", icon: Presentation },
 ];
 
 export function Sidebar() {
