@@ -426,8 +426,10 @@ function addOverviewDreBridgeSlide(
     autoPage: false,
   });
 
-  // Bordas vermelhas/verdes externas em linhas-chave (Volume / ROL R$Kg /
-  // Contrib. Marginal) — retângulos vazios desenhados sobre a tabela.
+  // Bordas verdes/vermelhas externas em linhas-chave. Cor decidida pela
+  // comparação do último mês exibido vs o penúltimo: cresceu → verde,
+  // piorou → vermelho. Para custos, o get() já inverte o sinal, então
+  // "valor maior = melhor" vale para todas as linhas destacadas.
   const drawBox = (rowIdx0: number, color: string) => {
     const y = tableY + headerH + rowH * rowIdx0;
     slide.addShape("rect", {
@@ -439,10 +441,17 @@ function addOverviewDreBridgeSlide(
       line: { color, width: 1.25 },
     });
   };
-  // Volume = linha 0; ROL R$/Kg = linha 2; Contrib Marginal = linha 13
-  drawBox(0, PPT_COLORS.haraldRed);
-  drawBox(2, PPT_COLORS.heatGreenStrong);
-  drawBox(13, PPT_COLORS.haraldRed);
+  const boxedRows = [0, 2, 4, 10, 12]; // Volume, ROL R$/Kg, Custo Var R$/Kg, CM, CM R$/Kg
+  boxedRows.forEach((idx) => {
+    const ln = lines[idx];
+    let color = PPT_COLORS.heatGreenStrong;
+    if (months.length >= 2) {
+      const last = ln.get(months[months.length - 1]);
+      const prev = ln.get(months[months.length - 2]);
+      color = last >= prev ? PPT_COLORS.heatGreenStrong : PPT_COLORS.haraldRed;
+    }
+    drawBox(idx, color);
+  });
 
   // ---- BRIDGE minimalista ---------------------------------------------
   // Replica o estilo do PNG: totais como retângulos pretos cheios,
