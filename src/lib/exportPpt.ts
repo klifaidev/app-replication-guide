@@ -357,7 +357,7 @@ function addOverviewDreBridgeSlide(
         fill: { color: PPT_COLORS.haraldRed },
         align: "center",
         valign: "middle",
-        fontSize: 8,
+        fontSize: 10,
       },
     },
     ...months.map((m) => ({
@@ -368,7 +368,7 @@ function addOverviewDreBridgeSlide(
         fill: { color: PPT_COLORS.haraldRed },
         align: "center" as const,
         valign: "middle" as const,
-        fontSize: 8,
+        fontSize: 10,
       },
     })),
   ];
@@ -390,7 +390,7 @@ function addOverviewDreBridgeSlide(
           fill: { color: "FFFFFF" },
           align: "left",
           valign: "middle",
-          fontSize: 8,
+          fontSize: 10,
           margin: 0.04,
         },
       },
@@ -404,7 +404,7 @@ function addOverviewDreBridgeSlide(
             fill: { color: fill },
             align: "center" as const,
             valign: "middle" as const,
-            fontSize: 8,
+            fontSize: 10,
             margin: 0.02,
           },
         };
@@ -413,8 +413,8 @@ function addOverviewDreBridgeSlide(
     rowsTbl.push(cells);
   });
 
-  const headerH = 0.24;
-  const rowH = 0.21; // altura fixa por linha (16 linhas × 0.21 ≈ 3.36")
+  const headerH = 0.26;
+  const rowH = 0.22; // altura fixa por linha
 
   slide.addTable(rowsTbl, {
     x: tableX,
@@ -423,8 +423,8 @@ function addOverviewDreBridgeSlide(
     colW: [labelColW, ...Array(colCount).fill(colW)],
     rowH: [headerH, ...Array(lines.length).fill(rowH)],
     border: { pt: 0.5, color: "FFFFFF" },
-    fontFace: "Arial",
-    fontSize: 8,
+    fontFace: "Calibri",
+    fontSize: 10,
     valign: "middle",
     autoPage: false,
   });
