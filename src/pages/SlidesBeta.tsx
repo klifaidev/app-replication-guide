@@ -123,11 +123,11 @@ function uniqueValues(
 ): string[] {
   const set = new Set<string>();
   for (const r of pricing) {
-    const v = (r as Record<string, unknown>)[key];
+    const v = (r as unknown as Record<string, unknown>)[key];
     if (typeof v === "string" && v) set.add(v);
   }
   for (const r of budget) {
-    const v = (r as Record<string, unknown>)[key];
+    const v = (r as unknown as Record<string, unknown>)[key];
     if (typeof v === "string" && v) set.add(v);
   }
   return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
