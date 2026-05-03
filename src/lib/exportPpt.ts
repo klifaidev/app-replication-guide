@@ -259,21 +259,22 @@ function addOverviewDreBridgeSlide(
     y: 0.25,
     w: 9,
     h: 0.55,
-    fontFace: "Arial",
+    fontFace: "Calibri",
     fontSize: 28,
     bold: true,
     color: PPT_COLORS.haraldRed,
     margin: 0,
   });
 
-  // ---- "DRE" lateral --------------------------------------------------
+  // ---- "DRE" lateral (centralizado verticalmente com a tabela) ---------
+  // Tabela: y=0.95 → 4.71  (centro ≈ 2.83)
   slide.addText("DRE", {
     x: -0.15,
-    y: 1.5,
+    y: 2.63,
     w: 1.0,
     h: 0.4,
-    fontFace: "Arial",
-    fontSize: 18,
+    fontFace: "Calibri",
+    fontSize: 21,
     bold: true,
     color: PPT_COLORS.haraldRed,
     rotate: 270,
@@ -282,14 +283,15 @@ function addOverviewDreBridgeSlide(
     margin: 0,
   });
 
-  // ---- "BRIDGE" lateral ----------------------------------------------
+  // ---- "BRIDGE" lateral (centralizado verticalmente com a bridge) ------
+  // Bridge: y=4.85 → 6.75  (centro ≈ 5.8)
   slide.addText("BRIDGE", {
     x: -0.25,
-    y: 4.55,
+    y: 5.6,
     w: 1.2,
     h: 0.4,
-    fontFace: "Arial",
-    fontSize: 18,
+    fontFace: "Calibri",
+    fontSize: 21,
     bold: true,
     color: PPT_COLORS.haraldRed,
     rotate: 270,
