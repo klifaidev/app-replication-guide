@@ -119,7 +119,7 @@ export default function VisaoGeral() {
             accent="green"
             glow="green"
           />
-          <KpiCard label="Volume" value={formatTon(kpis.volumeKg)} subValue={`${formatNum(kpis.volumeKg)} kg`} accent="amber" />
+          <KpiCard label="Volume" value={formatTon(kpis.volumeKg)} subValue={`${formatNum(kpis.volumeKg)} t`} accent="amber" />
           <KpiCard label="SKUs ativos" value={formatNum(kpis.skus)} accent="violet" />
         </div>
 

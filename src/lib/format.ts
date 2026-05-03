@@ -1,12 +1,6 @@
 export const formatBRL = (v: number, opts?: { compact?: boolean; digits?: number }) => {
   if (!isFinite(v)) return "—";
-  const { compact, digits = 0 } = opts ?? {};
-  if (compact) {
-    const abs = Math.abs(v);
-    if (abs >= 1_000_000_000) return `R$ ${(v / 1_000_000_000).toFixed(2)}B`;
-    if (abs >= 1_000_000) return `R$ ${(v / 1_000_000).toFixed(2)}M`;
-    if (abs >= 1_000) return `R$ ${(v / 1_000).toFixed(1)}k`;
-  }
+  const { digits = 0 } = opts ?? {};
   return v.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
@@ -17,11 +11,6 @@ export const formatBRL = (v: number, opts?: { compact?: boolean; digits?: number
 
 export const formatNum = (v: number, digits = 0, compact = false) => {
   if (!isFinite(v)) return "—";
-  if (compact) {
-    const abs = Math.abs(v);
-    if (abs >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
-    if (abs >= 1_000) return `${(v / 1_000).toFixed(1)}k`;
-  }
   return v.toLocaleString("pt-BR", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
@@ -36,7 +25,7 @@ export const formatPct = (v: number, digits = 1) => {
   })}%`;
 };
 
-export const formatTon = (kg: number) => `${formatNum(kg / 1000, 1)} t`;
+export const formatTon = (tons: number) => `${formatNum(tons, 0)} t`;
 
 const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 

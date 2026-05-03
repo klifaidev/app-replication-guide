@@ -130,7 +130,7 @@ function fmtValue(measure: PivotMeasure, val: number) {
   switch (measure.format) {
     case "currency": return formatBRL(val, { compact: true });
     case "percent": return formatPct(val);
-    case "tons": return `${formatNum(val / 1000, 1)} t`;
+    case "tons": return `${formatNum(val, 0)} t`;
     default: return formatNum(val, 0, true);
   }
 }

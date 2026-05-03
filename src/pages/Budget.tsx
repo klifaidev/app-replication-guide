@@ -28,10 +28,9 @@ type Dim = "canal" | "categoria" | "subcategoria" | "marca";
 // usado nas apresentações mensais: separador de milhar com ponto, ex.: 4.341.
 const fmtIntBR = (v: number) =>
   Math.round(v).toLocaleString("pt-BR");
-const fmtTonsBR = (kg: number) => `${fmtIntBR(kg / 1000)} t`;
-const fmtMiBR = (v: number) =>
-  `R$ ${(v / 1_000_000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Mi`;
-const fmtMilharBR = (v: number) => `${fmtIntBR(v / 1000)}`;
+const fmtTonsBR = (tons: number) => `${fmtIntBR(tons)} t`;
+const fmtCurrencyBR = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 interface AggLine {
   key: string;
@@ -187,11 +186,11 @@ function EvoChart({
 
 function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: number }) {
   const tonsFmt = (v: number) =>
-    `${Math.round(v / 1000).toLocaleString("pt-BR")} t`;
+    `${Math.round(v).toLocaleString("pt-BR")} t`;
   const gapStr = `${accumVolGap >= 0 ? "+" : ""}${tonsFmt(accumVolGap)}`;
   return (
     <div className="rounded-xl border border-border/40 bg-secondary/20 p-4 transition-colors hover:bg-secondary/30">
-      <ChartHeader title="Volume (Kg)" gapValue={gapStr} />
+      <ChartHeader title="Volume (Tons)" gapValue={gapStr} />
       <div className="h-60">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="22%">
@@ -352,16 +351,16 @@ export default function Budget() {
         {/* KPIs */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            label="Receita — Real vs Budget (R$ Mi)"
-            value={fmtMiBR(totals.realRol)}
-            subValue={`Budget ${fmtMiBR(totals.budRol)}`}
+            label="Receita — Real vs Budget"
+            value={fmtCurrencyBR(totals.realRol)}
+            subValue={`Budget ${fmtCurrencyBR(totals.budRol)}`}
             delta={isFinite(rolVar) ? rolVar : undefined}
             accent="blue"
           />
           <KpiCard
-            label="Contrib. Marginal (R$ Mi)"
-            value={fmtMiBR(totals.realCm)}
-            subValue={`Budget ${fmtMiBR(totals.budCm)}`}
+            label="Contrib. Marginal"
+            value={fmtCurrencyBR(totals.realCm)}
+            subValue={`Budget ${fmtCurrencyBR(totals.budCm)}`}
             delta={isFinite(cmVar) ? cmVar : undefined}
             accent="violet"
           />
@@ -418,12 +417,12 @@ export default function Budget() {
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <EvoChart
-                title="CM Absoluto (R$ Mil)"
-                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${fmtMilharBR(accumGap.cmGap)}`}
+                title="CM Absoluto (R$)"
+                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${fmtCurrencyBR(accumGap.cmGap)}`}
                 data={monthly}
                 realKey="realCm"
                 budKey="budCm"
-                fmt={(v) => fmtMilharBR(v ?? 0)}
+                fmt={(v) => fmtCurrencyBR(v ?? 0)}
                 gradientId="gradCmAbs"
               />
               <EvoChart
@@ -501,11 +500,11 @@ export default function Budget() {
                     return (
                       <TableRow key={row.key}>
                         <TableCell className="font-medium">{row.key}</TableCell>
-                        <TableCell className="text-right tabular-nums">{fmtMiBR(row.realRol)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtMiBR(row.budRol)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtCurrencyBR(row.realRol)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtCurrencyBR(row.budRol)}</TableCell>
                         <TableCell className="text-right"><VarBadge v={dRol} /></TableCell>
-                        <TableCell className="text-right tabular-nums">{fmtMiBR(row.realCm)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtMiBR(row.budCm)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtCurrencyBR(row.realCm)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtCurrencyBR(row.budCm)}</TableCell>
                         <TableCell className="text-right"><VarBadge v={dCm} /></TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
                           {row.budRol ? `${(ating * 100).toFixed(1)}%` : "—"}

@@ -906,9 +906,8 @@ export interface BudgetEvoRow {
 
 // Formatos pt-BR alinhados ao padrão das apresentações da Harald:
 // inteiros com separador de milhar (ponto). Ex.: 4.341.
-const fmtMi = (v: number) => Math.round(v / 1_000_000).toLocaleString("pt-BR");
-const fmtMilhar = (v: number) => Math.round(v / 1000).toLocaleString("pt-BR");
-const fmtTon = (v: number) => Math.round(v / 1000).toLocaleString("pt-BR");
+const fmtMoneyAbs = (v: number) => Math.round(v).toLocaleString("pt-BR");
+const fmtTonAbs = (v: number) => Math.round(v).toLocaleString("pt-BR");
 
 function plotLineRow(
   slide: PptxGenJS.Slide,
@@ -1048,7 +1047,7 @@ function plotVolBars(
         fill: { color: PPT_COLORS.haraldRed },
         line: { color: PPT_COLORS.haraldRed, width: 0 },
       });
-      slide.addText(fmtTon(r.realVol), {
+      slide.addText(fmtTonAbs(r.realVol), {
         x: cx - barW - 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
         fontFace: "Arial", fontSize: 7, bold: true, color: PPT_COLORS.haraldRed,
         align: "center", valign: "bottom", margin: 0,
@@ -1061,7 +1060,7 @@ function plotVolBars(
         fill: { color: "000000" },
         line: { color: "000000", width: 0 },
       });
-      slide.addText(fmtTon(r.budVol), {
+      slide.addText(fmtTonAbs(r.budVol), {
         x: cx + 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
         fontFace: "Arial", fontSize: 7, bold: true, color: "000000",
         align: "center", valign: "bottom", margin: 0,
@@ -1107,11 +1106,11 @@ export async function exportBudgetEvoPpt(
   plotLineRow(slide, {
     x: rowX, y: curY, w: rowW, h: rowH,
     title: "CM ABS",
-    headerNote: `${fmtMi(accumGap.cmGap)} Mi`,
+    headerNote: fmtMoneyAbs(accumGap.cmGap),
     data: monthly,
     realGet: (r) => r.realCm || null,
     budGet: (r) => r.budCm || null,
-    fmt: (v) => fmtMi(v),
+    fmt: (v) => fmtMoneyAbs(v),
   });
   curY += rowH;
 
@@ -1138,7 +1137,7 @@ export async function exportBudgetEvoPpt(
   plotVolBars(slide, {
     x: rowX, y: curY, w: rowW, h: rowH - 0.1,
     data: monthly,
-    accumGapTons: accumGap.volGap / 1000,
+    accumGapTons: accumGap.volGap,
   });
 
   const blob = (await pptx.write({ outputType: "blob" })) as Blob;
