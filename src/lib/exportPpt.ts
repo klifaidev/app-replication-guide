@@ -333,10 +333,10 @@ function addOverviewDreBridgeSlide(
     { label: "Custo Variável", get: (m) => -m.custoVariavel, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
     { label: "Custo Variável (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.custoVariavel / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), bold: true },
     { label: "Frete sobre Vendas", get: (m) => -m.freteSobreVendas, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
-    { label: "Frete (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.freteSobreVendas / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2) },
+    { label: "Frete (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.freteSobreVendas / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), bold: true },
     { label: "Comissão Repres", get: (m) => -m.comissaoRepres, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
     { label: "Comissão (%/ROL)", get: (m) => (m.rol > 0 ? -m.comissaoRepres / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), invert: true, noHeat: true },
-    { label: "Comissão (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.comissaoRepres / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2) },
+    { label: "Comissão (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.comissaoRepres / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), bold: true },
     { label: "Contrib. Marginal", get: (m) => m.contribMarginal, fmt: (v) => fmtIntBR(v), bold: true, boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
     { label: "Contrib. Marginal (%/ROL)", get: (m) => (m.rol > 0 ? m.contribMarginal / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), noHeat: true },
     { label: "Contrib. Marginal (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.contribMarginal / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), bold: true },
@@ -521,11 +521,13 @@ function addOverviewDreBridgeSlide(
       ? fmtIntBR(s.value)
       : fmtSignedIntBR(s.value);
     const topY = s.type === "total" ? yOf(Math.max(0, g.value)) : yOf(Math.max(g.start, g.end));
+    const gapIn = 0.04 / 2.54; // 0.04 cm de respiro vertical entre o número e a barra
+    const valH = 0.28;
     slide.addText(valText, {
       x: cx - colSlot / 2,
-      y: Math.max(plotY - 0.05, topY - 0.32),
+      y: Math.max(plotY - 0.05, topY - valH - gapIn),
       w: colSlot,
-      h: 0.28,
+      h: valH,
       fontFace: "Calibri",
       fontSize: 11,
       color: PPT_COLORS.ink,
