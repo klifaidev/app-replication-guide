@@ -190,7 +190,7 @@ function EvoVolChart({ data, accumVolGap }: { data: EvoRow[]; accumVolGap: numbe
   const gapStr = `${accumVolGap >= 0 ? "+" : ""}${tonsFmt(accumVolGap)}`;
   return (
     <div className="rounded-xl border border-border/40 bg-secondary/20 p-4 transition-colors hover:bg-secondary/30">
-      <ChartHeader title="Volume (Kg)" gapValue={gapStr} />
+      <ChartHeader title="Volume (Tons)" gapValue={gapStr} />
       <div className="h-60">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="22%">
