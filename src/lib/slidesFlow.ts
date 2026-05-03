@@ -164,7 +164,7 @@ export function itemToFlow(item: SlideItem, ctx: BuildContext): SlideFlowItem {
               }
             : undefined;
           const result = calcPVM(filtered, ctx.metric, cfg.base, cfg.comp, cfg.mode, labels);
-          await addBridgePvmSlides(pptx, result, filtered);
+          await addBridgePvmSlides(pptx, result, filtered, { onlyOverview: true });
         },
       };
     }

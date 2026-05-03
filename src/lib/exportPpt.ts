@@ -751,9 +751,11 @@ export async function addBridgePvmSlides(
   pptx: PptxGenJS,
   result: PVMResult,
   rows: PricingRow[] = [],
+  opts: { onlyOverview?: boolean } = {},
 ) {
   await getHaraldFooterDataUri();
   addOverviewDreBridgeSlide(pptx, result, rows);
+  if (opts.onlyOverview) return;
   addBridgeTableSlide(pptx, result);
   EFFECT_CONFIG.forEach((effect) => addEffectSlide(pptx, result, effect));
 }
