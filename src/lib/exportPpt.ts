@@ -488,7 +488,7 @@ function addOverviewDreBridgeSlide(
 
   // Plot area (encurtada para dar respiro do rodapé vermelho)
   const plotX = 0.95;
-  const plotY = 4.85;
+  const plotY = 4.95;
   const plotW = 12.0;
   const plotH = 1.4; // bar area (sem labels de eixo)
   const labelStripY = plotY + plotH + 0.05;
