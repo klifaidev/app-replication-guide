@@ -327,11 +327,11 @@ function addOverviewDreBridgeSlide(
   };
 
   const lines: Line[] = [
-    { label: "Volume (Tons)", get: (m) => m.volumeKg, fmt: (v) => fmtIntBR(v), boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
+    { label: "Volume (Tons)", get: (m) => m.volumeKg, fmt: (v) => fmtIntBR(v), bold: true, boxed: true, boxColor: PPT_COLORS.haraldRed },
     { label: "Receita Operacional Líquida", get: (m) => m.rol, fmt: (v) => fmtIntBR(v), noHeat: true },
-    { label: "ROL (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.rol / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), boxed: true, boxColor: PPT_COLORS.heatGreenStrong },
+    { label: "ROL (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.rol / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), bold: true, boxed: true, boxColor: PPT_COLORS.heatGreenStrong },
     { label: "Custo Variável", get: (m) => -m.custoVariavel, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
-    { label: "Custo Variável (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.custoVariavel / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
+    { label: "Custo Variável (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.custoVariavel / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true, bold: true },
     { label: "Matéria Prima", get: (m) => -m.materiaPrima, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
     { label: "Soma de CIF", get: (m) => m.somaCif, fmt: (v) => fmtIntBR(v), noHeat: true },
     { label: "Embalagem", get: (m) => -m.embalagem, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
@@ -342,7 +342,7 @@ function addOverviewDreBridgeSlide(
     { label: "Comissão (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.comissaoRepres / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
     { label: "Contrib. Marginal", get: (m) => m.contribMarginal, fmt: (v) => fmtIntBR(v), bold: true, boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
     { label: "Contrib. Marginal (%/ROL)", get: (m) => (m.rol > 0 ? m.contribMarginal / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), noHeat: true },
-    { label: "Contrib. Marginal (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.contribMarginal / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2) },
+    { label: "Contrib. Marginal (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.contribMarginal / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), bold: true },
   ];
 
   type Cell = { text: string; options: PptxGenJS.TableCellProps };
