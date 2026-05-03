@@ -325,7 +325,7 @@ function addOverviewDreBridgeSlide(
   };
 
   const lines: Line[] = [
-    { label: "Volume (Tons)", get: (m) => m.volumeKg / 1000, fmt: (v) => fmtIntBR(v), boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
+    { label: "Volume (Tons)", get: (m) => m.volumeKg, fmt: (v) => fmtIntBR(v), boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
     { label: "Receita Operacional Líquida", get: (m) => m.rol, fmt: (v) => fmtIntBR(v), noHeat: true },
     { label: "ROL (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.rol / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), boxed: true, boxColor: PPT_COLORS.heatGreenStrong },
     { label: "Custo Variável", get: (m) => -m.custoVariavel, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
