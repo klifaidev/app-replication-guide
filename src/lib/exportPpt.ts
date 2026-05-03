@@ -537,11 +537,13 @@ function addOverviewDreBridgeSlide(
       ? fmtIntBR(s.value)
       : fmtSignedIntBR(s.value);
     const topY = s.type === "total" ? yOf(Math.max(0, g.value)) : yOf(Math.max(g.start, g.end));
+    const labelH = 0.28;
+    const gap = 0.0157; // 0.04 cm de respiro entre o número e a barra
     slide.addText(valText, {
       x: cx - colSlot / 2,
-      y: Math.max(plotY - 0.05, topY - 0.32),
+      y: Math.max(plotY - 0.05, topY - labelH - gap),
       w: colSlot,
-      h: 0.28,
+      h: labelH,
       fontFace: "Calibri",
       fontSize: 11,
       color: PPT_COLORS.ink,
