@@ -486,11 +486,11 @@ function addOverviewDreBridgeSlide(
   const yMin = minV - range * 0.08;
   const yMax = maxV + range * 0.18; // espaço extra para labels acima
 
-  // Plot area
+  // Plot area (encurtada para dar respiro do rodapé vermelho)
   const plotX = 0.95;
-  const plotY = 4.55;
+  const plotY = 4.85;
   const plotW = 12.0;
-  const plotH = 1.95; // bar area (sem labels de eixo)
+  const plotH = 1.4; // bar area (sem labels de eixo)
   const labelStripY = plotY + plotH + 0.05;
   const labelStripH = 0.3;
 
