@@ -259,21 +259,22 @@ function addOverviewDreBridgeSlide(
     y: 0.25,
     w: 9,
     h: 0.55,
-    fontFace: "Arial",
+    fontFace: "Calibri",
     fontSize: 28,
     bold: true,
     color: PPT_COLORS.haraldRed,
     margin: 0,
   });
 
-  // ---- "DRE" lateral --------------------------------------------------
+  // ---- "DRE" lateral (centralizado verticalmente com a tabela) ---------
+  // Tabela: y=0.95 → 4.71  (centro ≈ 2.83)
   slide.addText("DRE", {
     x: -0.15,
-    y: 1.5,
+    y: 2.63,
     w: 1.0,
     h: 0.4,
-    fontFace: "Arial",
-    fontSize: 18,
+    fontFace: "Calibri",
+    fontSize: 21,
     bold: true,
     color: PPT_COLORS.haraldRed,
     rotate: 270,
@@ -282,14 +283,15 @@ function addOverviewDreBridgeSlide(
     margin: 0,
   });
 
-  // ---- "BRIDGE" lateral ----------------------------------------------
+  // ---- "BRIDGE" lateral (centralizado verticalmente com a bridge) ------
+  // Bridge: y=4.85 → 6.75  (centro ≈ 5.8)
   slide.addText("BRIDGE", {
     x: -0.25,
-    y: 4.55,
+    y: 5.6,
     w: 1.2,
     h: 0.4,
-    fontFace: "Arial",
-    fontSize: 18,
+    fontFace: "Calibri",
+    fontSize: 21,
     bold: true,
     color: PPT_COLORS.haraldRed,
     rotate: 270,
@@ -325,11 +327,11 @@ function addOverviewDreBridgeSlide(
   };
 
   const lines: Line[] = [
-    { label: "Volume (Tons)", get: (m) => m.volumeKg, fmt: (v) => fmtIntBR(v), boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
+    { label: "Volume (Tons)", get: (m) => m.volumeKg, fmt: (v) => fmtIntBR(v), bold: true, boxed: true, boxColor: PPT_COLORS.haraldRed },
     { label: "Receita Operacional Líquida", get: (m) => m.rol, fmt: (v) => fmtIntBR(v), noHeat: true },
-    { label: "ROL (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.rol / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), boxed: true, boxColor: PPT_COLORS.heatGreenStrong },
+    { label: "ROL (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.rol / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), bold: true, boxed: true, boxColor: PPT_COLORS.heatGreenStrong },
     { label: "Custo Variável", get: (m) => -m.custoVariavel, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
-    { label: "Custo Variável (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.custoVariavel / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
+    { label: "Custo Variável (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.custoVariavel / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true, bold: true },
     { label: "Matéria Prima", get: (m) => -m.materiaPrima, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
     { label: "Soma de CIF", get: (m) => m.somaCif, fmt: (v) => fmtIntBR(v), noHeat: true },
     { label: "Embalagem", get: (m) => -m.embalagem, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
@@ -340,7 +342,7 @@ function addOverviewDreBridgeSlide(
     { label: "Comissão (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.comissaoRepres / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
     { label: "Contrib. Marginal", get: (m) => m.contribMarginal, fmt: (v) => fmtIntBR(v), bold: true, boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
     { label: "Contrib. Marginal (%/ROL)", get: (m) => (m.rol > 0 ? m.contribMarginal / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), noHeat: true },
-    { label: "Contrib. Marginal (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.contribMarginal / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2) },
+    { label: "Contrib. Marginal (R$/Kg)", get: (m) => (m.volumeKg > 0 ? m.contribMarginal / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), bold: true },
   ];
 
   type Cell = { text: string; options: PptxGenJS.TableCellProps };
@@ -355,7 +357,7 @@ function addOverviewDreBridgeSlide(
         fill: { color: PPT_COLORS.haraldRed },
         align: "center",
         valign: "middle",
-        fontSize: 8,
+        fontSize: 10,
       },
     },
     ...months.map((m) => ({
@@ -366,7 +368,7 @@ function addOverviewDreBridgeSlide(
         fill: { color: PPT_COLORS.haraldRed },
         align: "center" as const,
         valign: "middle" as const,
-        fontSize: 8,
+        fontSize: 10,
       },
     })),
   ];
@@ -388,7 +390,7 @@ function addOverviewDreBridgeSlide(
           fill: { color: "FFFFFF" },
           align: "left",
           valign: "middle",
-          fontSize: 8,
+          fontSize: 10,
           margin: 0.04,
         },
       },
@@ -402,7 +404,7 @@ function addOverviewDreBridgeSlide(
             fill: { color: fill },
             align: "center" as const,
             valign: "middle" as const,
-            fontSize: 8,
+            fontSize: 10,
             margin: 0.02,
           },
         };
@@ -411,8 +413,8 @@ function addOverviewDreBridgeSlide(
     rowsTbl.push(cells);
   });
 
-  const headerH = 0.24;
-  const rowH = 0.21; // altura fixa por linha (16 linhas × 0.21 ≈ 3.36")
+  const headerH = 0.26;
+  const rowH = 0.22; // altura fixa por linha
 
   slide.addTable(rowsTbl, {
     x: tableX,
@@ -421,8 +423,8 @@ function addOverviewDreBridgeSlide(
     colW: [labelColW, ...Array(colCount).fill(colW)],
     rowH: [headerH, ...Array(lines.length).fill(rowH)],
     border: { pt: 0.5, color: "FFFFFF" },
-    fontFace: "Arial",
-    fontSize: 8,
+    fontFace: "Calibri",
+    fontSize: 10,
     valign: "middle",
     autoPage: false,
   });
@@ -452,14 +454,14 @@ function addOverviewDreBridgeSlide(
   type Step = { label: string; value: number; type: "total" | "delta" };
   // Ordem do deck Harald: PP / Volume / Frete / Comissão / Outros / Preço / Custo / Total
   const steps: Step[] = [
-    { label: "Contrib. Marginal PP", value: result.base, type: "total" },
+    { label: `Contrib. Marginal ${result.baseLabel}`, value: result.base, type: "total" },
     { label: "Efeito volume", value: result.volume, type: "delta" },
     { label: "Efeito frete", value: result.freight, type: "delta" },
     { label: "Efeito comissão", value: result.commission, type: "delta" },
     { label: "Efeito outros", value: result.others, type: "delta" },
     { label: "Efeito preço", value: result.price, type: "delta" },
     { label: "Efeito custo variável", value: result.cost, type: "delta" },
-    { label: "Contrib. Marginal total", value: result.current, type: "total" },
+    { label: `Contrib. Marginal ${result.currentLabel}`, value: result.current, type: "total" },
   ];
 
   // Geometria start/end (mesmo princípio do componente Waterfall)
@@ -484,11 +486,11 @@ function addOverviewDreBridgeSlide(
   const yMin = minV - range * 0.08;
   const yMax = maxV + range * 0.18; // espaço extra para labels acima
 
-  // Plot area
+  // Plot area (encurtada para dar respiro do rodapé vermelho)
   const plotX = 0.95;
-  const plotY = 4.55;
+  const plotY = 4.85;
   const plotW = 12.0;
-  const plotH = 1.95; // bar area (sem labels de eixo)
+  const plotH = 1.4; // bar area (sem labels de eixo)
   const labelStripY = plotY + plotH + 0.05;
   const labelStripH = 0.3;
 
@@ -541,7 +543,7 @@ function addOverviewDreBridgeSlide(
       y: Math.max(plotY - 0.05, topY - 0.32),
       w: colSlot,
       h: 0.28,
-      fontFace: "Arial",
+      fontFace: "Calibri",
       fontSize: 11,
       color: PPT_COLORS.ink,
       align: "center",
@@ -556,7 +558,7 @@ function addOverviewDreBridgeSlide(
       y: labelStripY,
       w: colSlot,
       h: labelStripH,
-      fontFace: "Arial",
+      fontFace: "Calibri",
       fontSize: 9,
       color: PPT_COLORS.muted,
       align: "center",
@@ -768,8 +770,8 @@ export async function exportBridgePvmPpt(result: PVMResult, rows: PricingRow[] =
   pptx.subject = "Bridge PVM";
   pptx.title = `Bridge PVM ${result.baseLabel} vs ${result.currentLabel}`;
   pptx.theme = {
-    headFontFace: "Arial",
-    bodyFontFace: "Arial",
+    headFontFace: "Calibri",
+    bodyFontFace: "Calibri",
   };
 
   addOverviewDreBridgeSlide(pptx, result, rows);
@@ -923,7 +925,7 @@ function plotLineRow(
 
   slide.addText(title, {
     x: x - 0.05, y, w: 0.7, h,
-    fontFace: "Arial", fontSize: 11, bold: true,
+    fontFace: "Calibri", fontSize: 11, bold: true,
     color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
   });
@@ -931,7 +933,7 @@ function plotLineRow(
   if (headerNote) {
     slide.addText(headerNote, {
       x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
-      fontFace: "Arial", fontSize: 10, bold: true,
+      fontFace: "Calibri", fontSize: 10, bold: true,
       color: PPT_COLORS.haraldRed, align: "center", valign: "top", margin: 0,
     });
   }
@@ -961,7 +963,7 @@ function plotLineRow(
   data.forEach((r, i) => {
     slide.addText(r.label, {
       x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
-      fontFace: "Arial", fontSize: 7, color: PPT_COLORS.muted,
+      fontFace: "Calibri", fontSize: 7, color: PPT_COLORS.muted,
       align: "center", valign: "top", margin: 0,
     });
   });
@@ -992,7 +994,7 @@ function plotLineRow(
       });
       slide.addText(fmt(v), {
         x: cx - colW / 2, y: cy - 0.22, w: colW, h: 0.18,
-        fontFace: "Arial", fontSize: 7, bold: true, color: labelColor,
+        fontFace: "Calibri", fontSize: 7, bold: true, color: labelColor,
         align: "center", valign: "bottom", margin: 0,
       });
       prev = { x: cx, y: cy };
@@ -1010,12 +1012,12 @@ function plotVolBars(
   const { x, y, w, h, data, accumGapTons } = opts;
   slide.addText("VOLUME", {
     x: x - 0.05, y, w: 0.7, h,
-    fontFace: "Arial", fontSize: 11, bold: true, color: PPT_COLORS.haraldRed,
+    fontFace: "Calibri", fontSize: 11, bold: true, color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
   });
   slide.addText(`${accumGapTons.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} Tons`, {
     x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
-    fontFace: "Arial", fontSize: 10, bold: true,
+    fontFace: "Calibri", fontSize: 10, bold: true,
     color: PPT_COLORS.haraldRed, align: "center", valign: "top", margin: 0,
   });
 
@@ -1047,7 +1049,7 @@ function plotVolBars(
       });
       slide.addText(fmtTonAbs(r.realVol), {
         x: cx - barW - 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
-        fontFace: "Arial", fontSize: 7, bold: true, color: PPT_COLORS.haraldRed,
+        fontFace: "Calibri", fontSize: 7, bold: true, color: PPT_COLORS.haraldRed,
         align: "center", valign: "bottom", margin: 0,
       });
     }
@@ -1060,21 +1062,21 @@ function plotVolBars(
       });
       slide.addText(fmtTonAbs(r.budVol), {
         x: cx + 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
-        fontFace: "Arial", fontSize: 7, bold: true, color: "000000",
+        fontFace: "Calibri", fontSize: 7, bold: true, color: "000000",
         align: "center", valign: "bottom", margin: 0,
       });
     }
     slide.addText(r.label, {
       x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
-      fontFace: "Arial", fontSize: 7, color: PPT_COLORS.muted,
+      fontFace: "Calibri", fontSize: 7, color: PPT_COLORS.muted,
       align: "center", valign: "top", margin: 0,
     });
   });
 
   slide.addShape("rect", { x: plotX + plotW - 1.4, y: y + h + 0.18, w: 0.18, h: 0.1, fill: { color: PPT_COLORS.haraldRed }, line: { color: PPT_COLORS.haraldRed, width: 0 } });
-  slide.addText("REAL", { x: plotX + plotW - 1.2, y: y + h + 0.13, w: 0.4, h: 0.18, fontFace: "Arial", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
+  slide.addText("REAL", { x: plotX + plotW - 1.2, y: y + h + 0.13, w: 0.4, h: 0.18, fontFace: "Calibri", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
   slide.addShape("rect", { x: plotX + plotW - 0.7, y: y + h + 0.18, w: 0.18, h: 0.1, fill: { color: "000000" }, line: { color: "000000", width: 0 } });
-  slide.addText("BUDGET", { x: plotX + plotW - 0.5, y: y + h + 0.13, w: 0.5, h: 0.18, fontFace: "Arial", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
+  slide.addText("BUDGET", { x: plotX + plotW - 0.5, y: y + h + 0.13, w: 0.5, h: 0.18, fontFace: "Calibri", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
 }
 
 export async function exportBudgetEvoPpt(
@@ -1092,7 +1094,7 @@ export async function exportBudgetEvoPpt(
 
   slide.addText("Overview CM/VOL", {
     x: 0.4, y: 0.2, w: 8, h: 0.5,
-    fontFace: "Arial", fontSize: 24, bold: true,
+    fontFace: "Calibri", fontSize: 24, bold: true,
     color: PPT_COLORS.haraldRed, margin: 0,
   });
 
