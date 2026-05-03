@@ -894,6 +894,23 @@ export interface BudgetEvoRow {
 const fmtMoneyAbs = (v: number) => Math.round(v).toLocaleString("pt-BR");
 const fmtTonAbs = (v: number) => Math.round(v).toLocaleString("pt-BR");
 
+function smoothPathD(points: { x: number; y: number }[]): string {
+  if (points.length < 2) return "";
+  let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  return d;
+}
+
 function plotLineRow(
   slide: PptxGenJS.Slide,
   opts: {
@@ -908,11 +925,13 @@ function plotLineRow(
 ) {
   const { x, y, w, h, title, headerNote, data, realGet, budGet, fmt } = opts;
 
+  // Title rotated 90° to the left (vertical, reading bottom to top)
   slide.addText(title, {
-    x: x - 0.05, y, w: 0.7, h,
-    fontFace: "Calibri", fontSize: 11, bold: true,
+    x: x - 0.15, y: y + h / 2 - 0.4, w: 0.8, h: 0.8,
+    fontFace: "Calibri", fontSize: 16, bold: true,
     color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
+    rotate: 270,
   });
 
   if (headerNote) {
@@ -945,49 +964,53 @@ function plotLineRow(
   const yOf = (v: number) => plotY + (1 - (v - yMin) / (yMax - yMin)) * plotH;
   const xOf = (i: number) => plotX + colW * (i + 0.5);
 
+  // Build smooth curves rendered as inline SVG image (rounded, no markers, no month labels)
+  const SCALE = 100;
+  const realPts: { x: number; y: number }[] = [];
+  const budPts: { x: number; y: number }[] = [];
   data.forEach((r, i) => {
-    slide.addText(r.label, {
-      x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
-      fontFace: "Calibri", fontSize: 7, color: PPT_COLORS.muted,
-      align: "center", valign: "top", margin: 0,
-    });
+    const a = realGet(r);
+    const b = budGet(r);
+    const px = (xOf(i) - plotX) * SCALE;
+    if (a != null && isFinite(a)) realPts.push({ x: px, y: (yOf(a) - plotY) * SCALE });
+    if (b != null && isFinite(b)) budPts.push({ x: px, y: (yOf(b) - plotY) * SCALE });
   });
 
-  const drawSeg = (x1: number, y1: number, x2: number, y2: number, color: string, dashed: boolean) => {
-    slide.addShape("line", {
-      x: x1, y: y1, w: x2 - x1, h: y2 - y1,
-      line: { color, width: 1.75, dashType: dashed ? "dash" : "solid" },
-    });
-  };
+  const svgW = plotW * SCALE;
+  const svgH = plotH * SCALE;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none">`
+    + `<path d="${smoothPathD(realPts)}" stroke="#${PPT_COLORS.haraldRed}" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
+    + `<path d="${smoothPathD(budPts)}" stroke="#000000" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="10,6"/>`
+    + `</svg>`;
+  const svgData = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`;
+  slide.addImage({ data: svgData, x: plotX, y: plotY, w: plotW, h: plotH });
 
-  const drawSeries = (
-    get: (r: BudgetEvoRow) => number | null,
-    color: string,
-    dashed: boolean,
-    labelColor: string,
-  ) => {
-    let prev: { x: number; y: number } | null = null;
-    data.forEach((r, i) => {
-      const v = get(r);
-      if (v == null || !isFinite(v)) { prev = null; return; }
-      const cx = xOf(i);
-      const cy = yOf(v);
-      if (prev) drawSeg(prev.x, prev.y, cx, cy, color, dashed);
-      slide.addShape("ellipse", {
-        x: cx - 0.04, y: cy - 0.04, w: 0.08, h: 0.08,
-        fill: { color }, line: { color, width: 0 },
+  // Smart label placement: per month, larger value above, smaller below
+  // Labels rotated 90° to the left, font 10, bold
+  const labelOffset = 0.32;
+  const labelW = 0.22;
+  const labelH = 0.55;
+  data.forEach((r, i) => {
+    const a = realGet(r);
+    const b = budGet(r);
+    const cx = xOf(i);
+    const items: { v: number; color: string }[] = [];
+    if (a != null && isFinite(a)) items.push({ v: a, color: PPT_COLORS.haraldRed });
+    if (b != null && isFinite(b)) items.push({ v: b, color: "000000" });
+    if (items.length === 0) return;
+    items.sort((p, q) => q.v - p.v); // descending: index 0 is the highest -> above
+    items.forEach((it, idx) => {
+      const cy = yOf(it.v);
+      const goAbove = idx === 0; // largest above; smallest below
+      const ly = goAbove ? cy - labelOffset - labelH / 2 : cy + labelOffset - labelH / 2;
+      slide.addText(fmt(it.v), {
+        x: cx - labelW / 2, y: ly, w: labelW, h: labelH,
+        fontFace: "Calibri", fontSize: 10, bold: true, color: it.color,
+        align: "center", valign: "middle", margin: 0,
+        rotate: 270,
       });
-      slide.addText(fmt(v), {
-        x: cx - colW / 2, y: cy - 0.22, w: colW, h: 0.18,
-        fontFace: "Calibri", fontSize: 7, bold: true, color: labelColor,
-        align: "center", valign: "bottom", margin: 0,
-      });
-      prev = { x: cx, y: cy };
     });
-  };
-
-  drawSeries(realGet, PPT_COLORS.haraldRed, false, PPT_COLORS.haraldRed);
-  drawSeries(budGet, "000000", true, "000000");
+  });
 }
 
 function plotVolBars(
@@ -996,9 +1019,10 @@ function plotVolBars(
 ) {
   const { x, y, w, h, data, accumGapTons } = opts;
   slide.addText("VOLUME", {
-    x: x - 0.05, y, w: 0.7, h,
-    fontFace: "Calibri", fontSize: 11, bold: true, color: PPT_COLORS.haraldRed,
+    x: x - 0.15, y: y + h / 2 - 0.4, w: 0.8, h: 0.8,
+    fontFace: "Calibri", fontSize: 16, bold: true, color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
+    rotate: 270,
   });
   slide.addText(`${accumGapTons.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} Tons`, {
     x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
@@ -1023,6 +1047,9 @@ function plotVolBars(
   const colW = plotW / Math.max(1, data.length);
   const barW = colW * 0.36;
 
+  const labelW = 0.22;
+  const labelH = 0.55;
+
   data.forEach((r, i) => {
     const cx = plotX + colW * (i + 0.5);
     if (r.realVol > 0) {
@@ -1033,9 +1060,12 @@ function plotVolBars(
         line: { color: PPT_COLORS.haraldRed, width: 0 },
       });
       slide.addText(fmtTonAbs(r.realVol), {
-        x: cx - barW - 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
-        fontFace: "Calibri", fontSize: 7, bold: true, color: PPT_COLORS.haraldRed,
+        x: cx - barW - 0.01 + barW / 2 - labelW / 2,
+        y: yT - labelH - 0.02,
+        w: labelW, h: labelH,
+        fontFace: "Calibri", fontSize: 10, bold: true, color: PPT_COLORS.haraldRed,
         align: "center", valign: "bottom", margin: 0,
+        rotate: 270,
       });
     }
     if (r.budVol > 0) {
@@ -1046,14 +1076,17 @@ function plotVolBars(
         line: { color: "000000", width: 0 },
       });
       slide.addText(fmtTonAbs(r.budVol), {
-        x: cx + 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
-        fontFace: "Calibri", fontSize: 7, bold: true, color: "000000",
+        x: cx + 0.01 + barW / 2 - labelW / 2,
+        y: yT - labelH - 0.02,
+        w: labelW, h: labelH,
+        fontFace: "Calibri", fontSize: 10, bold: true, color: "000000",
         align: "center", valign: "bottom", margin: 0,
+        rotate: 270,
       });
     }
     slide.addText(r.label, {
       x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
-      fontFace: "Calibri", fontSize: 7, color: PPT_COLORS.muted,
+      fontFace: "Calibri", fontSize: 8, bold: true, color: PPT_COLORS.muted,
       align: "center", valign: "top", margin: 0,
     });
   });
