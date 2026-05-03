@@ -1,5 +1,5 @@
 import type { AggRow } from "@/lib/analytics";
-import { formatBRL, formatPct } from "@/lib/format";
+import { formatBRL, formatPct, formatTon } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 interface AbcBarProps {
@@ -39,7 +39,7 @@ export function AbcBar({ rows, variant, limit = 5, sortBy = "margem", minRolForP
         const pct = Math.abs(value) / max;
         const headline =
           sortBy === "volume"
-            ? `${(r.volumeKg / 1000).toFixed(1)} t`
+            ? formatTon(r.volumeKg)
             : sortBy === "margemPct"
             ? formatPct(r.margemPct)
             : formatBRL(r.margem, { compact: true });
@@ -67,7 +67,7 @@ export function AbcBar({ rows, variant, limit = 5, sortBy = "margem", minRolForP
                   <span>
                     {sortBy === "volume"
                       ? `ROL: ${formatBRL(r.rol, { compact: true })}`
-                      : `Vol: ${(r.volumeKg / 1000).toFixed(1)} t`}
+                      : `Vol: ${formatTon(r.volumeKg)}`}
                   </span>
                 </>
               )}
