@@ -580,6 +580,11 @@ function Inspector({ item }: { item: SlideItem | null }) {
 
         <Separator />
 
+        {/* Live preview */}
+        <SlidePreview item={item} />
+
+        <Separator />
+
         {item.kind === "bridge_pvm" && (
           <BridgePvmConfigPanel item={item} onChange={(next) => updateItem(item.id, () => next)} />
         )}
