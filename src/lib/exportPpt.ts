@@ -267,10 +267,10 @@ function addOverviewDreBridgeSlide(
   });
 
   // ---- "DRE" lateral (centralizado verticalmente com a tabela) ---------
-  // Tabela: y=0.95 → 4.71  (centro ≈ 2.83)
+  // Tabela: y=0.95 → 4.39  (centro ≈ 2.67)
   slide.addText("DRE", {
     x: -0.15,
-    y: 2.63,
+    y: 2.47,
     w: 1.0,
     h: 0.4,
     fontFace: "Calibri",
