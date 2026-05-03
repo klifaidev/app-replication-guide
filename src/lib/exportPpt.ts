@@ -746,6 +746,18 @@ function addEffectSlide(pptx: PptxGenJS, result: PVMResult, effect: { key: Effec
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
+// Builders públicos para reutilização no fluxo de slides multi-export.
+export async function addBridgePvmSlides(
+  pptx: PptxGenJS,
+  result: PVMResult,
+  rows: PricingRow[] = [],
+) {
+  await getHaraldFooterDataUri();
+  addOverviewDreBridgeSlide(pptx, result, rows);
+  addBridgeTableSlide(pptx, result);
+  EFFECT_CONFIG.forEach((effect) => addEffectSlide(pptx, result, effect));
+}
+
 export async function exportBridgePvmPpt(result: PVMResult, rows: PricingRow[] = []) {
   await getHaraldFooterDataUri(); // pré-carrega o rodapé como base64
   const pptx = new PptxGenJS();
@@ -759,9 +771,7 @@ export async function exportBridgePvmPpt(result: PVMResult, rows: PricingRow[] =
     bodyFontFace: "Calibri",
   };
 
-  addOverviewDreBridgeSlide(pptx, result, rows);
-  addBridgeTableSlide(pptx, result);
-  EFFECT_CONFIG.forEach((effect) => addEffectSlide(pptx, result, effect));
+  await addBridgePvmSlides(pptx, result, rows);
 
   // Gera o PPTX em memória, agrupa elementos da bridge num único objeto
   // (slide 1) e dispara o download.
