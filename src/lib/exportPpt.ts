@@ -116,21 +116,20 @@ const fmtPctBR = (v: number, digits = 1) => {
   })}%`;
 };
 
-const brl = (value: number) =>
-  value.toLocaleString("pt-BR", {
+// Moeda absoluta no padrão das apresentações Harald: "R$ 1.234.567" (sem
+// sufixos compactos, milhar com ponto, sem casas decimais).
+const brl = (value: number) => {
+  if (!isFinite(value)) return "—";
+  return value.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
-
-const brlCompact = (value: number) => {
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `R$ ${(value / 1_000_000_000).toFixed(2)}B`;
-  if (abs >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(2)}M`;
-  if (abs >= 1_000) return `R$ ${(value / 1_000).toFixed(1)}k`;
-  return brl(value);
 };
+
+// Mantido por compatibilidade — agora idêntico ao `brl` (sem compactar).
+const brlCompact = (value: number) => brl(value);
 
 function safeName(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]+/g, "_");
