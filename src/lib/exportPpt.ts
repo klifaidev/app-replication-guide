@@ -335,7 +335,7 @@ function addOverviewDreBridgeSlide(
     { label: "Frete sobre Vendas", get: (m) => -m.freteSobreVendas, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
     { label: "Frete (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.freteSobreVendas / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
     { label: "Comissão Repres", get: (m) => -m.comissaoRepres, fmt: (v) => fmtSignedIntBR(v), invert: true, noHeat: true },
-    { label: "Comissão (%/ROL)", get: (m) => (m.rol > 0 ? -m.comissaoRepres / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), invert: true },
+    { label: "Comissão (%/ROL)", get: (m) => (m.rol > 0 ? -m.comissaoRepres / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), invert: true, noHeat: true },
     { label: "Comissão (R$/Kg)", get: (m) => (m.volumeKg > 0 ? -m.comissaoRepres / m.volumeKg : 0), fmt: (v) => fmtDecimalBR(v, 2), invert: true },
     { label: "Contrib. Marginal", get: (m) => m.contribMarginal, fmt: (v) => fmtIntBR(v), bold: true, boxed: true, boxColor: PPT_COLORS.haraldRed, noHeat: true },
     { label: "Contrib. Marginal (%/ROL)", get: (m) => (m.rol > 0 ? m.contribMarginal / m.rol : 0), fmt: (v) => fmtPctBR(v, 1), noHeat: true },
