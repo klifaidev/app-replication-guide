@@ -543,7 +543,7 @@ function addOverviewDreBridgeSlide(
       y: Math.max(plotY - 0.05, topY - 0.32),
       w: colSlot,
       h: 0.28,
-      fontFace: "Arial",
+      fontFace: "Calibri",
       fontSize: 11,
       color: PPT_COLORS.ink,
       align: "center",
@@ -558,7 +558,7 @@ function addOverviewDreBridgeSlide(
       y: labelStripY,
       w: colSlot,
       h: labelStripH,
-      fontFace: "Arial",
+      fontFace: "Calibri",
       fontSize: 9,
       color: PPT_COLORS.muted,
       align: "center",
@@ -770,8 +770,8 @@ export async function exportBridgePvmPpt(result: PVMResult, rows: PricingRow[] =
   pptx.subject = "Bridge PVM";
   pptx.title = `Bridge PVM ${result.baseLabel} vs ${result.currentLabel}`;
   pptx.theme = {
-    headFontFace: "Arial",
-    bodyFontFace: "Arial",
+    headFontFace: "Calibri",
+    bodyFontFace: "Calibri",
   };
 
   addOverviewDreBridgeSlide(pptx, result, rows);
@@ -925,7 +925,7 @@ function plotLineRow(
 
   slide.addText(title, {
     x: x - 0.05, y, w: 0.7, h,
-    fontFace: "Arial", fontSize: 11, bold: true,
+    fontFace: "Calibri", fontSize: 11, bold: true,
     color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
   });
@@ -933,7 +933,7 @@ function plotLineRow(
   if (headerNote) {
     slide.addText(headerNote, {
       x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
-      fontFace: "Arial", fontSize: 10, bold: true,
+      fontFace: "Calibri", fontSize: 10, bold: true,
       color: PPT_COLORS.haraldRed, align: "center", valign: "top", margin: 0,
     });
   }
@@ -963,7 +963,7 @@ function plotLineRow(
   data.forEach((r, i) => {
     slide.addText(r.label, {
       x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
-      fontFace: "Arial", fontSize: 7, color: PPT_COLORS.muted,
+      fontFace: "Calibri", fontSize: 7, color: PPT_COLORS.muted,
       align: "center", valign: "top", margin: 0,
     });
   });
@@ -994,7 +994,7 @@ function plotLineRow(
       });
       slide.addText(fmt(v), {
         x: cx - colW / 2, y: cy - 0.22, w: colW, h: 0.18,
-        fontFace: "Arial", fontSize: 7, bold: true, color: labelColor,
+        fontFace: "Calibri", fontSize: 7, bold: true, color: labelColor,
         align: "center", valign: "bottom", margin: 0,
       });
       prev = { x: cx, y: cy };
@@ -1012,12 +1012,12 @@ function plotVolBars(
   const { x, y, w, h, data, accumGapTons } = opts;
   slide.addText("VOLUME", {
     x: x - 0.05, y, w: 0.7, h,
-    fontFace: "Arial", fontSize: 11, bold: true, color: PPT_COLORS.haraldRed,
+    fontFace: "Calibri", fontSize: 11, bold: true, color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
   });
   slide.addText(`${accumGapTons.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} Tons`, {
     x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
-    fontFace: "Arial", fontSize: 10, bold: true,
+    fontFace: "Calibri", fontSize: 10, bold: true,
     color: PPT_COLORS.haraldRed, align: "center", valign: "top", margin: 0,
   });
 
@@ -1049,7 +1049,7 @@ function plotVolBars(
       });
       slide.addText(fmtTonAbs(r.realVol), {
         x: cx - barW - 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
-        fontFace: "Arial", fontSize: 7, bold: true, color: PPT_COLORS.haraldRed,
+        fontFace: "Calibri", fontSize: 7, bold: true, color: PPT_COLORS.haraldRed,
         align: "center", valign: "bottom", margin: 0,
       });
     }
@@ -1062,21 +1062,21 @@ function plotVolBars(
       });
       slide.addText(fmtTonAbs(r.budVol), {
         x: cx + 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
-        fontFace: "Arial", fontSize: 7, bold: true, color: "000000",
+        fontFace: "Calibri", fontSize: 7, bold: true, color: "000000",
         align: "center", valign: "bottom", margin: 0,
       });
     }
     slide.addText(r.label, {
       x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
-      fontFace: "Arial", fontSize: 7, color: PPT_COLORS.muted,
+      fontFace: "Calibri", fontSize: 7, color: PPT_COLORS.muted,
       align: "center", valign: "top", margin: 0,
     });
   });
 
   slide.addShape("rect", { x: plotX + plotW - 1.4, y: y + h + 0.18, w: 0.18, h: 0.1, fill: { color: PPT_COLORS.haraldRed }, line: { color: PPT_COLORS.haraldRed, width: 0 } });
-  slide.addText("REAL", { x: plotX + plotW - 1.2, y: y + h + 0.13, w: 0.4, h: 0.18, fontFace: "Arial", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
+  slide.addText("REAL", { x: plotX + plotW - 1.2, y: y + h + 0.13, w: 0.4, h: 0.18, fontFace: "Calibri", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
   slide.addShape("rect", { x: plotX + plotW - 0.7, y: y + h + 0.18, w: 0.18, h: 0.1, fill: { color: "000000" }, line: { color: "000000", width: 0 } });
-  slide.addText("BUDGET", { x: plotX + plotW - 0.5, y: y + h + 0.13, w: 0.5, h: 0.18, fontFace: "Arial", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
+  slide.addText("BUDGET", { x: plotX + plotW - 0.5, y: y + h + 0.13, w: 0.5, h: 0.18, fontFace: "Calibri", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
 }
 
 export async function exportBudgetEvoPpt(
@@ -1094,7 +1094,7 @@ export async function exportBudgetEvoPpt(
 
   slide.addText("Overview CM/VOL", {
     x: 0.4, y: 0.2, w: 8, h: 0.5,
-    fontFace: "Arial", fontSize: 24, bold: true,
+    fontFace: "Calibri", fontSize: 24, bold: true,
     color: PPT_COLORS.haraldRed, margin: 0,
   });
 
