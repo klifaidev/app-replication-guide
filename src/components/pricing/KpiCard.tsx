@@ -26,7 +26,7 @@ export function KpiCard({ label, value, subValue, delta, glow = "none", accent =
         <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
           {label}
         </span>
-        <div className={cn("text-4xl font-light tabular-nums", accentColor[accent])}>
+        <div className={cn("break-words text-3xl font-light leading-tight tabular-nums", accentColor[accent])}>
           {value}
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
