@@ -1110,15 +1110,11 @@ function plotVolBars(
   slide.addText("BUDGET", { x: plotX + plotW - 0.5, y: y + h + 0.13, w: 0.5, h: 0.18, fontFace: "Calibri", fontSize: 8, bold: true, color: PPT_COLORS.ink, margin: 0 });
 }
 
-export async function exportBudgetEvoPpt(
+export function addBudgetEvoSlide(
+  pptx: PptxGenJS,
   monthly: BudgetEvoRow[],
   accumGap: { cmGap: number; volGap: number },
 ) {
-  await getHaraldFooterDataUri();
-  const pptx = new PptxGenJS();
-  pptx.layout = "LAYOUT_WIDE";
-  pptx.title = "Overview CM/VOL — Real vs Budget";
-
   const slide = pptx.addSlide();
   slide.background = { color: "FFFFFF" };
   addHaraldFooter(slide);
@@ -1170,7 +1166,85 @@ export async function exportBudgetEvoPpt(
     data: monthly,
     accumGapTons: accumGap.volGap,
   });
+}
 
+export async function exportBudgetEvoPpt(
+  monthly: BudgetEvoRow[],
+  accumGap: { cmGap: number; volGap: number },
+) {
+  await getHaraldFooterDataUri();
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE";
+  pptx.title = "Overview CM/VOL — Real vs Budget";
+  addBudgetEvoSlide(pptx, monthly, accumGap);
   const blob = (await pptx.write({ outputType: "blob" })) as Blob;
   triggerDownload(blob, `overview_cm_vol_real_vs_budget.pptx`);
 }
+
+// ===========================================================================
+// SLIDE — Capa / divisor customizável
+// ===========================================================================
+export interface CoverSlideOptions {
+  title: string;
+  subtitle?: string;
+  /** "cover" = capa principal (vermelha cheia). "divider" = divisor sóbrio (branco). */
+  variant?: "cover" | "divider";
+}
+
+export async function addCoverSlide(pptx: PptxGenJS, opts: CoverSlideOptions) {
+  await getHaraldFooterDataUri();
+  const slide = pptx.addSlide();
+  const isDivider = opts.variant === "divider";
+  slide.background = { color: isDivider ? "FFFFFF" : PPT_COLORS.haraldRed };
+  if (isDivider) addHaraldFooter(slide);
+
+  const titleColor = isDivider ? PPT_COLORS.haraldRed : "FFFFFF";
+  const subColor = isDivider ? PPT_COLORS.muted : "FFFFFF";
+
+  if (isDivider) {
+    slide.addShape("rect", {
+      x: 0.4, y: 3.0, w: 0.6, h: 0.08,
+      fill: { color: PPT_COLORS.haraldRed }, line: { color: PPT_COLORS.haraldRed, width: 0 },
+    });
+  }
+
+  slide.addText(opts.title, {
+    x: 0.6, y: 3.2, w: 12, h: 1.2,
+    fontFace: "Calibri", fontSize: 44, bold: true,
+    color: titleColor, margin: 0, valign: "middle",
+  });
+  if (opts.subtitle) {
+    slide.addText(opts.subtitle, {
+      x: 0.62, y: 4.4, w: 12, h: 0.6,
+      fontFace: "Calibri", fontSize: 18,
+      color: subColor, margin: 0, valign: "middle",
+    });
+  }
+}
+
+// ===========================================================================
+// Multi-slide flow exporter — usado pela aba "Slides (Beta)"
+// ===========================================================================
+export interface SlideFlowItem {
+  build: (pptx: PptxGenJS) => Promise<void> | void;
+}
+
+export async function exportSlideFlow(items: SlideFlowItem[], fileName = "apresentacao.pptx") {
+  if (items.length === 0) throw new Error("Nenhum slide no fluxo.");
+  await getHaraldFooterDataUri();
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_WIDE";
+  pptx.author = "Lovable";
+  pptx.company = "Lovable";
+  pptx.title = "Apresentação Pricing Analytics";
+  pptx.theme = { headFontFace: "Calibri", bodyFontFace: "Calibri" };
+
+  for (const item of items) {
+    await item.build(pptx);
+  }
+
+  const rawBlob = (await pptx.write({ outputType: "blob" })) as Blob;
+  const grouped = await groupBridgeElements(rawBlob);
+  triggerDownload(grouped, fileName);
+}
+
