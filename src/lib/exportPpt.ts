@@ -986,10 +986,10 @@ function plotLineRow(
   slide.addImage({ data: svgData, x: plotX, y: plotY, w: plotW, h: plotH });
 
   // Smart label placement: per month, larger value above, smaller below
-  // Labels rotated 90° to the left, font 10, bold
-  const labelOffset = 0.32;
-  const labelW = 0.22;
-  const labelH = 0.55;
+  // Labels horizontal, font 10, bold, no wrapping
+  const labelW = Math.max(colW * 1.6, 0.7);
+  const labelH = 0.2;
+  const labelGap = 0.04;
   data.forEach((r, i) => {
     const a = realGet(r);
     const b = budGet(r);
@@ -998,16 +998,16 @@ function plotLineRow(
     if (a != null && isFinite(a)) items.push({ v: a, color: PPT_COLORS.haraldRed });
     if (b != null && isFinite(b)) items.push({ v: b, color: "000000" });
     if (items.length === 0) return;
-    items.sort((p, q) => q.v - p.v); // descending: index 0 is the highest -> above
+    items.sort((p, q) => q.v - p.v);
     items.forEach((it, idx) => {
       const cy = yOf(it.v);
-      const goAbove = idx === 0; // largest above; smallest below
-      const ly = goAbove ? cy - labelOffset - labelH / 2 : cy + labelOffset - labelH / 2;
+      const goAbove = idx === 0;
+      const ly = goAbove ? cy - labelH - labelGap : cy + labelGap;
       slide.addText(fmt(it.v), {
         x: cx - labelW / 2, y: ly, w: labelW, h: labelH,
         fontFace: "Calibri", fontSize: 10, bold: true, color: it.color,
         align: "center", valign: "middle", margin: 0,
-        rotate: 270,
+        wrap: false,
       });
     });
   });
