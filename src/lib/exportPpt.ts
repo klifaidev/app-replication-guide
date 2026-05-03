@@ -267,10 +267,10 @@ function addOverviewDreBridgeSlide(
   });
 
   // ---- "DRE" lateral (centralizado verticalmente com a tabela) ---------
-  // Tabela: y=0.95 → 4.71  (centro ≈ 2.83)
+  // Tabela: y=0.95 → 4.39  (centro ≈ 2.67)
   slide.addText("DRE", {
     x: -0.15,
-    y: 2.63,
+    y: 2.47,
     w: 1.0,
     h: 0.4,
     fontFace: "Calibri",
@@ -284,10 +284,10 @@ function addOverviewDreBridgeSlide(
   });
 
   // ---- "BRIDGE" lateral (centralizado verticalmente com a bridge) ------
-  // Bridge: y=4.85 → 6.75  (centro ≈ 5.8)
+  // Bridge: y=4.95 → 6.35  (centro ≈ 5.65)
   slide.addText("BRIDGE", {
     x: -0.25,
-    y: 5.6,
+    y: 5.45,
     w: 1.2,
     h: 0.4,
     fontFace: "Calibri",
@@ -413,8 +413,8 @@ function addOverviewDreBridgeSlide(
     rowsTbl.push(cells);
   });
 
-  const headerH = 0.26;
-  const rowH = 0.22; // altura fixa por linha
+  const headerH = 0.22;
+  const rowH = 0.20; // altura fixa por linha (compactada para não invadir a bridge)
 
   slide.addTable(rowsTbl, {
     x: tableX,
@@ -488,7 +488,7 @@ function addOverviewDreBridgeSlide(
 
   // Plot area (encurtada para dar respiro do rodapé vermelho)
   const plotX = 0.95;
-  const plotY = 4.85;
+  const plotY = 4.95;
   const plotW = 12.0;
   const plotH = 1.4; // bar area (sem labels de eixo)
   const labelStripY = plotY + plotH + 0.05;
