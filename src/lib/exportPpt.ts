@@ -355,6 +355,7 @@ function addOverviewDreBridgeSlide(
         align: "center",
         valign: "middle",
         fontSize: 10,
+        margin: 0.02,
       },
     },
     ...months.map((m) => ({
@@ -366,6 +367,7 @@ function addOverviewDreBridgeSlide(
         align: "center" as const,
         valign: "middle" as const,
         fontSize: 10,
+        margin: 0.02,
       },
     })),
   ];
