@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Topbar } from "@/components/pricing/Topbar";
 import { GlassCard } from "@/components/pricing/GlassCard";
 import { KpiCard } from "@/components/pricing/KpiCard";
@@ -291,13 +292,40 @@ export default function Budget() {
       }));
   }, [budgetRows, filters]);
 
+  // Range de meses para o evolutivo (start/end). Default: primeiro mês do
+  // ano fiscal ANTERIOR ao mais recente disponível (FY começa em abril).
+  const [evoStart, setEvoStart] = useState<string | null>(null);
+  const [evoEnd, setEvoEnd] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (monthly.length === 0) return;
+    const last = monthly[monthly.length - 1];
+    const fyStart = last.mes >= 4 ? last.ano : last.ano - 1;
+    const prevFyStart = fyStart - 1;
+    const defaultStartPeriod = `${String(4).padStart(3, "0")}.${prevFyStart}`;
+    const hasDefault = monthly.some((m) => m.periodo === defaultStartPeriod);
+    const startCandidate = hasDefault ? defaultStartPeriod : monthly[0].periodo;
+    const endCandidate = last.periodo;
+    if (!evoStart || !monthly.some((m) => m.periodo === evoStart)) setEvoStart(startCandidate);
+    if (!evoEnd || !monthly.some((m) => m.periodo === evoEnd)) setEvoEnd(endCandidate);
+  }, [monthly, evoStart, evoEnd]);
+
+  const monthlyRange = useMemo(() => {
+    if (!evoStart || !evoEnd) return monthly;
+    const si = monthly.findIndex((m) => m.periodo === evoStart);
+    const ei = monthly.findIndex((m) => m.periodo === evoEnd);
+    if (si < 0 || ei < 0) return monthly;
+    const [a, b] = si <= ei ? [si, ei] : [ei, si];
+    return monthly.slice(a, b + 1);
+  }, [monthly, evoStart, evoEnd]);
+
   // Acumulados Real vs Budget apenas onde há REAL (futuro só tem budget)
   const accumGap = useMemo(() => {
-    const realMonths = monthly.filter((m) => m.realCm !== 0 || m.realVol !== 0);
+    const realMonths = monthlyRange.filter((m) => m.realCm !== 0 || m.realVol !== 0);
     const cmGap = realMonths.reduce((s, m) => s + (m.realCm - m.budCm), 0);
     const volGap = realMonths.reduce((s, m) => s + (m.realVol - m.budVol), 0);
     return { cmGap, volGap };
-  }, [monthly]);
+  }, [monthlyRange]);
 
   // Agregação por dimensão
   const byDim = useMemo<AggLine[]>(() => {
@@ -391,15 +419,35 @@ export default function Budget() {
                 CM Absoluto, CM %, CM R$/Kg e Volume — meses futuros mostram apenas Budget.
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">{monthly.length} mês(es)</Badge>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-lg border border-border/50 bg-secondary/30 px-2 py-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">De</span>
+                <Select value={evoStart ?? undefined} onValueChange={(v) => setEvoStart(v)}>
+                  <SelectTrigger className="h-7 w-[120px] text-xs"><SelectValue placeholder="Início" /></SelectTrigger>
+                  <SelectContent>
+                    {monthly.map((m) => (
+                      <SelectItem key={m.periodo} value={m.periodo}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Até</span>
+                <Select value={evoEnd ?? undefined} onValueChange={(v) => setEvoEnd(v)}>
+                  <SelectTrigger className="h-7 w-[120px] text-xs"><SelectValue placeholder="Fim" /></SelectTrigger>
+                  <SelectContent>
+                    {monthly.map((m) => (
+                      <SelectItem key={m.periodo} value={m.periodo}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Badge variant="secondary">{monthlyRange.length} mês(es)</Badge>
               <Button
                 variant="outline"
                 size="sm"
                 className="gap-2"
                 onClick={async () => {
                   try {
-                    await exportBudgetEvoPpt(monthly, accumGap);
+                    await exportBudgetEvoPpt(monthlyRange, accumGap);
                     toast.success("PPTX gerado com os 4 evolutivos.");
                   } catch (e) {
                     console.error(e);
@@ -412,14 +460,14 @@ export default function Budget() {
             </div>
           </header>
 
-          {monthly.length === 0 ? (
+          {monthlyRange.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sem dados.</p>
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <EvoChart
                 title="CM Absoluto (R$)"
                 gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${fmtCurrencyBR(accumGap.cmGap)}`}
-                data={monthly}
+                data={monthlyRange}
                 realKey="realCm"
                 budKey="budCm"
                 fmt={(v) => fmtCurrencyBR(v ?? 0)}
@@ -427,7 +475,7 @@ export default function Budget() {
               />
               <EvoChart
                 title="CM % (sobre ROL)"
-                data={monthly}
+                data={monthlyRange}
                 realKey="realCmPct"
                 budKey="budCmPct"
                 fmt={(v) => (v == null ? "—" : `${(v * 100).toFixed(1)}%`)}
@@ -435,14 +483,14 @@ export default function Budget() {
               />
               <EvoChart
                 title="CM R$/Kg"
-                data={monthly}
+                data={monthlyRange}
                 realKey="realCmKg"
                 budKey="budCmKg"
                 fmt={(v) => (v == null ? "—" : v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}
                 gradientId="gradCmKg"
               />
               <EvoVolChart
-                data={monthly}
+                data={monthlyRange}
                 accumVolGap={accumGap.volGap}
               />
             </div>
