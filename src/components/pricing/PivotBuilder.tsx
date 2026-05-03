@@ -5,6 +5,7 @@ import {
   GripVertical,
   Layers,
   Rows3,
+  Search,
   Sigma,
   Sparkles,
   X,
@@ -22,6 +23,7 @@ import { computePivot, type PivotMeasure } from "@/lib/pivot";
 import type { PricingRow } from "@/lib/types";
 import type { BudgetRow } from "@/lib/budget";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -107,7 +109,6 @@ function measuresFor(mode: PivotMode): PivotMeasure[] {
   return compare;
 }
 
-// ---------- Defaults ----------
 function defaultConfig(mode: PivotMode) {
   if (mode === "compare") {
     return {
@@ -126,7 +127,7 @@ function defaultConfig(mode: PivotMode) {
 }
 
 function fmtValue(measure: PivotMeasure, val: number) {
-  if (!isFinite(val) || val === 0) return measure.format === "percent" ? "—" : measure.format === "currency" ? "—" : "—";
+  if (!isFinite(val) || val === 0) return "—";
   switch (measure.format) {
     case "currency": return formatBRL(val, { compact: true });
     case "percent": return formatPct(val);
@@ -136,15 +137,24 @@ function fmtValue(measure: PivotMeasure, val: number) {
 }
 
 function toneClass(tone?: PivotMeasure["tone"], val?: number) {
-  if (tone === "real") return "text-foreground";
   if (tone === "budget") return "text-accent";
   if (tone === "delta") {
     if (val == null || !isFinite(val)) return "text-muted-foreground";
-    if (val > 0) return "text-emerald-500";
-    if (val < 0) return "text-rose-500";
+    if (val > 0) return "text-emerald-400";
+    if (val < 0) return "text-rose-400";
     return "text-muted-foreground";
   }
+  if (tone === "real") return "text-foreground";
   return "text-foreground";
+}
+
+function toneAccentBar(tone?: PivotMeasure["tone"], val?: number) {
+  if (tone === "delta") {
+    if (val == null || !isFinite(val) || val === 0) return "hsl(var(--muted-foreground) / 0.35)";
+    return val > 0 ? "hsl(158 64% 52% / 0.6)" : "hsl(0 84% 65% / 0.6)";
+  }
+  if (tone === "budget") return "hsl(var(--accent) / 0.55)";
+  return "hsl(var(--primary) / 0.55)";
 }
 
 // ============================================================
@@ -163,8 +173,8 @@ export function PivotBuilder({
   const [valueIds, setValueIds] = useState<string[]>(["rol_real", "cm_real", "cm_pct_real"]);
   const [filterDims, setFilterDims] = useState<string[]>([]);
   const [filterVals, setFilterVals] = useState<Record<string, Set<string>>>({});
+  const [paletteQuery, setPaletteQuery] = useState("");
 
-  // Reset quando trocar modo
   useEffect(() => {
     const def = defaultConfig(mode);
     setRowsDims(def.rows);
@@ -247,52 +257,114 @@ export function PivotBuilder({
     setDragOver(null);
   }
 
-  // Available items in palette = all dims + (in values mode) measures not already used
+  function resetAll() {
+    const def = defaultConfig(mode);
+    setRowsDims(def.rows);
+    setColsDims(def.cols);
+    setValueIds(def.values);
+    setFilterDims([]);
+    setFilterVals({});
+  }
+
   const usedItems = new Set([...rowsDims, ...colsDims, ...filterDims, ...valueIds]);
+  const activeFiltersCount = Object.values(filterVals).reduce(
+    (acc, s) => acc + (s?.size ?? 0),
+    0,
+  );
+
+  const matchesQuery = (label: string) =>
+    paletteQuery.trim() === "" ||
+    label.toLowerCase().includes(paletteQuery.trim().toLowerCase());
+
+  const modeMeta = {
+    real: { label: "Real", hint: "Faturamento realizado", chip: "bg-primary text-primary-foreground" },
+    budget: { label: "Budget", hint: "Orçado / planejado", chip: "bg-accent text-accent-foreground" },
+    compare: { label: "Comparativo", hint: "Real vs Budget + deltas", chip: "bg-foreground text-background" },
+  } as const;
 
   return (
-    <div className="space-y-4">
-      {/* MODE TOGGLE */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex rounded-xl border border-border/50 bg-secondary/40 p-1">
-          {(["real", "budget", "compare"] as PivotMode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={cn(
-                "rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors",
-                mode === m
-                  ? m === "real"
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : m === "budget"
-                      ? "bg-accent text-accent-foreground shadow-sm"
-                      : "bg-foreground text-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
+    <div className="space-y-5">
+      {/* HERO HEADER */}
+      <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-gradient-to-br from-card/60 via-card/30 to-transparent p-5">
+        <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <Sigma className="h-4 w-4" />
+              </span>
+              <h2 className="text-base font-semibold tracking-tight">Construtor dinâmico</h2>
+              <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", modeMeta[mode].chip)}>
+                {modeMeta[mode].label}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {modeMeta[mode].hint} · {pivot.rowHeaders.length.toLocaleString("pt-BR")} linhas · {selectedMeasures.length} medidas
+              {activeFiltersCount > 0 && ` · ${activeFiltersCount} filtros ativos`}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-xl border border-border/50 bg-secondary/40 p-1">
+              {(["real", "budget", "compare"] as PivotMode[]).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={cn(
+                    "rounded-lg px-3.5 py-1.5 text-xs font-medium transition-all",
+                    mode === m
+                      ? m === "real"
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : m === "budget"
+                          ? "bg-accent text-accent-foreground shadow-sm"
+                          : "bg-foreground text-background shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {m === "real" ? "Real" : m === "budget" ? "Budget" : "Comparativo"}
+                </button>
+              ))}
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={resetAll}
+              className="h-8 text-[11px] text-muted-foreground hover:text-foreground"
             >
-              {m === "real" ? "Real" : m === "budget" ? "Budget" : "Comparativo"}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <Sparkles className="h-3.5 w-3.5" />
-          Arraste campos da paleta para as zonas
+              Restaurar
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
         {/* PALETTE */}
-        <aside className="space-y-3 rounded-2xl border border-border/40 bg-card/30 p-3">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <Layers className="h-3.5 w-3.5" /> Campos
+        <aside className="space-y-4 rounded-2xl border border-border/40 bg-card/30 p-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <Layers className="h-3.5 w-3.5" /> Campos disponíveis
+            </div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={paletteQuery}
+                onChange={(e) => setPaletteQuery(e.target.value)}
+                placeholder="Buscar campo…"
+                className="h-8 border-border/40 bg-secondary/40 pl-8 text-xs"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/80">
+              <Sparkles className="h-3 w-3" />
+              Arraste para as zonas abaixo
+            </div>
           </div>
 
           {DIM_GROUPS.map((g) => {
-            const items = dims.filter((d) => d.group === g);
+            const items = dims.filter((d) => d.group === g && matchesQuery(d.label));
             if (items.length === 0) return null;
             return (
-              <div key={g}>
-                <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <div key={g} className="space-y-1.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
                   {g}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -311,12 +383,12 @@ export function PivotBuilder({
             );
           })}
 
-          <div className="pt-2">
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <div className="space-y-1.5 border-t border-border/30 pt-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
               Medidas
             </div>
             <div className="flex flex-wrap gap-1.5">
-              {measureCatalog.map((m) => (
+              {measureCatalog.filter((m) => matchesQuery(m.label)).map((m) => (
                 <Chip
                   key={m.id}
                   label={m.label}
@@ -332,17 +404,19 @@ export function PivotBuilder({
         </aside>
 
         {/* CONFIG ZONES + TABLE */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <DropZone
               label="Filtros"
               icon={<FilterIcon className="h-3.5 w-3.5" />}
+              accent="muted"
               zone="filters"
+              count={filterDims.length}
               dragOver={dragOver === "filters"}
               setDragOver={setDragOver}
               onDrop={() => handleDrop("filters")}
             >
-              {filterDims.length === 0 && <Hint>Arraste uma dimensão aqui</Hint>}
+              {filterDims.length === 0 && <Hint>Arraste uma dimensão</Hint>}
               {filterDims.map((id) => (
                 <FilterChip
                   key={id}
@@ -351,9 +425,7 @@ export function PivotBuilder({
                     .filter(Boolean)
                     .sort()}
                   selected={filterVals[id] ?? new Set()}
-                  onChange={(s) =>
-                    setFilterVals((prev) => ({ ...prev, [id]: s }))
-                  }
+                  onChange={(s) => setFilterVals((prev) => ({ ...prev, [id]: s }))}
                   onRemove={() => removeFromZone(id, "filters")}
                   draggable
                   onDragStart={() => setDragging({ id, from: "filters" })}
@@ -365,12 +437,14 @@ export function PivotBuilder({
             <DropZone
               label="Colunas"
               icon={<Columns3 className="h-3.5 w-3.5" />}
+              accent="primary"
               zone="cols"
+              count={colsDims.length}
               dragOver={dragOver === "cols"}
               setDragOver={setDragOver}
               onDrop={() => handleDrop("cols")}
             >
-              {colsDims.length === 0 && <Hint>Sem colunas (mostra um total)</Hint>}
+              {colsDims.length === 0 && <Hint>Sem colunas (total)</Hint>}
               {colsDims.map((id) => (
                 <Chip
                   key={id}
@@ -387,12 +461,14 @@ export function PivotBuilder({
             <DropZone
               label="Linhas"
               icon={<Rows3 className="h-3.5 w-3.5" />}
+              accent="primary"
               zone="rows"
+              count={rowsDims.length}
               dragOver={dragOver === "rows"}
               setDragOver={setDragOver}
               onDrop={() => handleDrop("rows")}
             >
-              {rowsDims.length === 0 && <Hint>Sem linhas (mostra um total)</Hint>}
+              {rowsDims.length === 0 && <Hint>Sem linhas (total)</Hint>}
               {rowsDims.map((id) => (
                 <Chip
                   key={id}
@@ -409,12 +485,14 @@ export function PivotBuilder({
             <DropZone
               label="Valores"
               icon={<Sigma className="h-3.5 w-3.5" />}
+              accent="accent"
               zone="values"
+              count={valueIds.length}
               dragOver={dragOver === "values"}
               setDragOver={setDragOver}
               onDrop={() => handleDrop("values")}
             >
-              {valueIds.length === 0 && <Hint>Arraste medidas aqui</Hint>}
+              {valueIds.length === 0 && <Hint>Arraste medidas</Hint>}
               {valueIds.map((id) => {
                 const m = measureMap.get(id);
                 return (
@@ -433,7 +511,6 @@ export function PivotBuilder({
             </DropZone>
           </div>
 
-          {/* TABLE */}
           <PivotTable
             pivot={pivot}
             measures={selectedMeasures}
@@ -451,7 +528,7 @@ export function PivotBuilder({
 //                       SUB-COMPONENTS
 // ============================================================
 function Hint({ children }: { children: React.ReactNode }) {
-  return <span className="text-[11px] italic text-muted-foreground/70">{children}</span>;
+  return <span className="text-[11px] italic text-muted-foreground/60">{children}</span>;
 }
 
 function Chip({
@@ -477,7 +554,7 @@ function Chip({
     tone === "budget"
       ? "border-accent/40 bg-accent/10 text-accent"
       : tone === "delta"
-        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
         : tone === "real"
           ? "border-primary/40 bg-primary/10 text-primary"
           : "border-border/60 bg-secondary/60 text-foreground";
@@ -491,12 +568,12 @@ function Chip({
       }}
       onDragEnd={onDragEnd}
       className={cn(
-        "inline-flex cursor-grab select-none items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium active:cursor-grabbing",
+        "group inline-flex cursor-grab select-none items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-medium shadow-sm transition-all hover:-translate-y-px hover:shadow active:cursor-grabbing",
         toneRing,
         faded && "opacity-50",
       )}
     >
-      <GripVertical className="h-3 w-3 opacity-60" />
+      <GripVertical className="h-3 w-3 opacity-50 transition-opacity group-hover:opacity-90" />
       {label}
       {closable && (
         <button
@@ -504,7 +581,7 @@ function Chip({
             e.stopPropagation();
             onRemove?.();
           }}
-          className="ml-0.5 rounded-full p-0.5 hover:bg-foreground/10"
+          className="ml-0.5 rounded-full p-0.5 opacity-70 hover:bg-foreground/10 hover:opacity-100"
           aria-label="Remover"
         >
           <X className="h-3 w-3" />
@@ -548,13 +625,13 @@ function FilterChip({
         <PopoverTrigger asChild>
           <button
             className={cn(
-              "inline-flex cursor-grab items-center gap-1 rounded-l-full border border-r-0 px-2 py-1 text-[11px] font-medium active:cursor-grabbing",
+              "inline-flex cursor-grab items-center gap-1 rounded-l-full border border-r-0 px-2 py-1 text-[11px] font-medium transition-all hover:-translate-y-px active:cursor-grabbing",
               count > 0
                 ? "border-primary/40 bg-primary/10 text-primary"
                 : "border-border/60 bg-secondary/60 text-foreground",
             )}
           >
-            <GripVertical className="h-3 w-3 opacity-60" />
+            <GripVertical className="h-3 w-3 opacity-50" />
             {label}
             {count > 0 && (
               <span className="ml-1 rounded-full bg-primary/20 px-1.5 text-[10px]">{count}</span>
@@ -591,20 +668,10 @@ function FilterChip({
             )}
           </div>
           <div className="flex items-center justify-between border-t border-border/40 p-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-[11px]"
-              onClick={() => onChange(new Set())}
-            >
+            <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => onChange(new Set())}>
               Limpar
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-[11px]"
-              onClick={() => onChange(new Set(values))}
-            >
+            <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => onChange(new Set(values))}>
               Todos
             </Button>
           </div>
@@ -625,6 +692,8 @@ function DropZone({
   label,
   icon,
   zone,
+  count,
+  accent,
   dragOver,
   setDragOver,
   onDrop,
@@ -633,11 +702,20 @@ function DropZone({
   label: string;
   icon: React.ReactNode;
   zone: Zone;
+  count: number;
+  accent: "primary" | "accent" | "muted";
   dragOver: boolean;
   setDragOver: (z: Zone | null) => void;
   onDrop: () => void;
   children: React.ReactNode;
 }) {
+  const accentRing =
+    accent === "primary"
+      ? "before:bg-primary/60"
+      : accent === "accent"
+        ? "before:bg-accent/60"
+        : "before:bg-muted-foreground/40";
+
   return (
     <div
       onDragOver={(e) => {
@@ -650,15 +728,24 @@ function DropZone({
         onDrop();
       }}
       className={cn(
-        "min-h-[88px] rounded-2xl border bg-card/30 p-3 transition-colors",
+        "relative min-h-[100px] overflow-hidden rounded-2xl border bg-card/30 p-3 transition-all",
+        "before:absolute before:left-0 before:top-0 before:h-full before:w-[3px] before:rounded-l-2xl",
+        accentRing,
         dragOver
-          ? "border-primary/60 bg-primary/5"
+          ? "scale-[1.01] border-primary/60 bg-primary/5 shadow-lg shadow-primary/10"
           : "border-border/40",
       )}
     >
-      <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        {icon}
-        {label}
+      <div className="mb-2 flex items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          {icon}
+          {label}
+        </div>
+        {count > 0 && (
+          <span className="rounded-full bg-secondary/80 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+            {count}
+          </span>
+        )}
       </div>
       <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>
@@ -685,9 +772,14 @@ function PivotTable({
 }) {
   if (measures.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/20 text-sm text-muted-foreground">
-        Adicione ao menos uma medida em <span className="mx-1 font-semibold">Valores</span> para
-        ver a tabela.
+      <div className="flex h-72 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/50 bg-card/20 text-sm">
+        <Sigma className="h-8 w-8 text-muted-foreground/40" />
+        <div className="text-muted-foreground">
+          Adicione ao menos uma medida em <span className="font-semibold text-foreground">Valores</span>
+        </div>
+        <div className="text-[11px] text-muted-foreground/60">
+          Arraste uma medida da paleta para começar
+        </div>
       </div>
     );
   }
@@ -695,121 +787,198 @@ function PivotTable({
   const hasCols = colDims.length > 0 && pivot.colHeaders.length > 0;
   const cols = hasCols ? pivot.colHeaders : [{ key: "__all__", values: [], depth: 0, isLeaf: true }];
 
+  // calcular max abs por medida (para barra de magnitude)
+  const maxByMeasure = new Map<string, number>();
+  for (const m of measures) {
+    let max = 0;
+    for (const rh of pivot.rowHeaders) {
+      for (const c of cols) {
+        const v = pivot.cells.get(rh.key)?.get(c.key)?.[m.id] ?? 0;
+        if (isFinite(v)) max = Math.max(max, Math.abs(v));
+      }
+    }
+    maxByMeasure.set(m.id, max);
+  }
+
+  function bgBar(m: PivotMeasure, v: number) {
+    if (m.format === "percent") return undefined;
+    const max = maxByMeasure.get(m.id) ?? 0;
+    if (max === 0 || !isFinite(v) || v === 0) return undefined;
+    const pct = Math.min(100, (Math.abs(v) / max) * 100);
+    const color = toneAccentBar(m.tone, v);
+    return {
+      backgroundImage: `linear-gradient(to left, ${color} 0%, ${color} ${pct}%, transparent ${pct}%)`,
+      backgroundSize: "100% 28%",
+      backgroundPosition: "right bottom",
+      backgroundRepeat: "no-repeat",
+    } as React.CSSProperties;
+  }
+
   return (
-    <div className="overflow-auto rounded-2xl border border-border/40 bg-card/30">
-      <table className="w-full border-collapse text-xs">
-        <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
-          {hasCols && (
+    <div className="overflow-hidden rounded-2xl border border-border/40 bg-card/30 shadow-sm">
+      <div className="overflow-auto">
+        <table className="w-full border-collapse text-xs">
+          <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur">
+            {hasCols && (
+              <tr>
+                {rowDims.map((d) => (
+                  <th
+                    key={`rh-${d}`}
+                    className="border-b border-border/40 bg-secondary/40 px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    {dimMap.get(d)?.label ?? d}
+                  </th>
+                ))}
+                {rowDims.length === 0 && (
+                  <th className="border-b border-border/40 bg-secondary/40 px-3 py-2.5" />
+                )}
+                {cols.map((c) => (
+                  <th
+                    key={`ch-${c.key}`}
+                    colSpan={measures.length}
+                    className="border-b border-l border-border/40 bg-secondary/40 px-3 py-2.5 text-center text-[11px] font-semibold"
+                  >
+                    {c.values.join(" · ") || "Total"}
+                  </th>
+                ))}
+                <th
+                  colSpan={measures.length}
+                  className="border-b border-l-2 border-primary/30 bg-primary/10 px-3 py-2.5 text-center text-[11px] font-semibold text-primary"
+                >
+                  Total
+                </th>
+              </tr>
+            )}
             <tr>
               {rowDims.map((d) => (
                 <th
-                  key={`rh-${d}`}
-                  className="border-b border-border/40 bg-secondary/40 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+                  key={`rh2-${d}`}
+                  className="sticky left-0 z-10 border-b border-border/40 bg-secondary/40 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
                 >
-                  {dimMap.get(d)?.label ?? d}
+                  {!hasCols && (dimMap.get(d)?.label ?? d)}
                 </th>
               ))}
-              {rowDims.length === 0 && (
+              {rowDims.length === 0 && !hasCols && (
                 <th className="border-b border-border/40 bg-secondary/40 px-3 py-2" />
               )}
-              {cols.map((c) => (
-                <th
-                  key={`ch-${c.key}`}
-                  colSpan={measures.length}
-                  className="border-b border-l border-border/40 bg-secondary/40 px-3 py-2 text-center text-[11px] font-semibold"
-                >
-                  {c.values.join(" · ") || "Total"}
-                </th>
-              ))}
-              <th
-                colSpan={measures.length}
-                className="border-b border-l-2 border-border/60 bg-primary/10 px-3 py-2 text-center text-[11px] font-semibold text-primary"
-              >
-                Total
-              </th>
-            </tr>
-          )}
-          <tr>
-            {rowDims.map((d) => (
-              <th
-                key={`rh2-${d}`}
-                className="border-b border-border/40 bg-secondary/40 px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                {!hasCols && (dimMap.get(d)?.label ?? d)}
-              </th>
-            ))}
-            {rowDims.length === 0 && !hasCols && (
-              <th className="border-b border-border/40 bg-secondary/40 px-3 py-2" />
-            )}
-            {cols.map((c) =>
-              measures.map((m) => (
-                <th
-                  key={`mh-${c.key}-${m.id}`}
-                  className={cn(
-                    "border-b border-l border-border/40 bg-secondary/30 px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider",
-                    toneClass(m.tone),
-                  )}
-                >
-                  {m.label}
-                </th>
-              )),
-            )}
-            {hasCols &&
-              measures.map((m) => (
-                <th
-                  key={`th-total-${m.id}`}
-                  className={cn(
-                    "border-b border-l border-border/40 bg-primary/10 px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider",
-                    toneClass(m.tone),
-                  )}
-                >
-                  {m.label}
-                </th>
-              ))}
-          </tr>
-        </thead>
-        <tbody>
-          {pivot.rowHeaders.map((rh, i) => (
-            <tr
-              key={rh.key}
-              className={cn(
-                "border-b border-border/30 transition-colors hover:bg-secondary/30",
-                i % 2 === 0 && "bg-background/40",
+              {cols.map((c) =>
+                measures.map((m) => (
+                  <th
+                    key={`mh-${c.key}-${m.id}`}
+                    className={cn(
+                      "border-b border-l border-border/40 bg-secondary/30 px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider",
+                      toneClass(m.tone),
+                    )}
+                  >
+                    {m.label}
+                  </th>
+                )),
               )}
-            >
+              {hasCols &&
+                measures.map((m) => (
+                  <th
+                    key={`th-total-${m.id}`}
+                    className={cn(
+                      "border-b border-l border-border/40 bg-primary/10 px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider",
+                      toneClass(m.tone),
+                    )}
+                  >
+                    {m.label}
+                  </th>
+                ))}
+            </tr>
+          </thead>
+          <tbody>
+            {pivot.rowHeaders.map((rh, i) => (
+              <tr
+                key={rh.key}
+                className={cn(
+                  "group border-b border-border/20 transition-colors hover:bg-primary/[0.04]",
+                  i % 2 === 0 && "bg-background/30",
+                )}
+              >
+                {rowDims.map((_, idx) => (
+                  <td
+                    key={`rv-${rh.key}-${idx}`}
+                    className={cn(
+                      "px-3 py-2 text-foreground",
+                      idx === 0 && "font-medium",
+                    )}
+                  >
+                    {rh.values[idx] ?? ""}
+                  </td>
+                ))}
+                {rowDims.length === 0 && (
+                  <td className="px-3 py-2 font-semibold text-muted-foreground">Total</td>
+                )}
+                {cols.map((c) => {
+                  const cell = pivot.cells.get(rh.key)?.get(c.key) ?? {};
+                  return measures.map((m) => {
+                    const v = cell[m.id] ?? 0;
+                    return (
+                      <td
+                        key={`v-${rh.key}-${c.key}-${m.id}`}
+                        style={bgBar(m, v)}
+                        className={cn(
+                          "border-l border-border/15 px-3 py-2 text-right tabular-nums transition-colors",
+                          toneClass(m.tone, v),
+                        )}
+                      >
+                        {fmtValue(m, v)}
+                      </td>
+                    );
+                  });
+                })}
+                {hasCols &&
+                  measures.map((m) => {
+                    const v = pivot.rowTotals.get(rh.key)?.[m.id] ?? 0;
+                    return (
+                      <td
+                        key={`rt-${rh.key}-${m.id}`}
+                        className={cn(
+                          "border-l border-primary/20 bg-primary/5 px-3 py-2 text-right font-semibold tabular-nums",
+                          toneClass(m.tone, v),
+                        )}
+                      >
+                        {fmtValue(m, v)}
+                      </td>
+                    );
+                  })}
+              </tr>
+            ))}
+
+            {/* Footer total */}
+            <tr className="border-t-2 border-primary/30 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 font-semibold">
               {rowDims.map((_, idx) => (
-                <td key={`rv-${rh.key}-${idx}`} className="px-3 py-1.5 text-foreground">
-                  {rh.values[idx] ?? ""}
+                <td key={`ft-${idx}`} className="px-3 py-2.5 text-foreground">
+                  {idx === 0 ? "Total geral" : ""}
                 </td>
               ))}
-              {rowDims.length === 0 && (
-                <td className="px-3 py-1.5 font-semibold text-muted-foreground">Total</td>
-              )}
-              {cols.map((c) => {
-                const cell = pivot.cells.get(rh.key)?.get(c.key) ?? {};
-                return measures.map((m) => {
-                  const v = cell[m.id] ?? 0;
+              {rowDims.length === 0 && <td className="px-3 py-2.5">Total</td>}
+              {cols.map((c) =>
+                measures.map((m) => {
+                  const v = pivot.colTotals.get(c.key)?.[m.id] ?? 0;
                   return (
                     <td
-                      key={`v-${rh.key}-${c.key}-${m.id}`}
+                      key={`ct-${c.key}-${m.id}`}
                       className={cn(
-                        "border-l border-border/20 px-3 py-1.5 text-right tabular-nums",
+                        "border-l border-border/40 px-3 py-2.5 text-right tabular-nums",
                         toneClass(m.tone, v),
                       )}
                     >
                       {fmtValue(m, v)}
                     </td>
                   );
-                });
-              })}
+                }),
+              )}
               {hasCols &&
                 measures.map((m) => {
-                  const v = pivot.rowTotals.get(rh.key)?.[m.id] ?? 0;
+                  const v = pivot.grandTotal[m.id] ?? 0;
                   return (
                     <td
-                      key={`rt-${rh.key}-${m.id}`}
+                      key={`gt-${m.id}`}
                       className={cn(
-                        "border-l border-border/40 bg-primary/5 px-3 py-1.5 text-right font-semibold tabular-nums",
+                        "border-l-2 border-primary/40 bg-primary/15 px-3 py-2.5 text-right tabular-nums",
                         toneClass(m.tone, v),
                       )}
                     >
@@ -818,50 +987,9 @@ function PivotTable({
                   );
                 })}
             </tr>
-          ))}
-
-          {/* Footer total */}
-          <tr className="border-t-2 border-border/60 bg-primary/5 font-semibold">
-            {rowDims.map((_, idx) => (
-              <td key={`ft-${idx}`} className="px-3 py-2 text-foreground">
-                {idx === 0 ? "Total" : ""}
-              </td>
-            ))}
-            {rowDims.length === 0 && <td className="px-3 py-2">Total</td>}
-            {cols.map((c) =>
-              measures.map((m) => {
-                const v = pivot.colTotals.get(c.key)?.[m.id] ?? 0;
-                return (
-                  <td
-                    key={`ct-${c.key}-${m.id}`}
-                    className={cn(
-                      "border-l border-border/40 px-3 py-2 text-right tabular-nums",
-                      toneClass(m.tone, v),
-                    )}
-                  >
-                    {fmtValue(m, v)}
-                  </td>
-                );
-              }),
-            )}
-            {hasCols &&
-              measures.map((m) => {
-                const v = pivot.grandTotal[m.id] ?? 0;
-                return (
-                  <td
-                    key={`gt-${m.id}`}
-                    className={cn(
-                      "border-l-2 border-border/60 bg-primary/15 px-3 py-2 text-right tabular-nums",
-                      toneClass(m.tone, v),
-                    )}
-                  >
-                    {fmtValue(m, v)}
-                  </td>
-                );
-              })}
-          </tr>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+      </div>
 
       {pivot.rowHeaders.length === 0 && (
         <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
@@ -874,3 +1002,4 @@ function PivotTable({
 
 // silence: ALL_DIMENSIONS reference is for typing — keep tree-shake safe
 void ALL_DIMENSIONS;
+type _UR = UnifiedRow;
