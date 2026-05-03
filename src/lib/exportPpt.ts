@@ -1019,10 +1019,10 @@ function plotVolBars(
 ) {
   const { x, y, w, h, data, accumGapTons } = opts;
   slide.addText("VOLUME", {
-    x: x - 0.15, y: y + h / 2 - 0.4, w: 0.8, h: 0.8,
+    x: x - 0.35, y: y + h / 2 - 0.2, w: 1.2, h: 0.4,
     fontFace: "Calibri", fontSize: 16, bold: true, color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
-    rotate: 270,
+    rotate: 270, wrap: false,
   });
   slide.addText(`${accumGapTons.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} Tons`, {
     x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
@@ -1048,7 +1048,7 @@ function plotVolBars(
   const barW = colW * 0.36;
 
   const labelW = 0.22;
-  const labelH = 0.55;
+  const labelH = 0.9;
 
   data.forEach((r, i) => {
     const cx = plotX + colW * (i + 0.5);
