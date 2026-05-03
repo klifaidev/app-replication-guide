@@ -60,6 +60,36 @@ import { exportSlideFlow } from "@/lib/exportPpt";
 import { cn } from "@/lib/utils";
 import type { Filters, FilterKey, PricingRow } from "@/lib/types";
 import type { BudgetRow } from "@/lib/budget";
+import { SlidePreview } from "@/components/pricing/SlidePreview";
+
+// ----------------------------------------------------------------------------
+// Smart defaults — calculados no momento de criar o slide a partir das bases
+// disponíveis. Bridge: mês anterior vs último mês. Budget Evo: primeiro mês
+// do FY anterior → último disponível.
+// ----------------------------------------------------------------------------
+function smartDefaults(
+  kind: SlideKind,
+  ctx: { months: { periodo: string; mes: number; ano: number }[]; budgetMonths: { periodo: string; mes: number; ano: number }[] },
+): Partial<SlideItem["config"]> | null {
+  if (kind === "bridge_pvm" && ctx.months.length >= 2) {
+    const last = ctx.months[ctx.months.length - 1];
+    const prev = ctx.months[ctx.months.length - 2];
+    return { mode: "month", base: prev.periodo, comp: last.periodo, filters: {} } as never;
+  }
+  if (kind === "budget_evo" && ctx.budgetMonths.length > 0) {
+    const last = ctx.budgetMonths[ctx.budgetMonths.length - 1];
+    const fyStart = last.mes >= 4 ? last.ano : last.ano - 1;
+    const prevFyStart = fyStart - 1;
+    const defaultStart = `${String(4).padStart(3, "0")}.${prevFyStart}`;
+    const has = ctx.budgetMonths.some((m) => m.periodo === defaultStart);
+    return {
+      start: has ? defaultStart : ctx.budgetMonths[0].periodo,
+      end: last.periodo,
+      filters: {},
+    } as never;
+  }
+  return null;
+}
 
 // ----------------------------------------------------------------------------
 // Helpers
@@ -550,6 +580,11 @@ function Inspector({ item }: { item: SlideItem | null }) {
 
         <Separator />
 
+        {/* Live preview */}
+        <SlidePreview item={item} />
+
+        <Separator />
+
         {item.kind === "bridge_pvm" && (
           <BridgePvmConfigPanel item={item} onChange={(next) => updateItem(item.id, () => next)} />
         )}
@@ -704,10 +739,37 @@ export default function SlidesBeta() {
   const selectedId = useSlidesFlow((s) => s.selectedId);
   const select = useSlidesFlow((s) => s.select);
   const addItem = useSlidesFlow((s) => s.addItem);
+  const updateItem = useSlidesFlow((s) => s.updateItem);
   const removeItem = useSlidesFlow((s) => s.removeItem);
   const duplicateItem = useSlidesFlow((s) => s.duplicateItem);
   const reorder = useSlidesFlow((s) => s.reorder);
   const clearItems = useSlidesFlow((s) => s.clearItems);
+
+  const months = useMonthsInfo();
+  const budgetRowsAll = useBudget((s) => s.rows);
+  const budgetMonths = useMemo(() => {
+    const map = new Map<string, { periodo: string; mes: number; ano: number }>();
+    for (const r of budgetRowsAll) {
+      if (!map.has(r.periodo)) map.set(r.periodo, { periodo: r.periodo, mes: r.mes, ano: r.ano });
+    }
+    return Array.from(map.values()).sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+  }, [budgetRowsAll]);
+
+  const addWithDefaults = (kind: SlideKind) => {
+    addItem(kind);
+    // O zustand atualiza items síncronamente; pegamos o último item criado.
+    const state = useSlidesFlow.getState();
+    const created = state.items[state.items.length - 1];
+    if (!created) return;
+    const def = smartDefaults(kind, { months, budgetMonths });
+    if (def) {
+      updateItem(created.id, (it) => ({
+        ...it,
+        config: { ...(it as any).config, ...def },
+      } as SlideItem));
+    }
+  };
+
 
   const pricingRows = usePricing((s) => s.rows);
   const budgetRows = useBudget((s) => s.rows);
@@ -765,7 +827,7 @@ export default function SlidesBeta() {
                 return (
                   <button
                     key={s.kind}
-                    onClick={() => addItem(s.kind)}
+                    onClick={() => addWithDefaults(s.kind)}
                     className="group flex w-full items-start gap-3 rounded-xl border border-border/40 bg-card/40 p-3 text-left transition-all hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-sm"
                   >
                     <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[s.accent])}>
@@ -837,7 +899,7 @@ export default function SlidesBeta() {
           <ScrollArea className="flex-1">
             <div className="mx-auto max-w-3xl p-6">
               {items.length === 0 ? (
-                <EmptyFlow onAdd={addItem} />
+                <EmptyFlow onAdd={addWithDefaults} />
               ) : (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                   <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
