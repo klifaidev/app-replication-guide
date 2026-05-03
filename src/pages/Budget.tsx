@@ -292,13 +292,40 @@ export default function Budget() {
       }));
   }, [budgetRows, filters]);
 
+  // Range de meses para o evolutivo (start/end). Default: primeiro mês do
+  // ano fiscal ANTERIOR ao mais recente disponível (FY começa em abril).
+  const [evoStart, setEvoStart] = useState<string | null>(null);
+  const [evoEnd, setEvoEnd] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (monthly.length === 0) return;
+    const last = monthly[monthly.length - 1];
+    const fyStart = last.mes >= 4 ? last.ano : last.ano - 1;
+    const prevFyStart = fyStart - 1;
+    const defaultStartPeriod = `${String(4).padStart(3, "0")}.${prevFyStart}`;
+    const hasDefault = monthly.some((m) => m.periodo === defaultStartPeriod);
+    const startCandidate = hasDefault ? defaultStartPeriod : monthly[0].periodo;
+    const endCandidate = last.periodo;
+    if (!evoStart || !monthly.some((m) => m.periodo === evoStart)) setEvoStart(startCandidate);
+    if (!evoEnd || !monthly.some((m) => m.periodo === evoEnd)) setEvoEnd(endCandidate);
+  }, [monthly, evoStart, evoEnd]);
+
+  const monthlyRange = useMemo(() => {
+    if (!evoStart || !evoEnd) return monthly;
+    const si = monthly.findIndex((m) => m.periodo === evoStart);
+    const ei = monthly.findIndex((m) => m.periodo === evoEnd);
+    if (si < 0 || ei < 0) return monthly;
+    const [a, b] = si <= ei ? [si, ei] : [ei, si];
+    return monthly.slice(a, b + 1);
+  }, [monthly, evoStart, evoEnd]);
+
   // Acumulados Real vs Budget apenas onde há REAL (futuro só tem budget)
   const accumGap = useMemo(() => {
-    const realMonths = monthly.filter((m) => m.realCm !== 0 || m.realVol !== 0);
+    const realMonths = monthlyRange.filter((m) => m.realCm !== 0 || m.realVol !== 0);
     const cmGap = realMonths.reduce((s, m) => s + (m.realCm - m.budCm), 0);
     const volGap = realMonths.reduce((s, m) => s + (m.realVol - m.budVol), 0);
     return { cmGap, volGap };
-  }, [monthly]);
+  }, [monthlyRange]);
 
   // Agregação por dimensão
   const byDim = useMemo<AggLine[]>(() => {
