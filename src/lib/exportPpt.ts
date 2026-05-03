@@ -454,14 +454,14 @@ function addOverviewDreBridgeSlide(
   type Step = { label: string; value: number; type: "total" | "delta" };
   // Ordem do deck Harald: PP / Volume / Frete / Comissão / Outros / Preço / Custo / Total
   const steps: Step[] = [
-    { label: "Contrib. Marginal PP", value: result.base, type: "total" },
+    { label: `Contrib. Marginal ${result.baseLabel}`, value: result.base, type: "total" },
     { label: "Efeito volume", value: result.volume, type: "delta" },
     { label: "Efeito frete", value: result.freight, type: "delta" },
     { label: "Efeito comissão", value: result.commission, type: "delta" },
     { label: "Efeito outros", value: result.others, type: "delta" },
     { label: "Efeito preço", value: result.price, type: "delta" },
     { label: "Efeito custo variável", value: result.cost, type: "delta" },
-    { label: "Contrib. Marginal total", value: result.current, type: "total" },
+    { label: `Contrib. Marginal ${result.currentLabel}`, value: result.current, type: "total" },
   ];
 
   // Geometria start/end (mesmo princípio do componente Waterfall)
