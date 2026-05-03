@@ -1065,7 +1065,7 @@ function plotVolBars(
         w: labelW, h: labelH,
         fontFace: "Calibri", fontSize: 10, bold: true, color: PPT_COLORS.haraldRed,
         align: "center", valign: "bottom", margin: 0,
-        rotate: 270,
+        rotate: 270, wrap: false,
       });
     }
     if (r.budVol > 0) {
@@ -1081,7 +1081,7 @@ function plotVolBars(
         w: labelW, h: labelH,
         fontFace: "Calibri", fontSize: 10, bold: true, color: "000000",
         align: "center", valign: "bottom", margin: 0,
-        rotate: 270,
+        rotate: 270, wrap: false,
       });
     }
     slide.addText(r.label, {
