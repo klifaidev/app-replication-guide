@@ -531,11 +531,10 @@ function addOverviewDreBridgeSlide(
       });
     }
 
-    // Label numérico acima do topo da barra/linha — milhares com 1 casa decimal
-    const valShown = s.value / 1000; // milhares
+    // Label numérico acima do topo da barra/linha — valor absoluto pt-BR
     const valText = s.type === "total"
-      ? fmtDecimalBR(valShown, 1)
-      : fmtDecimalBR(Math.abs(valShown), 1);
+      ? fmtIntBR(s.value)
+      : fmtSignedIntBR(s.value);
     const topY = s.type === "total" ? yOf(Math.max(0, g.value)) : yOf(Math.max(g.start, g.end));
     slide.addText(valText, {
       x: cx - colSlot / 2,
