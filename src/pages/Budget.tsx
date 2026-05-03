@@ -417,12 +417,12 @@ export default function Budget() {
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <EvoChart
-                title="CM Absoluto (R$ Mil)"
-                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${fmtMilharBR(accumGap.cmGap)}`}
+                title="CM Absoluto (R$)"
+                gapValue={`${accumGap.cmGap >= 0 ? "+" : ""}${fmtCurrencyBR(accumGap.cmGap)}`}
                 data={monthly}
                 realKey="realCm"
                 budKey="budCm"
-                fmt={(v) => fmtMilharBR(v ?? 0)}
+                fmt={(v) => fmtCurrencyBR(v ?? 0)}
                 gradientId="gradCmAbs"
               />
               <EvoChart
@@ -500,11 +500,11 @@ export default function Budget() {
                     return (
                       <TableRow key={row.key}>
                         <TableCell className="font-medium">{row.key}</TableCell>
-                        <TableCell className="text-right tabular-nums">{fmtMiBR(row.realRol)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtMiBR(row.budRol)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtCurrencyBR(row.realRol)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtCurrencyBR(row.budRol)}</TableCell>
                         <TableCell className="text-right"><VarBadge v={dRol} /></TableCell>
-                        <TableCell className="text-right tabular-nums">{fmtMiBR(row.realCm)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtMiBR(row.budCm)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtCurrencyBR(row.realCm)}</TableCell>
+                        <TableCell className="text-right tabular-nums text-muted-foreground">{fmtCurrencyBR(row.budCm)}</TableCell>
                         <TableCell className="text-right"><VarBadge v={dCm} /></TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
                           {row.budRol ? `${(ating * 100).toFixed(1)}%` : "—"}
