@@ -1019,9 +1019,10 @@ function plotVolBars(
 ) {
   const { x, y, w, h, data, accumGapTons } = opts;
   slide.addText("VOLUME", {
-    x: x - 0.05, y, w: 0.7, h,
-    fontFace: "Calibri", fontSize: 11, bold: true, color: PPT_COLORS.haraldRed,
+    x: x - 0.15, y: y + h / 2 - 0.4, w: 0.8, h: 0.8,
+    fontFace: "Calibri", fontSize: 16, bold: true, color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
+    rotate: 270,
   });
   slide.addText(`${accumGapTons.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} Tons`, {
     x: x + w * 0.55, y: y - 0.05, w: w * 0.45, h: 0.25,
@@ -1046,6 +1047,9 @@ function plotVolBars(
   const colW = plotW / Math.max(1, data.length);
   const barW = colW * 0.36;
 
+  const labelW = 0.22;
+  const labelH = 0.55;
+
   data.forEach((r, i) => {
     const cx = plotX + colW * (i + 0.5);
     if (r.realVol > 0) {
@@ -1056,9 +1060,12 @@ function plotVolBars(
         line: { color: PPT_COLORS.haraldRed, width: 0 },
       });
       slide.addText(fmtTonAbs(r.realVol), {
-        x: cx - barW - 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
-        fontFace: "Calibri", fontSize: 7, bold: true, color: PPT_COLORS.haraldRed,
+        x: cx - barW - 0.01 + barW / 2 - labelW / 2,
+        y: yT - labelH - 0.02,
+        w: labelW, h: labelH,
+        fontFace: "Calibri", fontSize: 10, bold: true, color: PPT_COLORS.haraldRed,
         align: "center", valign: "bottom", margin: 0,
+        rotate: 270,
       });
     }
     if (r.budVol > 0) {
@@ -1069,14 +1076,17 @@ function plotVolBars(
         line: { color: "000000", width: 0 },
       });
       slide.addText(fmtTonAbs(r.budVol), {
-        x: cx + 0.01 - colW / 4, y: yT - 0.18, w: colW / 2 + barW, h: 0.16,
-        fontFace: "Calibri", fontSize: 7, bold: true, color: "000000",
+        x: cx + 0.01 + barW / 2 - labelW / 2,
+        y: yT - labelH - 0.02,
+        w: labelW, h: labelH,
+        fontFace: "Calibri", fontSize: 10, bold: true, color: "000000",
         align: "center", valign: "bottom", margin: 0,
+        rotate: 270,
       });
     }
     slide.addText(r.label, {
       x: plotX + colW * i, y: y + h - 0.02, w: colW, h: 0.22,
-      fontFace: "Calibri", fontSize: 7, color: PPT_COLORS.muted,
+      fontFace: "Calibri", fontSize: 8, bold: true, color: PPT_COLORS.muted,
       align: "center", valign: "top", margin: 0,
     });
   });
