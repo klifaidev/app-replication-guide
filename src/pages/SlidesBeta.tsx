@@ -822,7 +822,7 @@ export default function SlidesBeta() {
                 return (
                   <button
                     key={s.kind}
-                    onClick={() => addItem(s.kind)}
+                    onClick={() => addWithDefaults(s.kind)}
                     className="group flex w-full items-start gap-3 rounded-xl border border-border/40 bg-card/40 p-3 text-left transition-all hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-sm"
                   >
                     <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[s.accent])}>
@@ -894,7 +894,7 @@ export default function SlidesBeta() {
           <ScrollArea className="flex-1">
             <div className="mx-auto max-w-3xl p-6">
               {items.length === 0 ? (
-                <EmptyFlow onAdd={addItem} />
+                <EmptyFlow onAdd={addWithDefaults} />
               ) : (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                   <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
