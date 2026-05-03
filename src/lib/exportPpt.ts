@@ -372,27 +372,11 @@ function addOverviewDreBridgeSlide(
 
   const rowsTbl: Cell[][] = [header];
 
-  // Linhas com destaque por comparação último mês vs penúltimo.
-  // Para custos (invert=true), o get() já retorna valor negativo, então
-  // "menos negativo" = melhor = verde (last > prev continua valendo).
-  const highlightRowIdx = new Set([0, 2, 4, 10, 12]); // Volume, ROL R$/Kg, Custo Var R$/Kg, CM, CM R$/Kg
-  const HIGHLIGHT_GREEN = "C6EFCE"; // verde claro
-  const HIGHLIGHT_RED = "F8CBAD"; // vermelho/coral claro
-
-  lines.forEach((ln, idx) => {
+  lines.forEach((ln) => {
     const values = months.map(ln.get);
     const valid = values.filter((v) => isFinite(v));
     const min = valid.length ? Math.min(...valid) : 0;
     const max = valid.length ? Math.max(...valid) : 0;
-
-    // Decide cor de destaque pra linha inteira
-    let highlightFill: string | null = null;
-    if (highlightRowIdx.has(idx) && months.length >= 2) {
-      const last = ln.get(months[months.length - 1]);
-      const prev = ln.get(months[months.length - 2]);
-      // get() já inverte sinal para custos, então last > prev sempre = melhor
-      highlightFill = last >= prev ? HIGHLIGHT_GREEN : HIGHLIGHT_RED;
-    }
 
     const cells: Cell[] = [
       {
@@ -400,7 +384,7 @@ function addOverviewDreBridgeSlide(
         options: {
           bold: ln.bold,
           color: PPT_COLORS.ink,
-          fill: { color: highlightFill ?? "FFFFFF" },
+          fill: { color: "FFFFFF" },
           align: "left",
           valign: "middle",
           fontSize: 10,
@@ -408,11 +392,7 @@ function addOverviewDreBridgeSlide(
         },
       },
       ...values.map((v) => {
-        const fill = highlightFill
-          ? highlightFill
-          : ln.noHeat
-            ? "FFFFFF"
-            : heatColor(v, min, max, ln.invert);
+        const fill = ln.noHeat ? "FFFFFF" : heatColor(v, min, max, ln.invert);
         return {
           text: ln.fmt(v),
           options: {
@@ -444,6 +424,33 @@ function addOverviewDreBridgeSlide(
     fontSize: 10,
     valign: "middle",
     autoPage: false,
+  });
+
+  // Bordas verdes/vermelhas externas em linhas-chave. Cor decidida pela
+  // comparação do último mês exibido vs o penúltimo: cresceu → verde,
+  // piorou → vermelho. Para custos, o get() já inverte o sinal, então
+  // "valor maior = melhor" vale para todas as linhas destacadas.
+  const drawBox = (rowIdx0: number, color: string) => {
+    const y = tableY + headerH + rowH * rowIdx0;
+    slide.addShape("rect", {
+      x: tableX + labelColW - 0.02,
+      y: y - 0.005,
+      w: dataW + 0.04,
+      h: rowH + 0.01,
+      fill: { type: "none" },
+      line: { color, width: 1.25 },
+    });
+  };
+  const boxedRows = [0, 2, 4, 10, 12]; // Volume, ROL R$/Kg, Custo Var R$/Kg, CM, CM R$/Kg
+  boxedRows.forEach((idx) => {
+    const ln = lines[idx];
+    let color = PPT_COLORS.heatGreenStrong;
+    if (months.length >= 2) {
+      const last = ln.get(months[months.length - 1]);
+      const prev = ln.get(months[months.length - 2]);
+      color = last >= prev ? PPT_COLORS.heatGreenStrong : PPT_COLORS.haraldRed;
+    }
+    drawBox(idx, color);
   });
 
   // ---- BRIDGE minimalista ---------------------------------------------
@@ -537,13 +544,11 @@ function addOverviewDreBridgeSlide(
       ? fmtIntBR(s.value)
       : fmtSignedIntBR(s.value);
     const topY = s.type === "total" ? yOf(Math.max(0, g.value)) : yOf(Math.max(g.start, g.end));
-    const labelH = 0.28;
-    const gap = 0.0157; // 0.04 cm de respiro entre o número e a barra
     slide.addText(valText, {
       x: cx - colSlot / 2,
-      y: Math.max(plotY - 0.05, topY - labelH - gap),
+      y: Math.max(plotY - 0.05, topY - 0.32),
       w: colSlot,
-      h: labelH,
+      h: 0.28,
       fontFace: "Calibri",
       fontSize: 11,
       color: PPT_COLORS.ink,
