@@ -1019,7 +1019,7 @@ function plotVolBars(
 ) {
   const { x, y, w, h, data, accumGapTons } = opts;
   slide.addText("VOLUME", {
-    x: x - 0.35, y: y + h / 2 - 0.2, w: 1.2, h: 0.4,
+    x: x - 0.35, y: y + h / 2 - 0.15, w: 1.2, h: 0.3,
     fontFace: "Calibri", fontSize: 16, bold: true, color: PPT_COLORS.haraldRed,
     align: "center", valign: "middle", margin: 0,
     rotate: 270, wrap: false,
@@ -1047,8 +1047,10 @@ function plotVolBars(
   const colW = plotW / Math.max(1, data.length);
   const barW = colW * 0.36;
 
-  const labelW = 0.22;
-  const labelH = 0.9;
+  // For rotated text, w is the unrotated width (= visual height after rotation),
+  // h is the unrotated height (= visual width). Make w large so text fits in one line.
+  const labelW = 0.9;
+  const labelH = 0.22;
 
   data.forEach((r, i) => {
     const cx = plotX + colW * (i + 0.5);
@@ -1061,10 +1063,10 @@ function plotVolBars(
       });
       slide.addText(fmtTonAbs(r.realVol), {
         x: cx - barW - 0.01 + barW / 2 - labelW / 2,
-        y: yT - labelH - 0.02,
+        y: yT - labelW - 0.02,
         w: labelW, h: labelH,
         fontFace: "Calibri", fontSize: 10, bold: true, color: PPT_COLORS.haraldRed,
-        align: "center", valign: "bottom", margin: 0,
+        align: "center", valign: "middle", margin: 0,
         rotate: 270, wrap: false,
       });
     }
@@ -1077,10 +1079,10 @@ function plotVolBars(
       });
       slide.addText(fmtTonAbs(r.budVol), {
         x: cx + 0.01 + barW / 2 - labelW / 2,
-        y: yT - labelH - 0.02,
+        y: yT - labelW - 0.02,
         w: labelW, h: labelH,
         fontFace: "Calibri", fontSize: 10, bold: true, color: "000000",
-        align: "center", valign: "bottom", margin: 0,
+        align: "center", valign: "middle", margin: 0,
         rotate: 270, wrap: false,
       });
     }
