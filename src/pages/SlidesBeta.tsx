@@ -734,10 +734,37 @@ export default function SlidesBeta() {
   const selectedId = useSlidesFlow((s) => s.selectedId);
   const select = useSlidesFlow((s) => s.select);
   const addItem = useSlidesFlow((s) => s.addItem);
+  const updateItem = useSlidesFlow((s) => s.updateItem);
   const removeItem = useSlidesFlow((s) => s.removeItem);
   const duplicateItem = useSlidesFlow((s) => s.duplicateItem);
   const reorder = useSlidesFlow((s) => s.reorder);
   const clearItems = useSlidesFlow((s) => s.clearItems);
+
+  const months = useMonthsInfo();
+  const budgetRowsAll = useBudget((s) => s.rows);
+  const budgetMonths = useMemo(() => {
+    const map = new Map<string, { periodo: string; mes: number; ano: number }>();
+    for (const r of budgetRowsAll) {
+      if (!map.has(r.periodo)) map.set(r.periodo, { periodo: r.periodo, mes: r.mes, ano: r.ano });
+    }
+    return Array.from(map.values()).sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+  }, [budgetRowsAll]);
+
+  const addWithDefaults = (kind: SlideKind) => {
+    addItem(kind);
+    // O zustand atualiza items síncronamente; pegamos o último item criado.
+    const state = useSlidesFlow.getState();
+    const created = state.items[state.items.length - 1];
+    if (!created) return;
+    const def = smartDefaults(kind, { months, budgetMonths });
+    if (def) {
+      updateItem(created.id, (it) => ({
+        ...it,
+        config: { ...(it as any).config, ...def },
+      } as SlideItem));
+    }
+  };
+
 
   const pricingRows = usePricing((s) => s.rows);
   const budgetRows = useBudget((s) => s.rows);
