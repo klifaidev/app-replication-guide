@@ -1048,9 +1048,10 @@ function plotVolBars(
   const barW = colW * 0.36;
 
   // For rotated text, w is the unrotated width (= visual height after rotation),
-  // h is the unrotated height (= visual width). Make w large so text fits in one line.
-  const labelW = 0.9;
+  // h is the unrotated height (= visual width). Keep w tight so text sits near the bar.
+  const labelW = 0.45;
   const labelH = 0.22;
+  const labelGap = 0.04;
 
   data.forEach((r, i) => {
     const cx = plotX + colW * (i + 0.5);
