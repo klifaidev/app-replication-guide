@@ -39,6 +39,14 @@ export interface UnifiedRow {
   cogs_real: number;
   cm_real: number;
   mb_real: number;
+  custoVariavel_real: number;
+  custoFixo_real: number;
+  materiaPrima_real: number;
+  embalagem_real: number;
+  mod_real: number;
+  cif_real: number;
+  frete_real: number;
+  comissao_real: number;
   // Medidas Budget
   rol_budget: number;
   volumeKg_budget: number;
