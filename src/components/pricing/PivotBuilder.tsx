@@ -3,19 +3,17 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  BarChart3,
   Columns3,
-  Copy,
   Download,
   Eye,
   EyeOff,
+  FileImage,
+  FileSpreadsheet,
   Filter as FilterIcon,
   Flame,
   GripVertical,
   Hash,
   Layers,
-  Maximize2,
-  Minimize2,
   Plus,
   RotateCcw,
   Rows3,
@@ -26,13 +24,14 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { toPng } from "html-to-image";
 import { cn } from "@/lib/utils";
 import { formatBRL, formatNum, formatPct } from "@/lib/format";
 import {
   buildUnifiedRows,
   dimensionsForMode,
   type PivotMode,
-  type UnifiedRow,
 } from "@/lib/pivotData";
 import { computePivot, type PivotMeasure } from "@/lib/pivot";
 import type { PricingRow } from "@/lib/types";
@@ -43,8 +42,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 
 type Zone = "rows" | "cols" | "values" | "filters";
-type VizMode = "bars" | "heatmap" | "plain";
-type Density = "compact" | "cozy";
+type VizMode = "heatmap" | "plain";
 type SortState = { col: string; measure: string; dir: "asc" | "desc" } | null;
 
 const DIM_GROUPS = ["Tempo", "Produto", "Inovação", "Comercial"] as const;
@@ -68,13 +66,13 @@ function measuresFor(mode: PivotMode): PivotMeasure[] {
     },
   ];
   const budget: PivotMeasure[] = [
-    { id: "rol_budget", label: "ROL Bdg", field: "rol_budget", agg: "sum", format: "currency", tone: "budget" },
-    { id: "vol_budget", label: "Volume Bdg", field: "volumeKg_budget", agg: "sum", format: "tons", tone: "budget" },
-    { id: "cm_budget", label: "CM Bdg", field: "cm_budget", agg: "sum", format: "currency", tone: "budget" },
-    { id: "cpv_budget", label: "CPV Bdg", field: "cpv_budget", agg: "sum", format: "currency", tone: "budget" },
+    { id: "rol_budget", label: "ROL", field: "rol_budget", agg: "sum", format: "currency", tone: "budget" },
+    { id: "vol_budget", label: "Volume", field: "volumeKg_budget", agg: "sum", format: "tons", tone: "budget" },
+    { id: "cm_budget", label: "CM", field: "cm_budget", agg: "sum", format: "currency", tone: "budget" },
+    { id: "cpv_budget", label: "CPV", field: "cpv_budget", agg: "sum", format: "currency", tone: "budget" },
     {
       id: "cm_pct_budget",
-      label: "CM % Bdg",
+      label: "CM %",
       field: "cm_budget",
       agg: "sum",
       format: "percent",
@@ -82,61 +80,10 @@ function measuresFor(mode: PivotMode): PivotMeasure[] {
       derive: (a) => (a.rol_budget > 0 ? a.cm_budget / a.rol_budget : 0),
     },
   ];
-  const compare: PivotMeasure[] = [
-    real[0],
-    budget[0],
-    {
-      id: "delta_rol",
-      label: "Δ ROL",
-      field: "rol_real",
-      agg: "sum",
-      format: "currency",
-      tone: "delta",
-      derive: (a) => a.rol_real - a.rol_budget,
-    },
-    {
-      id: "delta_rol_pct",
-      label: "Δ ROL %",
-      field: "rol_real",
-      agg: "sum",
-      format: "percent",
-      tone: "delta",
-      derive: (a) => (a.rol_budget > 0 ? (a.rol_real - a.rol_budget) / a.rol_budget : 0),
-    },
-    real[2],
-    budget[2],
-    {
-      id: "delta_cm",
-      label: "Δ CM",
-      field: "cm_real",
-      agg: "sum",
-      format: "currency",
-      tone: "delta",
-      derive: (a) => a.cm_real - a.cm_budget,
-    },
-    {
-      id: "delta_vol",
-      label: "Δ Volume",
-      field: "volumeKg_real",
-      agg: "sum",
-      format: "tons",
-      tone: "delta",
-      derive: (a) => a.volumeKg_real - a.volumeKg_budget,
-    },
-  ];
-  if (mode === "real") return real;
-  if (mode === "budget") return budget;
-  return compare;
+  return mode === "real" ? real : budget;
 }
 
 function defaultConfig(mode: PivotMode) {
-  if (mode === "compare") {
-    return {
-      rows: ["marca"],
-      cols: ["fy"],
-      values: ["rol_real", "rol_budget", "delta_rol", "delta_rol_pct"],
-    };
-  }
   return {
     rows: ["marca"],
     cols: ["fy"],
@@ -147,7 +94,7 @@ function defaultConfig(mode: PivotMode) {
   };
 }
 
-// Quick start presets — uma config completa (rows/cols/values) por preset.
+// Quick start presets
 type Preset = {
   id: string;
   label: string;
@@ -160,45 +107,43 @@ const PRESETS: Preset[] = [
     id: "marca-fy",
     label: "Marca × FY",
     hint: "Visão por marca em cada ano fiscal",
-    modes: ["real", "budget", "compare"],
+    modes: ["real", "budget"],
     build: (m) => ({
       rows: ["marca"],
       cols: ["fy"],
       values:
-        m === "compare"
-          ? ["rol_real", "rol_budget", "delta_rol_pct"]
-          : m === "real"
-            ? ["rol_real", "cm_real", "cm_pct_real"]
-            : ["rol_budget", "cm_budget", "cm_pct_budget"],
+        m === "real"
+          ? ["rol_real", "cm_real", "cm_pct_real"]
+          : ["rol_budget", "cm_budget", "cm_pct_budget"],
     }),
   },
   {
     id: "canal-mes",
     label: "Canal × Mês",
     hint: "Evolução mensal por canal",
-    modes: ["real", "budget", "compare"],
+    modes: ["real", "budget"],
     build: (m) => ({
       rows: ["canalAjustado"],
       cols: ["mesLabel"],
-      values: m === "real" ? ["rol_real"] : m === "budget" ? ["rol_budget"] : ["delta_rol"],
+      values: m === "real" ? ["rol_real"] : ["rol_budget"],
     }),
   },
   {
     id: "categoria-marca",
     label: "Categoria · Marca",
     hint: "Hierarquia categoria → marca",
-    modes: ["real", "budget", "compare"],
+    modes: ["real", "budget"],
     build: (m) => ({
       rows: ["categoria", "marca"],
       cols: ["fy"],
-      values: m === "compare" ? ["rol_real", "rol_budget", "delta_rol"] : m === "real" ? ["rol_real", "cm_real"] : ["rol_budget", "cm_budget"],
+      values: m === "real" ? ["rol_real", "cm_real"] : ["rol_budget", "cm_budget"],
     }),
   },
   {
     id: "regiao-uf",
     label: "Região × UF",
     hint: "Geografia comercial",
-    modes: ["real", "compare"],
+    modes: ["real"],
     build: () => ({
       rows: ["regiao", "uf"],
       cols: ["fy"],
@@ -209,11 +154,11 @@ const PRESETS: Preset[] = [
     id: "inovacao",
     label: "Inovação vs Regular",
     hint: "Quebra por classificação",
-    modes: ["real", "budget", "compare"],
+    modes: ["real", "budget"],
     build: (m) => ({
       rows: ["inovacao"],
       cols: ["mesLabel"],
-      values: m === "real" ? ["rol_real", "cm_pct_real"] : m === "budget" ? ["rol_budget", "cm_pct_budget"] : ["rol_real", "rol_budget"],
+      values: m === "real" ? ["rol_real", "cm_pct_real"] : ["rol_budget", "cm_pct_budget"],
     }),
   },
 ];
@@ -228,20 +173,6 @@ function fmtValue(measure: PivotMeasure, val: number) {
   }
 }
 
-function fmtKpi(measure: PivotMeasure, val: number) {
-  if (!isFinite(val)) return "—";
-  if (measure.format === "percent") return formatPct(val);
-  if (measure.format === "tons") return `${formatNum(val / 1000, 1)} t`;
-  if (measure.format === "currency") {
-    const abs = Math.abs(val);
-    if (abs >= 1e9) return `${val < 0 ? "-" : ""}R$ ${(abs / 1e9).toFixed(2)} bi`;
-    if (abs >= 1e6) return `${val < 0 ? "-" : ""}R$ ${(abs / 1e6).toFixed(1)} mi`;
-    if (abs >= 1e3) return `${val < 0 ? "-" : ""}R$ ${(abs / 1e3).toFixed(0)} k`;
-    return formatBRL(val);
-  }
-  return formatNum(val, 0, true);
-}
-
 function toneClass(tone?: PivotMeasure["tone"], val?: number) {
   if (tone === "delta") {
     if (val == null || !isFinite(val) || val === 0) return "text-muted-foreground";
@@ -254,34 +185,23 @@ function toneClass(tone?: PivotMeasure["tone"], val?: number) {
 function cellBg(viz: VizMode, m: PivotMeasure, v: number, max: number): React.CSSProperties | undefined {
   if (viz === "plain" || max === 0 || !isFinite(v) || v === 0) return undefined;
   const pct = Math.min(100, (Math.abs(v) / max) * 100);
-  if (viz === "heatmap") {
-    const isDelta = m.tone === "delta";
-    const baseHsl = isDelta
-      ? v >= 0
-        ? "158 64% 52%"
-        : "0 84% 65%"
-      : m.tone === "budget"
-        ? "263 70% 65%"
-        : "217 91% 60%";
-    const alpha = 0.06 + (pct / 100) * 0.42;
-    return { backgroundColor: `hsl(${baseHsl} / ${alpha})` };
-  }
-  // bars
-  const baseHsl =
-    m.tone === "delta"
-      ? v >= 0
-        ? "158 64% 52%"
-        : "0 84% 65%"
-      : m.tone === "budget"
-        ? "263 70% 65%"
-        : "217 91% 60%";
-  return {
-    backgroundImage: `linear-gradient(to left, hsl(${baseHsl} / 0.55) 0%, hsl(${baseHsl} / 0.55) ${pct}%, transparent ${pct}%)`,
-    backgroundSize: "100% 26%",
-    backgroundPosition: "right bottom",
-    backgroundRepeat: "no-repeat",
-  };
+  const isDelta = m.tone === "delta";
+  const baseHsl = isDelta
+    ? v >= 0
+      ? "158 64% 52%"
+      : "0 84% 65%"
+    : m.tone === "budget"
+      ? "263 70% 65%"
+      : "217 91% 60%";
+  const alpha = 0.06 + (pct / 100) * 0.42;
+  return { backgroundColor: `hsl(${baseHsl} / ${alpha})` };
 }
+
+const MODE_LABEL: Record<PivotMode, string> = {
+  real: "KE30",
+  budget: "SuperBase",
+  compare: "Comparativo",
+};
 
 // ============================================================
 //                        COMPONENT
@@ -298,16 +218,17 @@ export function PivotBuilder({
   const [colsDims, setColsDims] = useState<string[]>(["fy"]);
   const [valueIds, setValueIds] = useState<string[]>(["rol_real", "cm_real", "cm_pct_real"]);
   const [filterDims, setFilterDims] = useState<string[]>([]);
-  const [filterVals, setFilterVals] = useState<Record<string, Set<string>>>({});
+  const [filterVals, setFilterVals] = useState<Record<string, string[]>>({});
   const [paletteQuery, setPaletteQuery] = useState("");
 
   // UX state
-  const [viz, setViz] = useState<VizMode>("bars");
-  const [density, setDensity] = useState<Density>("cozy");
+  const [viz, setViz] = useState<VizMode>("heatmap");
   const [hideEmpty, setHideEmpty] = useState(true);
   const [sort, setSort] = useState<SortState>(null);
   const [highlightRow, setHighlightRow] = useState<string | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(true);
+
+  const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const def = defaultConfig(mode);
@@ -337,15 +258,24 @@ export function PivotBuilder({
     [valueIds, measureMap],
   );
 
+  // converter filterVals (ordem preservada) → Set para o engine
+  const filterValsForEngine = useMemo(() => {
+    const out: Record<string, Set<string>> = {};
+    for (const [k, arr] of Object.entries(filterVals)) {
+      if (arr && arr.length) out[k] = new Set(arr);
+    }
+    return out;
+  }, [filterVals]);
+
   const pivot = useMemo(
     () =>
       computePivot(unified as unknown as Record<string, unknown>[], {
         rows: rowsDims,
         cols: colsDims,
         values: selectedMeasures,
-        filters: filterVals,
+        filters: filterValsForEngine,
       }),
-    [unified, rowsDims, colsDims, selectedMeasures, filterVals],
+    [unified, rowsDims, colsDims, selectedMeasures, filterValsForEngine],
   );
 
   // ----- Drag & Drop (HTML5) -----
@@ -377,7 +307,6 @@ export function PivotBuilder({
       return;
     }
     if (!isDimension(id)) return;
-    // remove from other dim zones
     if (zone !== "rows") setRowsDims((p) => p.filter((x) => x !== id));
     if (zone !== "cols") setColsDims((p) => p.filter((x) => x !== id));
     if (zone !== "filters") setFilterDims((p) => p.filter((x) => x !== id));
@@ -387,9 +316,24 @@ export function PivotBuilder({
   }
 
   function quickAdd(id: string) {
-    // measure → values; dimension → rows by default
     if (measureMap.has(id)) addToZone(id, "values");
     else if (isDimension(id)) addToZone(id, "rows");
+  }
+
+  function reorderInZone(zone: Zone, fromId: string, toId: string) {
+    const apply = (arr: string[]) => {
+      const fromIdx = arr.indexOf(fromId);
+      const toIdx = arr.indexOf(toId);
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return arr;
+      const next = arr.slice();
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, fromId);
+      return next;
+    };
+    if (zone === "rows") setRowsDims((p) => apply(p));
+    else if (zone === "cols") setColsDims((p) => apply(p));
+    else if (zone === "values") setValueIds((p) => apply(p));
+    else if (zone === "filters") setFilterDims((p) => apply(p));
   }
 
   function handleDrop(zone: Zone) {
@@ -423,20 +367,17 @@ export function PivotBuilder({
   }
 
   const usedItems = new Set([...rowsDims, ...colsDims, ...filterDims, ...valueIds]);
-  const activeFiltersCount = Object.values(filterVals).reduce((acc, s) => acc + (s?.size ?? 0), 0);
+  const activeFiltersCount = Object.values(filterVals).reduce((acc, s) => acc + (s?.length ?? 0), 0);
 
   const matchesQuery = (label: string) =>
     paletteQuery.trim() === "" ||
     label.toLowerCase().includes(paletteQuery.trim().toLowerCase());
 
   const modeMeta = {
-    real: { label: "Real", hint: "Faturamento realizado", chip: "bg-primary text-primary-foreground", glow: "shadow-[0_0_24px_-4px_hsl(var(--primary)/0.6)]" },
-    budget: { label: "Budget", hint: "Orçado / planejado", chip: "bg-accent text-accent-foreground", glow: "shadow-[0_0_24px_-4px_hsl(var(--accent)/0.6)]" },
-    compare: { label: "Comparativo", hint: "Real vs Budget + deltas", chip: "bg-foreground text-background", glow: "shadow-[0_0_24px_-4px_hsl(var(--foreground)/0.4)]" },
+    real: { chip: "bg-primary text-primary-foreground", glow: "shadow-[0_0_24px_-4px_hsl(var(--primary)/0.6)]" },
+    budget: { chip: "bg-accent text-accent-foreground", glow: "shadow-[0_0_24px_-4px_hsl(var(--accent)/0.6)]" },
+    compare: { chip: "bg-foreground text-background", glow: "" },
   } as const;
-
-  // KPI strip — top measures (até 4)
-  const kpiMeasures = selectedMeasures.slice(0, 4);
 
   return (
     <div className="space-y-4">
@@ -454,7 +395,7 @@ export function PivotBuilder({
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold tracking-tight">Pivot Studio</h2>
                 <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", modeMeta[mode].chip)}>
-                  {modeMeta[mode].label}
+                  {MODE_LABEL[mode]}
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground">
@@ -468,7 +409,7 @@ export function PivotBuilder({
 
           {/* Mode switcher */}
           <div className="inline-flex rounded-xl border border-border/50 bg-secondary/40 p-1">
-            {(["real", "budget", "compare"] as PivotMode[]).map((m) => (
+            {(["real", "budget"] as PivotMode[]).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
@@ -477,23 +418,20 @@ export function PivotBuilder({
                   mode === m
                     ? m === "real"
                       ? "bg-primary text-primary-foreground shadow-sm"
-                      : m === "budget"
-                        ? "bg-accent text-accent-foreground shadow-sm"
-                        : "bg-foreground text-background shadow-sm"
+                      : "bg-accent text-accent-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                {m === "real" ? "Real" : m === "budget" ? "Budget" : "Comparativo"}
+                {MODE_LABEL[m]}
               </button>
             ))}
           </div>
 
-          {/* Viz mode */}
+          {/* Viz mode (Heatmap | Valor) */}
           <div className="inline-flex rounded-xl border border-border/50 bg-secondary/40 p-1">
             {([
-              { id: "bars" as const, icon: BarChart3, label: "Barras" },
               { id: "heatmap" as const, icon: Flame, label: "Heatmap" },
-              { id: "plain" as const, icon: Hash, label: "Limpo" },
+              { id: "plain" as const, icon: Hash, label: "Valor" },
             ]).map((v) => (
               <button
                 key={v.id}
@@ -505,18 +443,10 @@ export function PivotBuilder({
                 )}
               >
                 <v.icon className="h-3.5 w-3.5" />
+                {v.label}
               </button>
             ))}
           </div>
-
-          {/* Density */}
-          <button
-            onClick={() => setDensity((d) => (d === "compact" ? "cozy" : "compact"))}
-            title={density === "compact" ? "Aumentar" : "Compactar"}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border/50 bg-secondary/40 text-muted-foreground hover:text-foreground"
-          >
-            {density === "compact" ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
-          </button>
 
           {/* Hide empty */}
           <button
@@ -537,6 +467,8 @@ export function PivotBuilder({
             rowDims={rowsDims}
             colDims={colsDims}
             dimMap={dimMap}
+            tableRef={tableRef}
+            modeLabel={MODE_LABEL[mode]}
           />
 
           <Button
@@ -567,44 +499,6 @@ export function PivotBuilder({
           ))}
         </div>
       </div>
-
-      {/* ═════════════════ KPI STRIP ═════════════════ */}
-      {kpiMeasures.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {kpiMeasures.map((m, i) => {
-            const v = pivot.grandTotal[m.id] ?? 0;
-            const tone =
-              m.tone === "delta"
-                ? v >= 0
-                  ? "from-emerald-500/15 to-emerald-500/0 border-emerald-500/25"
-                  : "from-rose-500/15 to-rose-500/0 border-rose-500/25"
-                : m.tone === "budget"
-                  ? "from-accent/15 to-accent/0 border-accent/25"
-                  : "from-primary/15 to-primary/0 border-primary/25";
-            return (
-              <div
-                key={m.id}
-                className={cn(
-                  "group relative overflow-hidden rounded-2xl border bg-gradient-to-br p-3.5 transition-all hover:-translate-y-px hover:shadow-lg",
-                  tone,
-                )}
-                style={{ animation: `fade-up 0.4s ${i * 60}ms both` }}
-              >
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {m.label}
-                </div>
-                <div className={cn("mt-1 text-2xl font-semibold tabular-nums", toneClass(m.tone, v))}>
-                  {fmtKpi(m, v)}
-                </div>
-                <div className="mt-1 text-[10px] text-muted-foreground/70">
-                  {pivot.rowHeaders.length} linhas · {pivot.colHeaders.length || 1} colunas
-                </div>
-                <div className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-foreground/5 blur-2xl transition-opacity group-hover:bg-foreground/10" />
-              </div>
-            );
-          })}
-        </div>
-      )}
 
       {/* ═════════════════ MAIN GRID ═════════════════ */}
       <div className={cn("grid grid-cols-1 gap-4", paletteOpen ? "lg:grid-cols-[260px_1fr]" : "lg:grid-cols-[44px_1fr]")}>
@@ -707,21 +601,36 @@ export function PivotBuilder({
               onDrop={() => handleDrop("filters")}
             >
               {filterDims.length === 0 && <Hint>Arraste uma dimensão</Hint>}
-              {filterDims.map((id) => (
-                <FilterChip
-                  key={id}
-                  label={dimMap.get(id)?.label ?? id}
-                  values={[...new Set(unified.map((u) => String((u as unknown as Record<string, unknown>)[id] ?? "—")))]
-                    .filter(Boolean)
-                    .sort()}
-                  selected={filterVals[id] ?? new Set()}
-                  onChange={(s) => setFilterVals((prev) => ({ ...prev, [id]: s }))}
-                  onRemove={() => removeFromZone(id, "filters")}
-                  draggable
-                  onDragStart={() => setDragging({ id, from: "filters" })}
-                  onDragEnd={() => setDragging(null)}
-                />
-              ))}
+              {filterDims.map((id) => {
+                const allValues = [...new Set(unified.map((u) => String((u as unknown as Record<string, unknown>)[id] ?? "—")))]
+                  .filter(Boolean)
+                  .sort();
+                const selected = filterVals[id] ?? [];
+                return (
+                  <FilterChip
+                    key={id}
+                    label={dimMap.get(id)?.label ?? id}
+                    values={allValues}
+                    selected={selected}
+                    onChange={(s) => setFilterVals((prev) => ({ ...prev, [id]: s }))}
+                    onRemove={() => removeFromZone(id, "filters")}
+                    draggable
+                    onDragStart={() => setDragging({ id, from: "filters" })}
+                    onDragOver={(e) => {
+                      if (dragging && dragging.from === "filters" && dragging.id !== id) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onDropOnChip={() => {
+                      if (dragging && dragging.from === "filters" && dragging.id !== id) {
+                        reorderInZone("filters", dragging.id, id);
+                        setDragging(null);
+                      }
+                    }}
+                    onDragEnd={() => setDragging(null)}
+                  />
+                );
+              })}
             </DropZone>
 
             <DropZone
@@ -734,7 +643,7 @@ export function PivotBuilder({
               setDragOver={setDragOver}
               onDrop={() => handleDrop("cols")}
             >
-              {colsDims.length === 0 && <Hint>Sem colunas (total)</Hint>}
+              {colsDims.length === 0 && <Hint>Sem colunas</Hint>}
               {colsDims.map((id) => (
                 <Chip
                   key={id}
@@ -743,6 +652,15 @@ export function PivotBuilder({
                   onRemove={() => removeFromZone(id, "cols")}
                   draggable
                   onDragStart={() => setDragging({ id, from: "cols" })}
+                  onDragOverChip={(e) => {
+                    if (dragging && dragging.from === "cols" && dragging.id !== id) e.preventDefault();
+                  }}
+                  onDropOnChip={() => {
+                    if (dragging && dragging.from === "cols" && dragging.id !== id) {
+                      reorderInZone("cols", dragging.id, id);
+                      setDragging(null);
+                    }
+                  }}
                   onDragEnd={() => setDragging(null)}
                 />
               ))}
@@ -758,7 +676,7 @@ export function PivotBuilder({
               setDragOver={setDragOver}
               onDrop={() => handleDrop("rows")}
             >
-              {rowsDims.length === 0 && <Hint>Sem linhas (total)</Hint>}
+              {rowsDims.length === 0 && <Hint>Sem linhas</Hint>}
               {rowsDims.map((id) => (
                 <Chip
                   key={id}
@@ -767,6 +685,15 @@ export function PivotBuilder({
                   onRemove={() => removeFromZone(id, "rows")}
                   draggable
                   onDragStart={() => setDragging({ id, from: "rows" })}
+                  onDragOverChip={(e) => {
+                    if (dragging && dragging.from === "rows" && dragging.id !== id) e.preventDefault();
+                  }}
+                  onDropOnChip={() => {
+                    if (dragging && dragging.from === "rows" && dragging.id !== id) {
+                      reorderInZone("rows", dragging.id, id);
+                      setDragging(null);
+                    }
+                  }}
                   onDragEnd={() => setDragging(null)}
                 />
               ))}
@@ -794,6 +721,15 @@ export function PivotBuilder({
                     onRemove={() => removeFromZone(id, "values")}
                     draggable
                     onDragStart={() => setDragging({ id, from: "values" })}
+                    onDragOverChip={(e) => {
+                      if (dragging && dragging.from === "values" && dragging.id !== id) e.preventDefault();
+                    }}
+                    onDropOnChip={() => {
+                      if (dragging && dragging.from === "values" && dragging.id !== id) {
+                        reorderInZone("values", dragging.id, id);
+                        setDragging(null);
+                      }
+                    }}
                     onDragEnd={() => setDragging(null)}
                   />
                 );
@@ -801,20 +737,21 @@ export function PivotBuilder({
             </DropZone>
           </div>
 
-          <PivotTable
-            pivot={pivot}
-            measures={selectedMeasures}
-            rowDims={rowsDims}
-            colDims={colsDims}
-            dimMap={dimMap}
-            viz={viz}
-            density={density}
-            hideEmpty={hideEmpty}
-            sort={sort}
-            setSort={setSort}
-            highlightRow={highlightRow}
-            setHighlightRow={setHighlightRow}
-          />
+          <div ref={tableRef}>
+            <PivotTable
+              pivot={pivot}
+              measures={selectedMeasures}
+              rowDims={rowsDims}
+              colDims={colsDims}
+              dimMap={dimMap}
+              viz={viz}
+              hideEmpty={hideEmpty}
+              sort={sort}
+              setSort={setSort}
+              highlightRow={highlightRow}
+              setHighlightRow={setHighlightRow}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -838,6 +775,8 @@ function Chip({
   draggable,
   onDragStart,
   onDragEnd,
+  onDragOverChip,
+  onDropOnChip,
 }: {
   label: string;
   tone?: PivotMeasure["tone"];
@@ -848,6 +787,8 @@ function Chip({
   draggable?: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
+  onDragOverChip?: (e: React.DragEvent) => void;
+  onDropOnChip?: () => void;
 }) {
   const toneRing =
     tone === "budget"
@@ -866,6 +807,16 @@ function Chip({
         onDragStart?.();
       }}
       onDragEnd={onDragEnd}
+      onDragOver={(e) => {
+        onDragOverChip?.(e);
+      }}
+      onDrop={(e) => {
+        if (onDropOnChip) {
+          e.preventDefault();
+          e.stopPropagation();
+          onDropOnChip();
+        }
+      }}
       onClick={onClick}
       className={cn(
         "group inline-flex cursor-grab select-none items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium shadow-sm transition-all hover:-translate-y-px hover:shadow active:cursor-grabbing",
@@ -900,19 +851,40 @@ function FilterChip({
   draggable,
   onDragStart,
   onDragEnd,
+  onDragOver,
+  onDropOnChip,
 }: {
   label: string;
   values: string[];
-  selected: Set<string>;
-  onChange: (next: Set<string>) => void;
+  /** ordem definida pelo usuário */
+  selected: string[];
+  onChange: (next: string[]) => void;
   onRemove: () => void;
   draggable?: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDropOnChip?: () => void;
 }) {
   const [q, setQ] = useState("");
-  const count = selected.size;
+  const count = selected.length;
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
   const filtered = values.filter((v) => v.toLowerCase().includes(q.toLowerCase()));
+
+  // drag-reorder dentro do popover
+  const [internalDrag, setInternalDrag] = useState<string | null>(null);
+
+  function moveItem(from: string, to: string) {
+    if (from === to) return;
+    const next = selected.slice();
+    const fi = next.indexOf(from);
+    const ti = next.indexOf(to);
+    if (fi < 0 || ti < 0) return;
+    next.splice(fi, 1);
+    next.splice(ti, 0, from);
+    onChange(next);
+  }
+
   return (
     <span
       draggable={draggable}
@@ -921,6 +893,14 @@ function FilterChip({
         onDragStart?.();
       }}
       onDragEnd={onDragEnd}
+      onDragOver={onDragOver}
+      onDrop={(e) => {
+        if (onDropOnChip) {
+          e.preventDefault();
+          e.stopPropagation();
+          onDropOnChip();
+        }
+      }}
       className="inline-flex items-center"
     >
       <Popover>
@@ -940,17 +920,62 @@ function FilterChip({
             )}
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-72 p-0" align="start">
+        <PopoverContent className="w-80 p-0" align="start">
           <div className="flex items-center justify-between border-b border-border/40 px-3 py-2 text-[11px] font-semibold">
             <span>{label}</span>
             <span className="text-muted-foreground font-normal">{values.length} valores</span>
           </div>
+
+          {/* Lista ordenável dos selecionados */}
+          {selected.length > 0 && (
+            <div className="border-b border-border/30 p-2">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                Ordem (arraste)
+              </div>
+              <div className="space-y-1">
+                {selected.map((v) => (
+                  <div
+                    key={`sel-${v}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      setInternalDrag(v);
+                    }}
+                    onDragOver={(e) => {
+                      if (internalDrag && internalDrag !== v) e.preventDefault();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (internalDrag) moveItem(internalDrag, v);
+                      setInternalDrag(null);
+                    }}
+                    onDragEnd={() => setInternalDrag(null)}
+                    className={cn(
+                      "flex cursor-grab items-center gap-2 rounded border border-border/40 bg-secondary/40 px-2 py-1 text-xs transition-colors hover:bg-secondary/70 active:cursor-grabbing",
+                      internalDrag === v && "opacity-50",
+                    )}
+                  >
+                    <GripVertical className="h-3 w-3 text-muted-foreground" />
+                    <span className="flex-1 truncate">{v}</span>
+                    <button
+                      onClick={() => onChange(selected.filter((x) => x !== v))}
+                      className="rounded p-0.5 opacity-60 hover:bg-foreground/10 hover:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="border-b border-border/30 p-2">
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar valor…" className="h-7 text-xs" />
           </div>
-          <div className="max-h-64 overflow-auto p-1">
+          <div className="max-h-56 overflow-auto p-1">
             {filtered.map((v) => {
-              const checked = selected.has(v);
+              const checked = selectedSet.has(v);
               return (
                 <label
                   key={v}
@@ -959,9 +984,11 @@ function FilterChip({
                   <Checkbox
                     checked={checked}
                     onCheckedChange={(c) => {
-                      const next = new Set(selected);
-                      if (c) next.add(v); else next.delete(v);
-                      onChange(next);
+                      if (c) {
+                        if (!selectedSet.has(v)) onChange([...selected, v]);
+                      } else {
+                        onChange(selected.filter((x) => x !== v));
+                      }
                     }}
                   />
                   <span className="truncate">{v}</span>
@@ -973,10 +1000,10 @@ function FilterChip({
             )}
           </div>
           <div className="flex items-center justify-between border-t border-border/40 p-2">
-            <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => onChange(new Set())}>
+            <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => onChange([])}>
               Limpar
             </Button>
-            <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => onChange(new Set(values))}>
+            <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => onChange(values.slice())}>
               Todos
             </Button>
           </div>
@@ -1069,7 +1096,6 @@ function PivotTable({
   colDims,
   dimMap,
   viz,
-  density,
   hideEmpty,
   sort,
   setSort,
@@ -1082,7 +1108,6 @@ function PivotTable({
   colDims: string[];
   dimMap: Map<string, DimMeta>;
   viz: VizMode;
-  density: Density;
   hideEmpty: boolean;
   sort: SortState;
   setSort: (s: SortState) => void;
@@ -1117,10 +1142,7 @@ function PivotTable({
       });
     }
     if (sort) {
-      const getter = (k: string) => {
-        if (sort.col === "__total__") return pivot.rowTotals.get(k)?.[sort.measure] ?? 0;
-        return pivot.cells.get(k)?.get(sort.col)?.[sort.measure] ?? 0;
-      };
+      const getter = (k: string) => pivot.cells.get(k)?.get(sort.col)?.[sort.measure] ?? 0;
       rows = [...rows].sort((a, b) => {
         const va = getter(a.key);
         const vb = getter(b.key);
@@ -1130,7 +1152,6 @@ function PivotTable({
     return rows;
   }, [pivot, measures, sort, hideEmpty]);
 
-  // max abs por medida (escopo: visível)
   const maxByMeasure = useMemo(() => {
     const map = new Map<string, number>();
     for (const m of measures) {
@@ -1155,8 +1176,8 @@ function PivotTable({
     }
   }
 
-  const cellPad = density === "compact" ? "py-1 px-2" : "py-2 px-3";
-  const headerPad = density === "compact" ? "py-1.5 px-2" : "py-2.5 px-3";
+  const cellPad = "py-1 px-2";
+  const headerPad = "py-1.5 px-2";
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border/40 bg-card/30 shadow-sm">
@@ -1189,18 +1210,9 @@ function PivotTable({
                       headerPad,
                     )}
                   >
-                    {c.values.join(" · ") || "Total"}
+                    {c.values.join(" · ") || ""}
                   </th>
                 ))}
-                <th
-                  colSpan={measures.length}
-                  className={cn(
-                    "border-b border-l-2 border-primary/40 bg-primary/15 backdrop-blur text-center text-[11px] font-semibold text-primary",
-                    headerPad,
-                  )}
-                >
-                  Total
-                </th>
               </tr>
             )}
             <tr>
@@ -1245,38 +1257,13 @@ function PivotTable({
                   );
                 }),
               )}
-              {hasCols &&
-                measures.map((m) => {
-                  const isSorted = sort && sort.col === "__total__" && sort.measure === m.id;
-                  return (
-                    <th
-                      key={`th-total-${m.id}`}
-                      onClick={() => toggleSort("__total__", m.id)}
-                      className={cn(
-                        "cursor-pointer select-none border-b border-l border-border/40 bg-primary/10 backdrop-blur text-right text-[10px] font-semibold uppercase tracking-wider transition-colors hover:bg-primary/20",
-                        headerPad,
-                        toneClass(m.tone),
-                        isSorted && "text-primary",
-                      )}
-                    >
-                      <span className="inline-flex items-center justify-end gap-1">
-                        {m.label}
-                        {isSorted ? (
-                          sort!.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-20" />
-                        )}
-                      </span>
-                    </th>
-                  );
-                })}
             </tr>
           </thead>
           <tbody>
             {sortedRows.length === 0 && (
               <tr>
                 <td
-                  colSpan={Math.max(1, rowDims.length) + cols.length * measures.length + (hasCols ? measures.length : 0)}
+                  colSpan={Math.max(1, rowDims.length) + cols.length * measures.length}
                   className="px-3 py-12 text-center text-sm text-muted-foreground"
                 >
                   Sem dados para exibir. Ajuste filtros ou desative "ocultar linhas vazias".
@@ -1295,7 +1282,6 @@ function PivotTable({
                     i % 2 === 0 && "bg-background/30",
                     isHL && "bg-primary/[0.06]",
                   )}
-                  style={{ animation: `fade-in 0.25s ${Math.min(i, 30) * 12}ms both` }}
                 >
                   {rowDims.map((_, idx) => (
                     <td
@@ -1310,7 +1296,7 @@ function PivotTable({
                     </td>
                   ))}
                   {rowDims.length === 0 && (
-                    <td className={cn("sticky left-0 z-[1] bg-card/85 backdrop-blur font-semibold text-muted-foreground", cellPad)}>Total</td>
+                    <td className={cn("sticky left-0 z-[1] bg-card/85 backdrop-blur font-semibold text-muted-foreground", cellPad)}>—</td>
                   )}
                   {cols.map((c) => {
                     const cell = pivot.cells.get(rh.key)?.get(c.key) ?? {};
@@ -1332,64 +1318,9 @@ function PivotTable({
                       );
                     });
                   })}
-                  {hasCols &&
-                    measures.map((m) => {
-                      const v = pivot.rowTotals.get(rh.key)?.[m.id] ?? 0;
-                      return (
-                        <td
-                          key={`rt-${rh.key}-${m.id}`}
-                          className={cn(
-                            "border-l border-primary/20 bg-primary/5 text-right font-semibold tabular-nums",
-                            cellPad,
-                            toneClass(m.tone, v),
-                          )}
-                        >
-                          {fmtValue(m, v)}
-                        </td>
-                      );
-                    })}
                 </tr>
               );
             })}
-
-            {/* Footer total */}
-            <tr className="sticky bottom-0 z-10 border-t-2 border-primary/40 bg-gradient-to-r from-primary/15 via-primary/8 to-primary/15 font-semibold backdrop-blur">
-              {rowDims.map((_, idx) => (
-                <td key={`ft-${idx}`} className={cn("text-foreground", cellPad, idx === 0 && "sticky left-0 z-[1]")}>
-                  {idx === 0 ? "Total geral" : ""}
-                </td>
-              ))}
-              {rowDims.length === 0 && <td className={cn("sticky left-0 z-[1]", cellPad)}>Total</td>}
-              {cols.map((c) =>
-                measures.map((m) => {
-                  const v = pivot.colTotals.get(c.key)?.[m.id] ?? 0;
-                  return (
-                    <td
-                      key={`ct-${c.key}-${m.id}`}
-                      className={cn("border-l border-border/40 text-right tabular-nums", cellPad, toneClass(m.tone, v))}
-                    >
-                      {fmtValue(m, v)}
-                    </td>
-                  );
-                }),
-              )}
-              {hasCols &&
-                measures.map((m) => {
-                  const v = pivot.grandTotal[m.id] ?? 0;
-                  return (
-                    <td
-                      key={`gt-${m.id}`}
-                      className={cn(
-                        "border-l border-primary/30 bg-primary/15 text-right tabular-nums",
-                        cellPad,
-                        toneClass(m.tone, v),
-                      )}
-                    >
-                      {fmtValue(m, v)}
-                    </td>
-                  );
-                })}
-            </tr>
           </tbody>
         </table>
       </div>
@@ -1406,58 +1337,61 @@ function ExportMenu({
   rowDims,
   colDims,
   dimMap,
+  tableRef,
+  modeLabel,
 }: {
   pivot: ReturnType<typeof computePivot>;
   measures: PivotMeasure[];
   rowDims: string[];
   colDims: string[];
   dimMap: Map<string, DimMeta>;
+  tableRef: React.RefObject<HTMLDivElement>;
+  modeLabel: string;
 }) {
-  const buildCsv = () => {
-    const sep = ";";
+  const exportXlsx = () => {
     const cols = colDims.length > 0 && pivot.colHeaders.length > 0
       ? pivot.colHeaders
       : [{ key: "__all__", values: [], depth: 0, isLeaf: true }];
-    const head1 = [
+    const header: string[] = [
       ...rowDims.map((d) => dimMap.get(d)?.label ?? d),
-      ...cols.flatMap((c) => measures.map((m) => `${c.values.join(" · ") || "Total"} | ${m.label}`)),
-      ...measures.map((m) => `Total | ${m.label}`),
+      ...cols.flatMap((c) =>
+        measures.map((m) => `${c.values.join(" · ") || "Total"} | ${m.label}`),
+      ),
     ];
-    const lines = [head1.join(sep)];
+    const rows: (string | number)[][] = [];
     for (const rh of pivot.rowHeaders) {
-      const row: string[] = [];
+      const row: (string | number)[] = [];
       rowDims.forEach((_, i) => row.push(rh.values[i] ?? ""));
       for (const c of cols) {
         const cell = pivot.cells.get(rh.key)?.get(c.key) ?? {};
         for (const m of measures) {
           const v = cell[m.id] ?? 0;
-          row.push(isFinite(v) ? String(v).replace(".", ",") : "");
+          row.push(isFinite(v) ? Number(v) : "");
         }
       }
-      for (const m of measures) {
-        const v = pivot.rowTotals.get(rh.key)?.[m.id] ?? 0;
-        row.push(isFinite(v) ? String(v).replace(".", ",") : "");
-      }
-      lines.push(row.join(sep));
+      rows.push(row);
     }
-    return lines.join("\n");
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pivot");
+    XLSX.writeFile(wb, `pivot_${modeLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  const download = () => {
-    const csv = buildCsv();
-    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `pivot_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const copy = async () => {
+  const exportPng = async () => {
+    if (!tableRef.current) return;
     try {
-      await navigator.clipboard.writeText(buildCsv().replace(/;/g, "\t"));
-    } catch {/* noop */}
+      const dataUrl = await toPng(tableRef.current, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#0b0b0f",
+      });
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `pivot_${modeLabel}_${new Date().toISOString().slice(0, 10)}.png`;
+      a.click();
+    } catch (err) {
+      console.error("PNG export failed", err);
+    }
   };
 
   return (
@@ -1472,16 +1406,16 @@ function ExportMenu({
       </PopoverTrigger>
       <PopoverContent className="w-44 p-1" align="end">
         <button
-          onClick={download}
+          onClick={exportXlsx}
           className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-secondary/60"
         >
-          <Download className="h-3.5 w-3.5" /> Baixar CSV
+          <FileSpreadsheet className="h-3.5 w-3.5" /> Excel (.xlsx)
         </button>
         <button
-          onClick={copy}
+          onClick={exportPng}
           className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-secondary/60"
         >
-          <Copy className="h-3.5 w-3.5" /> Copiar (TSV)
+          <FileImage className="h-3.5 w-3.5" /> Imagem (.png)
         </button>
       </PopoverContent>
     </Popover>
