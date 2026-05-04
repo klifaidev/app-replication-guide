@@ -32,7 +32,6 @@ import {
   buildUnifiedRows,
   dimensionsForMode,
   type PivotMode,
-  type UnifiedRow,
 } from "@/lib/pivotData";
 import { computePivot, type PivotMeasure } from "@/lib/pivot";
 import type { PricingRow } from "@/lib/types";
