@@ -39,6 +39,14 @@ export interface UnifiedRow {
   cogs_real: number;
   cm_real: number;
   mb_real: number;
+  custoVariavel_real: number;
+  custoFixo_real: number;
+  materiaPrima_real: number;
+  embalagem_real: number;
+  mod_real: number;
+  cif_real: number;
+  frete_real: number;
+  comissao_real: number;
   // Medidas Budget
   rol_budget: number;
   volumeKg_budget: number;
@@ -114,6 +122,14 @@ export function buildUnifiedRows(
         cogs_real: r.cogs,
         cm_real: r.contribMarginal,
         mb_real: r.margemBruta,
+        custoVariavel_real: r.custoVariavel ?? 0,
+        custoFixo_real: r.custoFixo ?? 0,
+        materiaPrima_real: r.materiaPrima ?? 0,
+        embalagem_real: r.embalagem ?? 0,
+        mod_real: r.mod ?? 0,
+        cif_real: r.cif ?? 0,
+        frete_real: r.frete ?? 0,
+        comissao_real: r.comissao ?? 0,
         rol_budget: 0,
         volumeKg_budget: 0,
         cm_budget: 0,
@@ -146,6 +162,14 @@ export function buildUnifiedRows(
         cogs_real: 0,
         cm_real: 0,
         mb_real: 0,
+        custoVariavel_real: 0,
+        custoFixo_real: 0,
+        materiaPrima_real: 0,
+        embalagem_real: 0,
+        mod_real: 0,
+        cif_real: 0,
+        frete_real: 0,
+        comissao_real: 0,
         rol_budget: b.receita,
         volumeKg_budget: b.volumeKg,
         cm_budget: b.cm,
