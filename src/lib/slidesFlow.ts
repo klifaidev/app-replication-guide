@@ -21,6 +21,8 @@ import {
   type SlideFlowItem,
   type BudgetEvoRow,
 } from "./exportPpt";
+import { addCustomSlide } from "./exportCustomSlide";
+import { defaultCustomSlide, type CustomSlideConfig } from "./customSlide";
 
 // ---------------------------------------------------------------------------
 // Tipos
