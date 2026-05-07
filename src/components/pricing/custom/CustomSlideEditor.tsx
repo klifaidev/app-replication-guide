@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowDown, ArrowUp, Copy as CopyIcon, GitBranch, Image as ImageIcon,
   Layers as LayersIcon, MinusSquare, Plus, Square, Table as TableIcon,
-  Trash2, Type as TypeIcon, AlignLeft,
+  Trash2, Type as TypeIcon, AlignLeft, ZoomIn, ZoomOut, Maximize2,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
