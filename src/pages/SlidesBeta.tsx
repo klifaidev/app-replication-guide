@@ -831,6 +831,7 @@ export default function SlidesBeta() {
 
   const [exporting, setExporting] = useState(false);
   const [fileName, setFileName] = useState("apresentacao-pricing.pptx");
+  const [inspectorOpen, setInspectorOpen] = useState(true);
 
   const selected = useMemo(() => items.find((i) => i.id === selectedId) ?? null, [items, selectedId]);
   const readyAll = items.every((i) => isItemReady(i).ok);
