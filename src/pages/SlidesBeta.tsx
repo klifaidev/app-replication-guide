@@ -213,7 +213,7 @@ function FlowCard({
   const meta = metaOf(item.kind);
   const Icon = ICON_MAP[meta.icon];
   const ready = isItemReady(item);
-  const filtersCount = item.kind !== "cover"
+  const filtersCount = (item.kind === "bridge_pvm" || item.kind === "budget_evo")
     ? Object.values(item.config.filters).filter((v) => v && v.length > 0).length
     : 0;
 
@@ -595,13 +595,13 @@ function Inspector({ item }: { item: SlideItem | null }) {
           <CoverConfigPanel item={item} onChange={(next) => updateItem(item.id, () => next)} />
         )}
 
-        {meta.supportsFilters && item.kind !== "cover" && (
+        {meta.supportsFilters && (item.kind === "bridge_pvm" || item.kind === "budget_evo") && (
           <>
             <Separator />
             <FiltersPanel
               value={item.config.filters}
               onChange={(filters) => updateItem(item.id, (it) => {
-                if (it.kind === "cover") return it;
+                if (it.kind !== "bridge_pvm" && it.kind !== "budget_evo") return it;
                 return { ...it, config: { ...it.config, filters } } as SlideItem;
               })}
               pricing={pricing}
