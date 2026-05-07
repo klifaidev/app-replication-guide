@@ -51,25 +51,37 @@ interface Props {
 
 export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
+  const [fitScale, setFitScale] = useState(1);
+  const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
+  const [manualScale, setManualScale] = useState(1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const internalCanvasRef = useRef<HTMLDivElement>(null);
   const ref = canvasRef ?? internalCanvasRef;
 
-  // Auto-scale para caber no contêiner
+  // Calcula a escala para caber no contêiner mantendo a proporção 16:9
   useEffect(() => {
     function compute() {
       const el = wrapperRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const s = Math.min(rect.width / CANVAS_W, rect.height / CANVAS_H, 1);
-      setScale(s > 0 ? s : 1);
+      // 24px de padding interno para não colar nas bordas
+      const availW = Math.max(rect.width - 24, 100);
+      const availH = Math.max(rect.height - 24, 100);
+      const s = Math.min(availW / CANVAS_W, availH / CANVAS_H);
+      setFitScale(s > 0 ? s : 0.1);
     }
     compute();
     const ro = new ResizeObserver(compute);
     if (wrapperRef.current) ro.observe(wrapperRef.current);
     return () => ro.disconnect();
   }, []);
+
+  const scale = zoomMode === "fit" ? fitScale : manualScale;
+  const setZoom = (s: number) => {
+    setZoomMode("manual");
+    setManualScale(Math.max(0.1, Math.min(3, s)));
+  };
+
 
   const selected = config.blocks.find((b) => b.id === selectedId) ?? null;
   const zTop = config.blocks.reduce((m, b) => Math.max(m, b.z), 0);
