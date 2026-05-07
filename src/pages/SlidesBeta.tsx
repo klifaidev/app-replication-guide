@@ -994,9 +994,24 @@ export default function SlidesBeta() {
           </ScrollArea>
         </main>
 
-        {/* ===== Coluna direita: inspector ===== */}
-        <aside className="flex min-h-0 flex-col overflow-hidden border-l border-border/40 bg-sidebar/40">
-          <Inspector item={selected} />
+        {/* ===== Coluna direita: inspector (recolhível) ===== */}
+        <aside className="relative flex min-h-0 flex-col overflow-hidden border-l border-border/40 bg-sidebar/40">
+          <button
+            type="button"
+            onClick={() => setInspectorOpen((v) => !v)}
+            className="absolute left-0 top-3 z-10 flex h-8 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+            aria-label={inspectorOpen ? "Recolher painel" : "Expandir painel"}
+            title={inspectorOpen ? "Recolher prévia e filtros" : "Expandir prévia e filtros"}
+          >
+            {inspectorOpen ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+          </button>
+          {inspectorOpen ? (
+            <Inspector item={selected} />
+          ) : (
+            <div className="flex h-full items-center justify-center px-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground [writing-mode:vertical-rl]">
+              Prévia & Filtros
+            </div>
+          )}
         </aside>
       </div>
     </>
