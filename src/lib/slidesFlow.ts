@@ -217,6 +217,14 @@ export function itemToFlow(item: SlideItem, ctx: BuildContext): SlideFlowItem {
         },
       };
     }
+    case "custom": {
+      const cfg = item.config;
+      return {
+        build: async (pptx) => {
+          await addCustomSlide(pptx, cfg);
+        },
+      };
+    }
   }
 }
 
@@ -302,6 +310,9 @@ export function isItemReady(item: SlideItem): { ok: boolean; reason?: string } {
       return { ok: true };
     case "cover":
       if (!item.config.title.trim()) return { ok: false, reason: "Título obrigatório." };
+      return { ok: true };
+    case "custom":
+      if (item.config.blocks.length === 0) return { ok: false, reason: "Adicione ao menos um bloco." };
       return { ok: true };
   }
 }
