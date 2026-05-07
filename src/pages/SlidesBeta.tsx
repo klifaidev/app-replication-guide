@@ -869,7 +869,14 @@ export default function SlidesBeta() {
         title="Slides (Beta)"
         subtitle="Monte uma apresentação combinando slides com filtros independentes"
       />
-      <div className="grid h-[calc(100vh-3.5rem)] min-h-0 grid-cols-[220px_minmax(0,1fr)_320px] gap-0 overflow-hidden xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+      <div
+        className={cn(
+          "grid h-[calc(100vh-3.5rem)] min-h-0 gap-0 overflow-hidden",
+          inspectorOpen
+            ? "grid-cols-[80px_minmax(0,1fr)_320px] xl:grid-cols-[80px_minmax(0,1fr)_360px]"
+            : "grid-cols-[80px_minmax(0,1fr)_36px]",
+        )}
+      >
         {/* ===== Coluna esquerda: catálogo + presets ===== */}
         <aside className="flex min-h-0 flex-col border-r border-border/40 bg-sidebar/40">
           <ScrollArea className="flex-1">
