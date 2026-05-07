@@ -596,12 +596,10 @@ function Inspector({ item }: { item: SlideItem | null }) {
           <CoverConfigPanel item={item} onChange={(next) => updateItem(item.id, () => next)} />
         )}
         {item.kind === "custom" && (
-          <div className="h-[520px]">
-            <CustomSlideEditor
-              config={item.config}
-              onChange={(cfg) => updateItem(item.id, (it) => (it.kind === "custom" ? { ...it, config: cfg } : it))}
-            />
-          </div>
+          <CustomSlideFullscreenEditor
+            config={item.config}
+            onChange={(cfg) => updateItem(item.id, (it) => (it.kind === "custom" ? { ...it, config: cfg } : it))}
+          />
         )}
 
         {meta.supportsFilters && (item.kind === "bridge_pvm" || item.kind === "budget_evo") && (
