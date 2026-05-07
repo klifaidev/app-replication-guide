@@ -61,6 +61,7 @@ import { cn } from "@/lib/utils";
 import type { Filters, FilterKey, PricingRow } from "@/lib/types";
 import type { BudgetRow } from "@/lib/budget";
 import { SlidePreview } from "@/components/pricing/SlidePreview";
+import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
@@ -593,6 +594,14 @@ function Inspector({ item }: { item: SlideItem | null }) {
         )}
         {item.kind === "cover" && (
           <CoverConfigPanel item={item} onChange={(next) => updateItem(item.id, () => next)} />
+        )}
+        {item.kind === "custom" && (
+          <div className="h-[520px]">
+            <CustomSlideEditor
+              config={item.config}
+              onChange={(cfg) => updateItem(item.id, (it) => (it.kind === "custom" ? { ...it, config: cfg } : it))}
+            />
+          </div>
         )}
 
         {meta.supportsFilters && (item.kind === "bridge_pvm" || item.kind === "budget_evo") && (
