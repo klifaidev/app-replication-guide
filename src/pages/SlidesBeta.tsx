@@ -979,7 +979,7 @@ export default function SlidesBeta() {
         </main>
 
         {/* ===== Coluna direita: inspector ===== */}
-        <aside className="border-l border-border/40 bg-sidebar/40">
+        <aside className="flex min-h-0 flex-col overflow-hidden border-l border-border/40 bg-sidebar/40">
           <Inspector item={selected} />
         </aside>
       </div>
