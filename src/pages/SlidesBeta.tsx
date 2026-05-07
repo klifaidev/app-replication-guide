@@ -867,46 +867,48 @@ export default function SlidesBeta() {
         title="Slides (Beta)"
         subtitle="Monte uma apresentação combinando slides com filtros independentes"
       />
-      <div className="grid h-[calc(100vh-3.5rem)] grid-cols-[260px_1fr_360px] gap-0 overflow-hidden">
+      <div className="grid h-[calc(100vh-3.5rem)] min-h-0 grid-cols-[220px_minmax(0,1fr)_320px] gap-0 overflow-hidden xl:grid-cols-[260px_minmax(0,1fr)_360px]">
         {/* ===== Coluna esquerda: catálogo + presets ===== */}
-        <aside className="flex flex-col gap-4 border-r border-border/40 bg-sidebar/40 p-4">
-          <div>
-            <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              <Layers className="h-3 w-3" /> Catálogo
-            </div>
-            <div className="space-y-1.5">
-              {SLIDE_CATALOG.map((s) => {
-                const Icon = ICON_MAP[s.icon];
-                return (
-                  <button
-                    key={s.kind}
-                    onClick={() => addWithDefaults(s.kind)}
-                    className="group flex w-full items-start gap-3 rounded-xl border border-border/40 bg-card/40 p-3 text-left transition-all hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-sm"
-                  >
-                    <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[s.accent])}>
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-sm font-medium">{s.title}</span>
-                        <Plus className="h-3.5 w-3.5 text-muted-foreground/40 transition-colors group-hover:text-primary" />
-                      </div>
-                      <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{s.description}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <aside className="flex min-h-0 flex-col border-r border-border/40 bg-sidebar/40">
+          <ScrollArea className="flex-1">
+            <div className="flex flex-col gap-4 p-4">
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <Layers className="h-3 w-3" /> Catálogo
+                </div>
+                <div className="space-y-1.5">
+                  {SLIDE_CATALOG.map((s) => {
+                    const Icon = ICON_MAP[s.icon];
+                    return (
+                      <button
+                        key={s.kind}
+                        onClick={() => addWithDefaults(s.kind)}
+                        className="group flex w-full items-start gap-3 rounded-xl border border-border/40 bg-card/40 p-3 text-left transition-all hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-sm"
+                      >
+                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[s.accent])}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-sm font-medium">{s.title}</span>
+                            <Plus className="h-3.5 w-3.5 text-muted-foreground/40 transition-colors group-hover:text-primary" />
+                          </div>
+                          <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{s.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          <div className="flex-1 overflow-hidden">
-            <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              <Bookmark className="h-3 w-3" /> Pré-definições
+              <div>
+                <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  <Bookmark className="h-3 w-3" /> Pré-definições
+                </div>
+                <PresetsPanel />
+              </div>
             </div>
-            <ScrollArea className="h-full pr-1">
-              <PresetsPanel />
-            </ScrollArea>
-          </div>
+          </ScrollArea>
         </aside>
 
         {/* ===== Coluna central: esteira ===== */}
@@ -977,7 +979,7 @@ export default function SlidesBeta() {
         </main>
 
         {/* ===== Coluna direita: inspector ===== */}
-        <aside className="border-l border-border/40 bg-sidebar/40">
+        <aside className="flex min-h-0 flex-col overflow-hidden border-l border-border/40 bg-sidebar/40">
           <Inspector item={selected} />
         </aside>
       </div>

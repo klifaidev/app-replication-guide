@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowDown, ArrowUp, Copy as CopyIcon, GitBranch, Image as ImageIcon,
   Layers as LayersIcon, MinusSquare, Plus, Square, Table as TableIcon,
-  Trash2, Type as TypeIcon, AlignLeft,
+  Trash2, Type as TypeIcon, AlignLeft, ZoomIn, ZoomOut, Maximize2,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
@@ -51,25 +51,37 @@ interface Props {
 
 export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
+  const [fitScale, setFitScale] = useState(1);
+  const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
+  const [manualScale, setManualScale] = useState(1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const internalCanvasRef = useRef<HTMLDivElement>(null);
   const ref = canvasRef ?? internalCanvasRef;
 
-  // Auto-scale para caber no contêiner
+  // Calcula a escala para caber no contêiner mantendo a proporção 16:9
   useEffect(() => {
     function compute() {
       const el = wrapperRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      const s = Math.min(rect.width / CANVAS_W, rect.height / CANVAS_H, 1);
-      setScale(s > 0 ? s : 1);
+      // 24px de padding interno para não colar nas bordas
+      const availW = Math.max(rect.width - 24, 100);
+      const availH = Math.max(rect.height - 24, 100);
+      const s = Math.min(availW / CANVAS_W, availH / CANVAS_H);
+      setFitScale(s > 0 ? s : 0.1);
     }
     compute();
     const ro = new ResizeObserver(compute);
     if (wrapperRef.current) ro.observe(wrapperRef.current);
     return () => ro.disconnect();
   }, []);
+
+  const scale = zoomMode === "fit" ? fitScale : manualScale;
+  const setZoom = (s: number) => {
+    setZoomMode("manual");
+    setManualScale(Math.max(0.1, Math.min(3, s)));
+  };
+
 
   const selected = config.blocks.find((b) => b.id === selectedId) ?? null;
   const zTop = config.blocks.reduce((m, b) => Math.max(m, b.z), 0);
@@ -102,96 +114,145 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
   };
 
   return (
-    <div className="grid h-full grid-cols-[180px_1fr_300px] gap-3">
+    <div className="grid h-full min-h-0 grid-cols-[170px_minmax(0,1fr)_280px] gap-3">
       {/* ====== Paleta ====== */}
-      <div className="flex flex-col gap-1 rounded-lg border border-border/40 bg-card/40 p-2">
-        <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Adicionar bloco
+      <ScrollArea className="rounded-lg border border-border/40 bg-card/40">
+        <div className="flex flex-col gap-1 p-2">
+          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Adicionar bloco
+          </div>
+          {BLOCK_KINDS.map(({ kind, icon: Icon }) => (
+            <button
+              key={kind}
+              onClick={() => addBlock(kind)}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-left hover:bg-secondary"
+            >
+              <Icon className="h-3.5 w-3.5 text-primary" />
+              {BLOCK_LABELS[kind]}
+            </button>
+          ))}
+          <Separator className="my-2" />
+          <div className="flex items-center justify-between px-2 text-[11px]">
+            <span className="text-muted-foreground">Faixa Harald</span>
+            <Switch
+              checked={config.showHaraldFooter}
+              onCheckedChange={(v) => onChange({ ...config, showHaraldFooter: v })}
+            />
+          </div>
         </div>
-        {BLOCK_KINDS.map(({ kind, icon: Icon }) => (
-          <button
-            key={kind}
-            onClick={() => addBlock(kind)}
-            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-left hover:bg-secondary"
-          >
-            <Icon className="h-3.5 w-3.5 text-primary" />
-            {BLOCK_LABELS[kind]}
-          </button>
-        ))}
-        <Separator className="my-2" />
-        <div className="flex items-center justify-between px-2 text-[11px]">
-          <span className="text-muted-foreground">Faixa Harald</span>
-          <Switch
-            checked={config.showHaraldFooter}
-            onCheckedChange={(v) => onChange({ ...config, showHaraldFooter: v })}
-          />
-        </div>
-      </div>
+      </ScrollArea>
 
       {/* ====== Canvas ====== */}
-      <div ref={wrapperRef}
-        className="relative flex items-center justify-center overflow-hidden rounded-lg border border-border/40 bg-secondary/20"
-        style={{ minHeight: 360 }}
-        onClick={() => setSelectedId(null)}
-      >
+      <div className="flex min-h-0 min-w-0 flex-col gap-2">
         <div
-          ref={ref}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            width: CANVAS_W, height: CANVAS_H,
-            transform: `scale(${scale})`, transformOrigin: "center",
-            background: `#${config.background}`,
-            position: "relative", boxShadow: "0 10px 40px hsl(0 0% 0% / 0.25)",
-            overflow: "hidden",
-          }}
+          ref={wrapperRef}
+          className="relative min-h-0 flex-1 overflow-auto rounded-lg border border-border/40 bg-secondary/20"
+          onClick={() => setSelectedId(null)}
         >
-          {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => (
-            <Rnd
-              key={blk.id}
-              size={{ width: blk.w, height: blk.h }}
-              position={{ x: blk.x, y: blk.y }}
-              bounds="parent"
-              dragGrid={[10, 10]}
-              resizeGrid={[10, 10]}
-              onDragStop={(_, d) => updateBlock(blk.id, { x: d.x, y: d.y })}
-              onResizeStop={(_, __, refEl, ___, pos) =>
-                updateBlock(blk.id, {
-                  w: parseInt(refEl.style.width, 10),
-                  h: parseInt(refEl.style.height, 10),
-                  x: pos.x, y: pos.y,
-                })
-              }
-              onMouseDown={(e) => { e.stopPropagation(); setSelectedId(blk.id); }}
-              style={{ zIndex: blk.z }}
-              className={cn(
-                "group/block",
-                selectedId === blk.id
-                  ? "outline outline-2 outline-offset-1 outline-primary"
-                  : "outline outline-1 outline-transparent hover:outline-primary/40",
-              )}
-            >
-              <div style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
-                <BlockRenderer block={blk} />
-              </div>
-            </Rnd>
-          ))}
-
-          {/* Faixa Harald (não editável, sempre por cima) */}
-          {config.showHaraldFooter && (
-            <img
-              src={haraldFooterPng}
-              alt=""
+          {/* Wrapper que reserva o espaço escalado mantendo a proporção 16:9 */}
+          <div
+            className="relative"
+            style={{
+              width: CANVAS_W * scale,
+              height: CANVAS_H * scale,
+              margin: "12px auto",
+            }}
+          >
+            <div
+              ref={ref}
+              onClick={(e) => e.stopPropagation()}
               style={{
-                position: "absolute", left: 0, bottom: 0,
-                width: CANVAS_W, height: FOOTER_H,
-                pointerEvents: "none", zIndex: 99999,
+                width: CANVAS_W,
+                height: CANVAS_H,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                background: `#${config.background}`,
+                position: "absolute",
+                top: 0,
+                left: 0,
+                boxShadow: "0 10px 40px hsl(0 0% 0% / 0.25)",
+                overflow: "hidden",
               }}
-            />
-          )}
+            >
+              {[...config.blocks].sort((a, b) => a.z - b.z).map((blk) => (
+                <Rnd
+                  key={blk.id}
+                  size={{ width: blk.w, height: blk.h }}
+                  position={{ x: blk.x, y: blk.y }}
+                  bounds="parent"
+                  dragGrid={[10, 10]}
+                  resizeGrid={[10, 10]}
+                  scale={scale}
+                  onDragStop={(_, d) => updateBlock(blk.id, { x: d.x, y: d.y })}
+                  onResizeStop={(_, __, refEl, ___, pos) =>
+                    updateBlock(blk.id, {
+                      w: parseInt(refEl.style.width, 10),
+                      h: parseInt(refEl.style.height, 10),
+                      x: pos.x, y: pos.y,
+                    })
+                  }
+                  onMouseDown={(e) => { e.stopPropagation(); setSelectedId(blk.id); }}
+                  style={{ zIndex: blk.z }}
+                  className={cn(
+                    "group/block",
+                    selectedId === blk.id
+                      ? "outline outline-2 outline-offset-1 outline-primary"
+                      : "outline outline-1 outline-transparent hover:outline-primary/40",
+                  )}
+                >
+                  <div style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
+                    <BlockRenderer block={blk} />
+                  </div>
+                </Rnd>
+              ))}
+
+              {/* Faixa Harald (não editável, sempre por cima) */}
+              {config.showHaraldFooter && (
+                <img
+                  src={haraldFooterPng}
+                  alt=""
+                  style={{
+                    position: "absolute", left: 0, bottom: 0,
+                    width: CANVAS_W, height: FOOTER_H,
+                    pointerEvents: "none", zIndex: 99999,
+                  }}
+                />
+              )}
+            </div>
+          </div>
         </div>
 
-        <div className="pointer-events-none absolute bottom-2 right-3 rounded bg-background/70 px-2 py-0.5 text-[10px] text-muted-foreground backdrop-blur">
-          {Math.round(scale * 100)}%
+        {/* Barra de zoom (estilo PowerPoint) */}
+        <div className="flex shrink-0 items-center justify-center gap-1 rounded-lg border border-border/40 bg-card/40 px-2 py-1">
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={() => setZoom(scale - 0.1)} title="Diminuir zoom">
+            <ZoomOut className="h-3.5 w-3.5" />
+          </Button>
+          <input
+            type="range"
+            min={10}
+            max={300}
+            step={5}
+            value={Math.round(scale * 100)}
+            onChange={(e) => setZoom(parseInt(e.target.value, 10) / 100)}
+            className="h-1 w-40 cursor-pointer accent-primary"
+          />
+          <Button size="icon" variant="ghost" className="h-7 w-7"
+            onClick={() => setZoom(scale + 0.1)} title="Aumentar zoom">
+            <ZoomIn className="h-3.5 w-3.5" />
+          </Button>
+          <button
+            className="ml-1 min-w-[48px] rounded px-2 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground hover:bg-secondary"
+            onClick={() => { setZoomMode("manual"); setManualScale(1); }}
+            title="100%"
+          >
+            {Math.round(scale * 100)}%
+          </button>
+          <Button size="sm" variant="ghost" className="h-7 gap-1 px-2 text-[11px]"
+            onClick={() => setZoomMode("fit")} title="Ajustar à tela">
+            <Maximize2 className="h-3 w-3" /> Ajustar
+          </Button>
+          <Badge variant="secondary" className="ml-2 text-[9px] uppercase">16:9</Badge>
         </div>
       </div>
 
