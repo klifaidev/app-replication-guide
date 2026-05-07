@@ -1,54 +1,63 @@
+# Slides (Beta) — Slide "Personalizado" com canvas livre
 
-## Resumo do App Analisado
+## Objetivo
+Adicionar um novo tipo no catálogo chamado **Personalizado**, onde o usuário monta o slide arrastando, redimensionando e configurando blocos (bridge, tabela, título, texto, KPI, imagem) num canvas WYSIWYG. A exportação para PPTX reproduz fielmente o layout desenhado, já incluindo a faixa vermelha + logo Harald no rodapé (igual aos slides padrão de Bridge e Budget Evolutivo).
 
-**Pricing Analytics — Harald** é um dashboard de análise de pricing/lucratividade (mercado de chocolate B2B brasileiro), single-page HTML com tema **dark glassmorphism premium** (estilo Apple/Linear). Funciona 100% client-side: usuário faz upload de CSVs mensais exportados do Excel BR (separador `;`, decimal `,`), o app detecta meses, alerta duplicidades, e gera análises.
+## Como vai funcionar (visão do usuário)
 
-### Funcionalidades-chave
-- **Upload inteligente**: CSV BR/internacional, detecção automática de encoding (UTF-8/Windows-1252), separador, e período fiscal (FY abr–mar). Detecta meses duplicados e pede confirmação antes de sobrescrever.
-- **6 telas**: Início (filtros + boas-vindas), Visão Geral (KPIs + bubble + ABC + tabela canais), Bridge PVM (waterfall decompondo Volume/Preço/Custo/Mix entre 2 FYs), Canais, ABC Heróis & Ofensores (top 5 SKUs +/-), Tabela Detalhe (granular SKU×Cliente×Canal com sort/search), Upload/Bases.
-- **Toggle de métrica global**: Margem Bruta ⇄ Contribuição Marginal (recalcula tudo).
-- **Filtros**: chips de período no topbar (multi-seleção), e dropdowns por marca, canal, categoria, região etc.
-- **Visuais**: waterfall SVG (PVM bridge), bubble chart (canais: mg% × share vol × lucro), ABC bars com heróis (verde) / ofensores (vermelho), KPI cards com glow.
-- **Layout**: sidebar fixa esquerda com logo, navegação, badge de meses carregados, e toggle de métrica fixo no rodapé. Topbar com chips de período. Conteúdo central rolável.
+1. Em `/slides`, no catálogo aparece um novo card **Personalizado** (ícone `LayoutTemplate`).
+2. Ao adicionar, abre um editor de canvas em proporção 16:9 (1920×1080 internos, escalado).
+3. **Paleta de blocos** lateral com:
+   - **Título** (texto grande, fonte/tamanho/cor)
+   - **Texto** (parágrafo livre)
+   - **KPI** (valor + label, formato moeda/%/número)
+   - **Bridge PVM** (mini gráfico waterfall — usa filtros + período base/comp do bloco)
+   - **Tabela dinâmica** (linhas/colunas/medidas configuráveis, igual ao Pivot Studio mas embutido)
+   - **Imagem** (upload local, base64)
+   - **Forma** (retângulo/linha com cor)
+4. Cada bloco é **arrastável** (drag) e **redimensionável** (resize handles nos cantos), com snap-to-grid de 10px e guias de alinhamento.
+5. Painel direito (**Inspector**) mostra propriedades do bloco selecionado: posição (x/y/w/h), z-index, e props específicas do tipo.
+6. **Faixa Harald** (faixa vermelha + logo no rodapé) já vem renderizada no canvas como camada fixa, não editável — confirmando o que será exportado.
+7. Toolbar do editor: desfazer/refazer, duplicar, deletar, trazer pra frente / mandar pra trás, snap on/off.
+8. O slide personalizado entra no fluxo normal do `SlidesFlow`: aparece na lista, pode ser reordenado, salvo em preset, e exportado junto com os demais.
 
----
+## Exportação fiel
+- Coordenadas do canvas (1920×1080) convertidas para polegadas (10" × 5.625") na hora de gerar com `pptxgenjs`.
+- Cada bloco vira o equivalente nativo no PPTX:
+  - Título/Texto → `slide.addText`
+  - KPI → dois `addText` (valor grande + label)
+  - Imagem → `addImage` base64
+  - Forma → `addShape`
+  - Tabela → `addTable` com mesma config de medidas
+  - Bridge → render para PNG via `html-to-image` no momento do export e inserido como `addImage` (fidelidade total ao visual do app, sem reimplementar waterfall em PPT)
+- A faixa Harald é desenhada por uma função utilitária já existente (reuso da lógica de Bridge/Budget) — garantindo paridade visual.
 
-## Plano de Replicação (React + Tailwind + shadcn)
+## Estrutura técnica
 
-### Stack & estrutura
-- React + TS + Vite (já configurado), Tailwind, shadcn/ui, Recharts (substitui SVG manual quando útil), papaparse (parsing CSV robusto), Zustand para estado global.
-- Sem backend — tudo client-side, dados vivem em memória + opcional persistência em `localStorage`.
+### Novos arquivos
+- `src/lib/customSlide.ts` — tipos `CustomBlock` (union: title/text/kpi/bridge/table/image/shape), `CustomSlideConfig`, helpers de coordenada e defaults.
+- `src/components/pricing/custom/CustomSlideEditor.tsx` — canvas WYSIWYG (drag + resize com `react-rnd` ou implementação manual leve).
+- `src/components/pricing/custom/BlockPalette.tsx` — paleta lateral de blocos.
+- `src/components/pricing/custom/BlockInspector.tsx` — painel de propriedades.
+- `src/components/pricing/custom/blocks/` — renderers de cada tipo de bloco (Title/Text/Kpi/Bridge/Table/Image/Shape).
+- `src/lib/exportCustomSlide.ts` — função `addCustomSlide(pptx, cfg, ctx)` que constrói o slide PPTX.
 
-### Design system (dark glassmorphism)
-- Background gradiente escuro azulado (`#0a0a14` → `#14142a`), cards com `backdrop-blur` + borda `rgba(255,255,255,0.08)`, hover sutil.
-- Acentos: azul `#3b82f6`, verde `#34d399`, vermelho `#f87171`, âmbar `#fbbf24`, roxo `#8b5cf6`.
-- Tipografia leve (font-weight 300 em KPIs grandes), letterspacing negativo em títulos. Animações `fadeUp` nas trocas de view.
-- Tudo via tokens HSL no `index.css` + `tailwind.config.ts`.
+### Arquivos editados
+- `src/lib/slidesFlow.ts` — novo `SlideKind = "custom"`, entry no `SLIDE_CATALOG`, `defaultItem("custom")`, `itemToFlow` chamando `addCustomSlide`, `isItemReady`.
+- `src/lib/exportPpt.ts` — extrair função `addHaraldFooter(slide)` (faixa vermelha + logo) reutilizável; usar em Bridge/Budget e no Custom.
+- `src/pages/SlidesBeta.tsx` — registrar tipo no catálogo e roteamento de editor (quando o item selecionado for `custom`, mostrar `CustomSlideEditor` no lugar do form padrão).
+- `src/components/pricing/SlidePreview.tsx` — case `custom` que renderiza o canvas em modo somente-leitura escalado.
 
-### Layout
-- **Sidebar** (220px): logo 🍫 "Pricing Analytics · Harald", grupo "Dashboards" (Início, Visão Geral, Bridge PVM, Canais, ABC Heróis, Tabela Detalhe), grupo "Upload/Bases" com badge de contagem, toggle de métrica fixo no rodapé.
-- **Topbar**: título da view + chips de períodos (Todos + um por mês carregado, multi-seleção).
-- **Conteúdo**: rolável, usa cards "glass".
+### Dependências
+- `react-rnd` para drag + resize (leve, mantida, ~30kb). Alternativa: implementação manual com pointer events se preferir zero dependência — recomendo `react-rnd` pela velocidade.
 
-### Telas
-1. **Início**: zona de upload destacada se vazio; senão mostra resumo + grid de filtros (marca, canal, categoria, subcategoria, SKU, região, mercado, sabor, tecnologia, faixa de peso).
-2. **Visão Geral**: 4 KPI cards (ROL, Margem R$/%, Volume t, SKUs ativos) + bubble chart Canais + ABC Heróis/Ofensores side-by-side + tabela "Performance por Canal".
-3. **Bridge PVM**: 2 selects de FY (base → comparação) + waterfall (Base, Volume, Preço, Custo, Mix, Atual) + 4 KPIs com efeitos. Mensagem se <2 FYs.
-4. **Canais**: bubble grande + tabela detalhada com ROL/kg.
-5. **ABC Heróis**: top 5 verdes + top 5 vermelhos (barras horizontais animadas) + ranking completo de SKUs.
-6. **Tabela Detalhe**: search + tabela ordenável (sort por coluna), limita 300 linhas visíveis com indicador.
-7. **Upload/Bases**: dropzone (drag&drop + click), barra de progresso, lista de meses carregados (cards com mês/ano + nº linhas), lista de arquivos com botão remover, botão "Limpar tudo", e guia de colunas esperadas.
+## Faixa Harald
+A função `addHaraldFooter(slide, pptx)` será extraída do código atual de Bridge/Budget (mesma logo base64 + retângulo vermelho `#C8102E` + posição rodapé). Usada em **todos** os slides personalizados automaticamente, sem o usuário precisar configurar.
 
-### Lógica de dados
-- Parser CSV: detecta `;` vs `,` e decimal BR/EN; mapeia colunas por nome normalizado (sem acento/espaço); filtra `ROL ≤ 0`; extrai período `005.2025` → mês/ano/FY.
-- Estado global (Zustand): `allRows`, `loadedMonths`, `metric` ('cm'|'mb'), filtros, view atual, sort de tabela, seleções PVM.
-- Funções derivadas: `filteredRows()`, `getKPIs()`, `aggCanal()`, `aggSku()`, `calcPVM(fyBase, fyComp)` (decomposição clássica Volume/Preço/Custo/Mix).
-- Toast (sonner) para feedback de upload.
+## Escopo desta entrega
+Vou implementar tudo descrito acima em uma única passada. A tabela embutida no Custom usa um subconjunto simplificado do Pivot (escolha de linhas/colunas/medidas via popovers — não o Studio inteiro) para manter o escopo gerenciável. O Bridge embutido reaproveita o componente `Waterfall` existente e exporta como imagem renderizada.
 
-### Entregáveis
-- Substituir `Index.tsx` pelo shell (sidebar + topbar + outlet).
-- Componentes: `Sidebar`, `Topbar`, `KpiCard`, `GlassCard`, `Waterfall`, `BubbleChart`, `AbcBar`, `UploadZone`, `MonthCalendar`, `FilterGrid`, `DataTable`.
-- Hooks: `useCsvParser`, `usePricingStore` (Zustand).
-- Utilidades: `formatBRL`, `formatPct`, `parsePeriod`, `calcPVM`.
-
-Resultado: réplica visual e funcional 1:1 do HTML enviado, em React, mantendo a estética glass dark e todo o pipeline analítico.
+## O que NÃO está incluído
+- Templates pré-prontos de slide personalizado (pode vir num próximo passo via "Salvar como template").
+- Animações entre blocos no PPTX.
+- Edição colaborativa em tempo real.

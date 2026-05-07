@@ -21,11 +21,13 @@ import {
   type SlideFlowItem,
   type BudgetEvoRow,
 } from "./exportPpt";
+import { addCustomSlide } from "./exportCustomSlide";
+import { defaultCustomSlide, type CustomSlideConfig } from "./customSlide";
 
 // ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
-export type SlideKind = "bridge_pvm" | "budget_evo" | "cover";
+export type SlideKind = "bridge_pvm" | "budget_evo" | "cover" | "custom";
 
 export interface BaseSlideItem {
   /** Identificador estável (uuid) — usado para drag/drop e keys */
@@ -59,7 +61,8 @@ export interface CoverSlideConfig {
 export type SlideItem =
   | (BaseSlideItem & { kind: "bridge_pvm"; config: BridgePvmSlideConfig })
   | (BaseSlideItem & { kind: "budget_evo"; config: BudgetEvoSlideConfig })
-  | (BaseSlideItem & { kind: "cover"; config: CoverSlideConfig });
+  | (BaseSlideItem & { kind: "cover"; config: CoverSlideConfig })
+  | (BaseSlideItem & { kind: "custom"; config: CustomSlideConfig });
 
 // ---------------------------------------------------------------------------
 // Catálogo (metadados de cada tipo)
@@ -69,7 +72,7 @@ export interface SlideTypeMeta {
   title: string;
   description: string;
   /** Lucide icon name (resolvido na UI) */
-  icon: "GitBranch" | "Target" | "BookOpen";
+  icon: "GitBranch" | "Target" | "BookOpen" | "LayoutTemplate";
   accent: "blue" | "amber" | "neutral";
   supportsFilters: boolean;
 }
@@ -96,6 +99,14 @@ export const SLIDE_CATALOG: SlideTypeMeta[] = [
     title: "Capa / Divisor",
     description: "Slide de abertura ou divisor de seção com título e subtítulo customizáveis.",
     icon: "BookOpen",
+    accent: "neutral",
+    supportsFilters: false,
+  },
+  {
+    kind: "custom",
+    title: "Personalizado",
+    description: "Monte seu próprio slide arrastando blocos (título, KPI, bridge, tabela, imagem). Faixa Harald incluída.",
+    icon: "LayoutTemplate",
     accent: "neutral",
     supportsFilters: false,
   },
@@ -133,6 +144,11 @@ export function defaultItem(kind: SlideKind): SlideItem {
       return {
         id, kind, label: "Capa",
         config: { title: "Resultado Mensal", subtitle: "", variant: "cover" },
+      };
+    case "custom":
+      return {
+        id, kind, label: "Slide personalizado",
+        config: defaultCustomSlide(),
       };
   }
 }
@@ -198,6 +214,14 @@ export function itemToFlow(item: SlideItem, ctx: BuildContext): SlideFlowItem {
             subtitle: cfg.subtitle,
             variant: cfg.variant,
           });
+        },
+      };
+    }
+    case "custom": {
+      const cfg = item.config;
+      return {
+        build: async (pptx) => {
+          await addCustomSlide(pptx, cfg);
         },
       };
     }
@@ -286,6 +310,9 @@ export function isItemReady(item: SlideItem): { ok: boolean; reason?: string } {
       return { ok: true };
     case "cover":
       if (!item.config.title.trim()) return { ok: false, reason: "Título obrigatório." };
+      return { ok: true };
+    case "custom":
+      if (item.config.blocks.length === 0) return { ok: false, reason: "Adicione ao menos um bloco." };
       return { ok: true };
   }
 }

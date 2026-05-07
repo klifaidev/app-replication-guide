@@ -45,7 +45,7 @@ import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 import { toast } from "sonner";
 import {
   ArrowRight, BookOpen, Bookmark, Copy, Download, Filter as FilterIcon,
-  GitBranch, GripVertical, Layers, Plus, RotateCcw, Save, Sparkles, Target, Trash2, X,
+  GitBranch, GripVertical, Layers, LayoutTemplate, Plus, RotateCcw, Save, Sparkles, Target, Trash2, X,
 } from "lucide-react";
 
 import { usePricing } from "@/store/pricing";
@@ -61,6 +61,7 @@ import { cn } from "@/lib/utils";
 import type { Filters, FilterKey, PricingRow } from "@/lib/types";
 import type { BudgetRow } from "@/lib/budget";
 import { SlidePreview } from "@/components/pricing/SlidePreview";
+import { CustomSlideEditor } from "@/components/pricing/custom/CustomSlideEditor";
 
 // ----------------------------------------------------------------------------
 // Smart defaults — calculados no momento de criar o slide a partir das bases
@@ -94,7 +95,7 @@ function smartDefaults(
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
-const ICON_MAP = { GitBranch, Target, BookOpen } as const;
+const ICON_MAP = { GitBranch, Target, BookOpen, LayoutTemplate } as const;
 
 const ACCENT_BG = {
   blue: "bg-primary/15 text-primary border-primary/30",
@@ -213,7 +214,7 @@ function FlowCard({
   const meta = metaOf(item.kind);
   const Icon = ICON_MAP[meta.icon];
   const ready = isItemReady(item);
-  const filtersCount = item.kind !== "cover"
+  const filtersCount = (item.kind === "bridge_pvm" || item.kind === "budget_evo")
     ? Object.values(item.config.filters).filter((v) => v && v.length > 0).length
     : 0;
 
@@ -594,14 +595,22 @@ function Inspector({ item }: { item: SlideItem | null }) {
         {item.kind === "cover" && (
           <CoverConfigPanel item={item} onChange={(next) => updateItem(item.id, () => next)} />
         )}
+        {item.kind === "custom" && (
+          <div className="h-[520px]">
+            <CustomSlideEditor
+              config={item.config}
+              onChange={(cfg) => updateItem(item.id, (it) => (it.kind === "custom" ? { ...it, config: cfg } : it))}
+            />
+          </div>
+        )}
 
-        {meta.supportsFilters && item.kind !== "cover" && (
+        {meta.supportsFilters && (item.kind === "bridge_pvm" || item.kind === "budget_evo") && (
           <>
             <Separator />
             <FiltersPanel
               value={item.config.filters}
               onChange={(filters) => updateItem(item.id, (it) => {
-                if (it.kind === "cover") return it;
+                if (it.kind !== "bridge_pvm" && it.kind !== "budget_evo") return it;
                 return { ...it, config: { ...it.config, filters } } as SlideItem;
               })}
               pricing={pricing}

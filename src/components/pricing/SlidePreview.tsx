@@ -577,5 +577,6 @@ export function SlidePreview({ item }: { item: SlideItem }) {
     case "cover": return <CoverPreview item={item} />;
     case "bridge_pvm": return <BridgePvmPreview item={item} />;
     case "budget_evo": return <BudgetEvoPreview item={item} />;
+    case "custom": return null;
   }
 }
