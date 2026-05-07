@@ -646,6 +646,7 @@ function Inspector({ item }: { item: SlideItem | null }) {
         )}
         {item.kind === "custom" && (
           <CustomSlideFullscreenEditor
+            slideId={item.id}
             config={item.config}
             onChange={(cfg) => updateItem(item.id, (it) => (it.kind === "custom" ? { ...it, config: cfg } : it))}
           />
