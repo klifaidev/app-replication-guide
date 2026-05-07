@@ -219,9 +219,10 @@ export function itemToFlow(item: SlideItem, ctx: BuildContext): SlideFlowItem {
     }
     case "custom": {
       const cfg = item.config;
+      const id = item.id;
       return {
         build: async (pptx) => {
-          await addCustomSlide(pptx, cfg);
+          await addCustomSlide(pptx, cfg, { slideId: id });
         },
       };
     }

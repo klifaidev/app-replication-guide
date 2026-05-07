@@ -1,6 +1,7 @@
 // CustomSlideEditor — canvas WYSIWYG para o slide "Personalizado".
-// Usa react-rnd para drag + resize. Snap-to-grid de 10px. O canvas
-// renderiza no sistema 1333x750 e é escalado via CSS para caber no painel.
+// Drag + resize via react-rnd. Snap-to-grid de 10px com guias de alinhamento
+// dinâmicas. Atalhos de teclado, registro do canvas para o exporter, menu
+// de templates built-in / do usuário.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Rnd } from "react-rnd";
@@ -17,25 +18,36 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowDown, ArrowUp, Copy as CopyIcon, GitBranch, Image as ImageIcon,
-  Layers as LayersIcon, MinusSquare, Plus, Square, Table as TableIcon,
+  Layers as LayersIcon, Plus, Square, Table as TableIcon,
   Trash2, Type as TypeIcon, AlignLeft, ZoomIn, ZoomOut, Maximize2,
+  BarChart3, Trophy, BookOpen, Save, X,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 import {
   CANVAS_W, CANVAS_H, FOOTER_H,
-  newBlock, BLOCK_LABELS,
+  newBlock, BLOCK_LABELS, KPI_MEASURES,
   type CustomBlock, type CustomBlockKind, type CustomSlideConfig,
+  type KpiBlock, type ChartBlock, type TopSkuBlock,
 } from "@/lib/customSlide";
 import { BlockRenderer, CUSTOM_TABLE_MEASURES, CUSTOM_TABLE_DIMS } from "./BlockRenderer";
 import { useMonthsInfo, useFyList } from "@/store/selectors";
 import { cn } from "@/lib/utils";
 import haraldFooterPng from "@/assets/harald-footer-bar.png";
+import { registerCustomCanvas } from "@/lib/customCanvasRegistry";
+import {
+  BUILTIN_TEMPLATES, applyTemplate, loadUserTemplates,
+  saveUserTemplate, deleteUserTemplate, type CustomTemplate,
+} from "@/lib/customTemplates";
 
 const BLOCK_KINDS: { kind: CustomBlockKind; icon: React.ComponentType<{ className?: string }> }[] = [
   { kind: "title",  icon: TypeIcon },
   { kind: "text",   icon: AlignLeft },
   { kind: "kpi",    icon: LayersIcon },
+  { kind: "chart",  icon: BarChart3 },
+  { kind: "topSku", icon: Trophy },
   { kind: "bridge", icon: GitBranch },
   { kind: "table",  icon: TableIcon },
   { kind: "image",  icon: ImageIcon },
@@ -43,20 +55,20 @@ const BLOCK_KINDS: { kind: CustomBlockKind; icon: React.ComponentType<{ classNam
 ];
 
 interface Props {
+  /** ID estável do slide — usado para registrar o canvas no exporter */
+  slideId?: string;
   config: CustomSlideConfig;
   onChange: (next: CustomSlideConfig) => void;
-  /** Necessário para o exporter capturar o canvas em PNG */
-  canvasRef?: React.RefObject<HTMLDivElement>;
 }
 
-export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
+export function CustomSlideEditor({ slideId, config, onChange }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [fitScale, setFitScale] = useState(1);
   const [zoomMode, setZoomMode] = useState<"fit" | "manual">("fit");
   const [manualScale, setManualScale] = useState(1);
+  const [guides, setGuides] = useState<{ v: number[]; h: number[] }>({ v: [], h: [] });
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const internalCanvasRef = useRef<HTMLDivElement>(null);
-  const ref = canvasRef ?? internalCanvasRef;
+  const canvasRef = useRef<HTMLDivElement>(null);
 
   // Calcula a escala para caber no contêiner mantendo a proporção 16:9
   useEffect(() => {
@@ -64,7 +76,6 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
       const el = wrapperRef.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
-      // 24px de padding interno para não colar nas bordas
       const availW = Math.max(rect.width - 24, 100);
       const availH = Math.max(rect.height - 24, 100);
       const s = Math.min(availW / CANVAS_W, availH / CANVAS_H);
@@ -76,12 +87,18 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
     return () => ro.disconnect();
   }, []);
 
+  // Registra o canvas para o exporter capturar
+  useEffect(() => {
+    if (!slideId) return;
+    registerCustomCanvas(slideId, canvasRef.current);
+    return () => registerCustomCanvas(slideId, null);
+  }, [slideId]);
+
   const scale = zoomMode === "fit" ? fitScale : manualScale;
   const setZoom = (s: number) => {
     setZoomMode("manual");
     setManualScale(Math.max(0.1, Math.min(3, s)));
   };
-
 
   const selected = config.blocks.find((b) => b.id === selectedId) ?? null;
   const zTop = config.blocks.reduce((m, b) => Math.max(m, b.z), 0);
@@ -113,11 +130,70 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
     updateBlock(id, { z: minZ - 1 } as Partial<CustomBlock>);
   };
 
+  // Atalhos de teclado
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) return;
+      if (!selectedId) return;
+      const cur = config.blocks.find((b) => b.id === selectedId);
+      if (!cur) return;
+      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); removeBlock(selectedId); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d") { e.preventDefault(); duplicateBlock(selectedId); return; }
+      if (e.key === "Escape") { setSelectedId(null); return; }
+      const step = e.shiftKey ? 10 : 1;
+      if (e.key === "ArrowUp")    { e.preventDefault(); updateBlock(selectedId, { y: Math.max(0, cur.y - step) }); }
+      if (e.key === "ArrowDown")  { e.preventDefault(); updateBlock(selectedId, { y: Math.min(CANVAS_H - cur.h, cur.y + step) }); }
+      if (e.key === "ArrowLeft")  { e.preventDefault(); updateBlock(selectedId, { x: Math.max(0, cur.x - step) }); }
+      if (e.key === "ArrowRight") { e.preventDefault(); updateBlock(selectedId, { x: Math.min(CANVAS_W - cur.w, cur.x + step) }); }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, config.blocks]);
+
+  // Snap guides — calcula linhas vermelhas quando alinhamento ≤ 6px
+  function computeGuides(activeId: string, x: number, y: number, w: number, h: number) {
+    const others = config.blocks.filter((b) => b.id !== activeId);
+    const TH = 6;
+    const v: number[] = [], hh: number[] = [];
+    const candidatesX = [0, CANVAS_W / 2, CANVAS_W];
+    const candidatesY = [0, CANVAS_H / 2, CANVAS_H];
+    others.forEach((b) => {
+      candidatesX.push(b.x, b.x + b.w / 2, b.x + b.w);
+      candidatesY.push(b.y, b.y + b.h / 2, b.y + b.h);
+    });
+    const checks = [x, x + w / 2, x + w];
+    const checksY = [y, y + h / 2, y + h];
+    for (const cx of candidatesX) for (const c of checks) if (Math.abs(cx - c) <= TH) v.push(cx);
+    for (const cy of candidatesY) for (const c of checksY) if (Math.abs(cy - c) <= TH) hh.push(cy);
+    setGuides({ v: Array.from(new Set(v)), h: Array.from(new Set(hh)) });
+  }
+
+  // Templates
+  const [tplOpen, setTplOpen] = useState(false);
+  const [saveTplOpen, setSaveTplOpen] = useState(false);
+  const [tplName, setTplName] = useState("");
+  const [userTpls, setUserTpls] = useState<CustomTemplate[]>(() => loadUserTemplates());
+  const refreshUserTpls = () => setUserTpls(loadUserTemplates());
+
   return (
-    <div className="grid h-full min-h-0 grid-cols-[170px_minmax(0,1fr)_280px] gap-3">
+    <div className="grid h-full min-h-0 grid-cols-[180px_minmax(0,1fr)_300px] gap-3">
       {/* ====== Paleta ====== */}
       <ScrollArea className="rounded-lg border border-border/40 bg-card/40">
         <div className="flex flex-col gap-1 p-2">
+          <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Modelos
+          </div>
+          <Button size="sm" variant="outline" className="h-7 justify-start gap-2 text-xs"
+            onClick={() => setTplOpen(true)}>
+            <BookOpen className="h-3.5 w-3.5" /> Aplicar modelo
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 justify-start gap-2 text-xs"
+            onClick={() => setSaveTplOpen(true)}
+            disabled={config.blocks.length === 0}>
+            <Save className="h-3.5 w-3.5" /> Salvar como modelo
+          </Button>
+          <Separator className="my-2" />
           <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Adicionar bloco
           </div>
@@ -139,6 +215,9 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
               onCheckedChange={(v) => onChange({ ...config, showHaraldFooter: v })}
             />
           </div>
+          <p className="mt-2 px-2 text-[10px] leading-relaxed text-muted-foreground">
+            Atalhos: <kbd>Del</kbd> excluir · <kbd>⌘D</kbd> duplicar · <kbd>setas</kbd> mover (Shift = 10px)
+          </p>
         </div>
       </ScrollArea>
 
@@ -149,7 +228,6 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
           className="relative min-h-0 flex-1 overflow-auto rounded-lg border border-border/40 bg-secondary/20"
           onClick={() => setSelectedId(null)}
         >
-          {/* Wrapper que reserva o espaço escalado mantendo a proporção 16:9 */}
           <div
             className="relative"
             style={{
@@ -159,7 +237,7 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
             }}
           >
             <div
-              ref={ref}
+              ref={canvasRef}
               onClick={(e) => e.stopPropagation()}
               style={{
                 width: CANVAS_W,
@@ -180,17 +258,22 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
                   size={{ width: blk.w, height: blk.h }}
                   position={{ x: blk.x, y: blk.y }}
                   bounds="parent"
-                  dragGrid={[10, 10]}
-                  resizeGrid={[10, 10]}
+                  dragGrid={[5, 5]}
+                  resizeGrid={[5, 5]}
                   scale={scale}
-                  onDragStop={(_, d) => updateBlock(blk.id, { x: d.x, y: d.y })}
-                  onResizeStop={(_, __, refEl, ___, pos) =>
+                  onDrag={(_, d) => computeGuides(blk.id, d.x, d.y, blk.w, blk.h)}
+                  onResize={(_, __, refEl, ___, pos) =>
+                    computeGuides(blk.id, pos.x, pos.y, parseInt(refEl.style.width, 10), parseInt(refEl.style.height, 10))
+                  }
+                  onDragStop={(_, d) => { setGuides({ v: [], h: [] }); updateBlock(blk.id, { x: d.x, y: d.y }); }}
+                  onResizeStop={(_, __, refEl, ___, pos) => {
+                    setGuides({ v: [], h: [] });
                     updateBlock(blk.id, {
                       w: parseInt(refEl.style.width, 10),
                       h: parseInt(refEl.style.height, 10),
                       x: pos.x, y: pos.y,
-                    })
-                  }
+                    });
+                  }}
                   onMouseDown={(e) => { e.stopPropagation(); setSelectedId(blk.id); }}
                   style={{ zIndex: blk.z }}
                   className={cn(
@@ -204,6 +287,20 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
                     <BlockRenderer block={blk} />
                   </div>
                 </Rnd>
+              ))}
+
+              {/* Snap guides overlay */}
+              {guides.v.map((x, i) => (
+                <div key={`gv-${i}`} style={{
+                  position: "absolute", left: x, top: 0, width: 1, height: CANVAS_H,
+                  background: "#C8102E", pointerEvents: "none", zIndex: 999998,
+                }} />
+              ))}
+              {guides.h.map((y, i) => (
+                <div key={`gh-${i}`} style={{
+                  position: "absolute", top: y, left: 0, height: 1, width: CANVAS_W,
+                  background: "#C8102E", pointerEvents: "none", zIndex: 999998,
+                }} />
               ))}
 
               {/* Faixa Harald (não editável, sempre por cima) */}
@@ -222,17 +319,14 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
           </div>
         </div>
 
-        {/* Barra de zoom (estilo PowerPoint) */}
+        {/* Barra de zoom */}
         <div className="flex shrink-0 items-center justify-center gap-1 rounded-lg border border-border/40 bg-card/40 px-2 py-1">
           <Button size="icon" variant="ghost" className="h-7 w-7"
             onClick={() => setZoom(scale - 0.1)} title="Diminuir zoom">
             <ZoomOut className="h-3.5 w-3.5" />
           </Button>
           <input
-            type="range"
-            min={10}
-            max={300}
-            step={5}
+            type="range" min={10} max={300} step={5}
             value={Math.round(scale * 100)}
             onChange={(e) => setZoom(parseInt(e.target.value, 10) / 100)}
             className="h-1 w-40 cursor-pointer accent-primary"
@@ -263,7 +357,7 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
             <div className="space-y-2 px-1 text-[12px] text-muted-foreground">
               <p className="font-medium text-foreground">Slide personalizado</p>
               <p>Adicione blocos pela paleta à esquerda. Clique em um bloco para editar suas propriedades aqui.</p>
-              <p>Arraste pelas bordas para mover, use os cantos para redimensionar. Snap de 10px.</p>
+              <p>Arraste pelas bordas para mover, use os cantos para redimensionar. Linhas vermelhas mostram alinhamento com outros blocos.</p>
             </div>
           ) : (
             <>
@@ -292,6 +386,55 @@ export function CustomSlideEditor({ config, onChange, canvasRef }: Props) {
           )}
         </div>
       </ScrollArea>
+
+      {/* Templates dialog */}
+      <Dialog open={tplOpen} onOpenChange={setTplOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Aplicar modelo</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-2">
+            {[...BUILTIN_TEMPLATES, ...userTpls].map((t) => (
+              <div key={t.id} className="group relative rounded-lg border border-border/40 bg-card/60 p-3 hover:border-primary/60">
+                <button className="block w-full text-left"
+                  onClick={() => { onChange(applyTemplate(t)); setTplOpen(false); toast.success(`Modelo "${t.name}" aplicado`); }}>
+                  <div className="text-sm font-medium">{t.name}</div>
+                  <div className="text-[11px] text-muted-foreground">{t.description ?? `${t.config.blocks.length} blocos`}</div>
+                  {t.builtin && <Badge variant="secondary" className="mt-2 text-[9px]">Built-in</Badge>}
+                </button>
+                {!t.builtin && (
+                  <Button size="icon" variant="ghost"
+                    className="absolute right-1 top-1 h-6 w-6 opacity-0 group-hover:opacity-100 hover:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); deleteUserTemplate(t.id); refreshUserTpls(); toast.success("Modelo removido"); }}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Save template dialog */}
+      <Dialog open={saveTplOpen} onOpenChange={setSaveTplOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Salvar modelo</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            <Label>Nome</Label>
+            <Input autoFocus value={tplName} onChange={(e) => setTplName(e.target.value)}
+              placeholder="Ex.: Resumo mensal" />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setSaveTplOpen(false)}>Cancelar</Button>
+            <Button disabled={!tplName.trim()}
+              onClick={() => {
+                saveUserTemplate(tplName.trim(), config);
+                refreshUserTpls();
+                setSaveTplOpen(false);
+                setTplName("");
+                toast.success("Modelo salvo");
+              }}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -374,20 +517,7 @@ function BlockSpecificEditor({ block, onChange }: {
     }
 
     case "kpi":
-      return (
-        <div className="space-y-2">
-          <Field label="Rótulo" value={block.label}
-            onChange={(v) => onChange({ label: v } as never)} />
-          <Field label="Valor" value={block.value}
-            onChange={(v) => onChange({ value: v } as never)} />
-          <div className="grid grid-cols-2 gap-2">
-            <NumField label="Tamanho do valor" value={block.valueSize}
-              onChange={(v) => onChange({ valueSize: v } as never)} />
-            <Field label="Cor (hex)" value={block.color}
-              onChange={(v) => onChange({ color: v.replace("#", "") } as never)} />
-          </div>
-        </div>
-      );
+      return <KpiInspector block={block} onChange={onChange} />;
 
     case "image":
       return (
@@ -443,6 +573,12 @@ function BlockSpecificEditor({ block, onChange }: {
 
     case "table":
       return <TableBlockEditor block={block} onChange={onChange} />;
+
+    case "chart":
+      return <ChartBlockEditor block={block} onChange={onChange} />;
+
+    case "topSku":
+      return <TopSkuBlockEditor block={block} onChange={onChange} />;
   }
 }
 
@@ -464,6 +600,110 @@ function NumField({ label, value, onChange }: { label: string; value: number; on
   );
 }
 
+// ---------------------------------------------------------------------------
+// KPI inspector — Manual ou Dinâmico
+// ---------------------------------------------------------------------------
+function KpiInspector({ block, onChange }: {
+  block: KpiBlock; onChange: (p: Partial<CustomBlock>) => void;
+}) {
+  const months = useMonthsInfo();
+  const fyList = useFyList();
+  const periodMode = block.periodMode ?? "all";
+  const periodOpts = periodMode === "fy"
+    ? fyList.map((f) => ({ value: f, label: f }))
+    : periodMode === "month"
+      ? months.map((m) => ({ value: m.periodo, label: m.label }))
+      : [];
+
+  return (
+    <div className="space-y-2">
+      <Field label="Rótulo" value={block.label}
+        onChange={(v) => onChange({ label: v } as never)} />
+
+      <div>
+        <Label className="text-[10px] uppercase text-muted-foreground">Origem do valor</Label>
+        <Select value={block.source}
+          onValueChange={(v) => onChange({ source: v as "manual"|"dynamic" } as never)}>
+          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="dynamic">Dinâmico (calcular da base)</SelectItem>
+            <SelectItem value="manual">Manual (digitar valor)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {block.source === "manual" ? (
+        <Field label="Valor" value={block.manualValue ?? ""}
+          onChange={(v) => onChange({ manualValue: v } as never)} />
+      ) : (
+        <>
+          <div>
+            <Label className="text-[10px] uppercase text-muted-foreground">Medida</Label>
+            <Select value={block.measure ?? "rol"}
+              onValueChange={(v) => onChange({ measure: v as never } as never)}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {KPI_MEASURES.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-[10px] uppercase text-muted-foreground">Período</Label>
+              <Select value={periodMode}
+                onValueChange={(v) => onChange({ periodMode: v as never, periodValue: null } as never)}>
+                <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="month">Mês</SelectItem>
+                  <SelectItem value="fy">Ano fiscal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {periodMode !== "all" && (
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground">Valor</Label>
+                <Select value={block.periodValue ?? ""}
+                  onValueChange={(v) => onChange({ periodValue: v } as never)}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="..." /></SelectTrigger>
+                  <SelectContent>
+                    {periodOpts.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-muted-foreground">Formato</Label>
+            <Select value={block.format ?? "auto"}
+              onValueChange={(v) => onChange({ format: v as never } as never)}>
+              <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Automático</SelectItem>
+                <SelectItem value="currency">Moeda (R$)</SelectItem>
+                <SelectItem value="percent">Percentual</SelectItem>
+                <SelectItem value="tons">Toneladas</SelectItem>
+                <SelectItem value="number">Número</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )}
+
+      <Separator />
+      <div className="grid grid-cols-2 gap-2">
+        <NumField label="Tamanho do valor" value={block.valueSize}
+          onChange={(v) => onChange({ valueSize: v } as never)} />
+        <Field label="Cor (hex)" value={block.color}
+          onChange={(v) => onChange({ color: v.replace("#", "") } as never)} />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 function BridgeBlockEditor({ block, onChange }: {
   block: Extract<CustomBlock, { kind: "bridge" }>;
   onChange: (p: Partial<CustomBlock>) => void;
@@ -584,6 +824,145 @@ function TableBlockEditor({ block, onChange }: {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+function ChartBlockEditor({ block, onChange }: {
+  block: ChartBlock; onChange: (p: Partial<CustomBlock>) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Field label="Título" value={block.title ?? ""}
+        onChange={(v) => onChange({ title: v } as never)} />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-[10px] uppercase text-muted-foreground">Tipo</Label>
+          <Select value={block.chartType}
+            onValueChange={(v) => onChange({ chartType: v as never } as never)}>
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="line">Linha</SelectItem>
+              <SelectItem value="bar">Barra</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-[10px] uppercase text-muted-foreground">Medida</Label>
+          <Select value={block.measure}
+            onValueChange={(v) => onChange({ measure: v as never } as never)}>
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {KPI_MEASURES.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div>
+        <Label className="text-[10px] uppercase text-muted-foreground">Quebrar por</Label>
+        <Select value={block.breakdown ?? "__none__"}
+          onValueChange={(v) => onChange({ breakdown: v === "__none__" ? null : v } as never)}>
+          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— Série única —</SelectItem>
+            <SelectItem value="marca">Marca</SelectItem>
+            <SelectItem value="canalAjustado">Canal Ajustado</SelectItem>
+            <SelectItem value="categoria">Categoria</SelectItem>
+            <SelectItem value="mercado">Mercado</SelectItem>
+            <SelectItem value="inovacao">Inovação/Regular</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <ToggleRow label="Grade" value={block.showGrid} onChange={(v) => onChange({ showGrid: v } as never)} />
+        <ToggleRow label="Legenda" value={block.showLegend} onChange={(v) => onChange({ showLegend: v } as never)} />
+        <ToggleRow label="Rótulos" value={block.showLabels} onChange={(v) => onChange({ showLabels: v } as never)} />
+      </div>
+    </div>
+  );
+}
+
+function TopSkuBlockEditor({ block, onChange }: {
+  block: TopSkuBlock; onChange: (p: Partial<CustomBlock>) => void;
+}) {
+  const months = useMonthsInfo();
+  const fyList = useFyList();
+  const periodOpts = block.periodMode === "fy"
+    ? fyList.map((f) => ({ value: f, label: f }))
+    : block.periodMode === "month"
+      ? months.map((m) => ({ value: m.periodo, label: m.label }))
+      : [];
+  return (
+    <div className="space-y-2">
+      <Field label="Título" value={block.title ?? ""}
+        onChange={(v) => onChange({ title: v } as never)} />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-[10px] uppercase text-muted-foreground">Ranquear por</Label>
+          <Select value={block.dim}
+            onValueChange={(v) => onChange({ dim: v as never } as never)}>
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="skuDesc">Descrição SKU</SelectItem>
+              <SelectItem value="sku">SKU</SelectItem>
+              <SelectItem value="cliente">Cliente</SelectItem>
+              <SelectItem value="marca">Marca</SelectItem>
+              <SelectItem value="categoria">Categoria</SelectItem>
+              <SelectItem value="canalAjustado">Canal Ajustado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-[10px] uppercase text-muted-foreground">Medida</Label>
+          <Select value={block.measure}
+            onValueChange={(v) => onChange({ measure: v as never } as never)}>
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {KPI_MEASURES.map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <NumField label="Top N" value={block.topN}
+          onChange={(v) => onChange({ topN: Math.max(1, Math.min(50, v)) } as never)} />
+        <div>
+          <Label className="text-[10px] uppercase text-muted-foreground">Período</Label>
+          <Select value={block.periodMode}
+            onValueChange={(v) => onChange({ periodMode: v as never, periodValue: null } as never)}>
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="month">Mês</SelectItem>
+              <SelectItem value="fy">Ano fiscal</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      {block.periodMode !== "all" && (
+        <div>
+          <Label className="text-[10px] uppercase text-muted-foreground">Valor do período</Label>
+          <Select value={block.periodValue ?? ""}
+            onValueChange={(v) => onChange({ periodValue: v } as never)}>
+            <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="..." /></SelectTrigger>
+            <SelectContent>
+              {periodOpts.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <ToggleRow label="Mostrar % do total" value={block.showShare}
+        onChange={(v) => onChange({ showShare: v } as never)} />
+    </div>
+  );
+}
+
+function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <Label className="text-[10px] uppercase text-muted-foreground">{label}</Label>
+      <Switch checked={value} onCheckedChange={onChange} />
     </div>
   );
 }

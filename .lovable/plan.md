@@ -1,63 +1,83 @@
-# Slides (Beta) — Slide "Personalizado" com canvas livre
+## Slide Personalizado — correção do export + upgrade
 
-## Objetivo
-Adicionar um novo tipo no catálogo chamado **Personalizado**, onde o usuário monta o slide arrastando, redimensionando e configurando blocos (bridge, tabela, título, texto, KPI, imagem) num canvas WYSIWYG. A exportação para PPTX reproduz fielmente o layout desenhado, já incluindo a faixa vermelha + logo Harald no rodapé (igual aos slides padrão de Bridge e Budget Evolutivo).
+### 1. Bug do export em branco (causa raiz)
 
-## Como vai funcionar (visão do usuário)
+Hoje `exportCustomSlide.tsx` cria um `host` off-screen, monta um React root novo e usa `html-to-image` para tirar um PNG. O problema:
 
-1. Em `/slides`, no catálogo aparece um novo card **Personalizado** (ícone `LayoutTemplate`).
-2. Ao adicionar, abre um editor de canvas em proporção 16:9 (1920×1080 internos, escalado).
-3. **Paleta de blocos** lateral com:
-   - **Título** (texto grande, fonte/tamanho/cor)
-   - **Texto** (parágrafo livre)
-   - **KPI** (valor + label, formato moeda/%/número)
-   - **Bridge PVM** (mini gráfico waterfall — usa filtros + período base/comp do bloco)
-   - **Tabela dinâmica** (linhas/colunas/medidas configuráveis, igual ao Pivot Studio mas embutido)
-   - **Imagem** (upload local, base64)
-   - **Forma** (retângulo/linha com cor)
-4. Cada bloco é **arrastável** (drag) e **redimensionável** (resize handles nos cantos), com snap-to-grid de 10px e guias de alinhamento.
-5. Painel direito (**Inspector**) mostra propriedades do bloco selecionado: posição (x/y/w/h), z-index, e props específicas do tipo.
-6. **Faixa Harald** (faixa vermelha + logo no rodapé) já vem renderizada no canvas como camada fixa, não editável — confirmando o que será exportado.
-7. Toolbar do editor: desfazer/refazer, duplicar, deletar, trazer pra frente / mandar pra trás, snap on/off.
-8. O slide personalizado entra no fluxo normal do `SlidesFlow`: aparece na lista, pode ser reordenado, salvo em preset, e exportado junto com os demais.
+- Os blocos `bridge`, `table` e `kpi` dependem dos stores Zustand (`usePricing`, `useBudget`) e do tema/CSS do app. Renderizados num root isolado fora da árvore principal, o CSS Tailwind ainda chega, mas o `html-to-image` em `position: fixed; left: -99999px` frequentemente captura antes do `<Waterfall>` (Recharts) medir tamanho — gerando um SVG 0×0 → imagem em branco.
+- O `await requestAnimationFrame` + `setTimeout(120)` não é suficiente para Recharts (precisa de `ResizeObserver` que não dispara fora da viewport).
+- Resultado: o PNG enviado ao PPT vem transparente/branco, e só a faixa Harald (adicionada depois como `addImage` nativo) aparece.
 
-## Exportação fiel
-- Coordenadas do canvas (1920×1080) convertidas para polegadas (10" × 5.625") na hora de gerar com `pptxgenjs`.
-- Cada bloco vira o equivalente nativo no PPTX:
-  - Título/Texto → `slide.addText`
-  - KPI → dois `addText` (valor grande + label)
-  - Imagem → `addImage` base64
-  - Forma → `addShape`
-  - Tabela → `addTable` com mesma config de medidas
-  - Bridge → render para PNG via `html-to-image` no momento do export e inserido como `addImage` (fidelidade total ao visual do app, sem reimplementar waterfall em PPT)
-- A faixa Harald é desenhada por uma função utilitária já existente (reuso da lógica de Bridge/Budget) — garantindo paridade visual.
+**Fix:** capturar o canvas **que já está montado e visível dentro do editor** (via `canvasRef` que já existe no `CustomSlideEditor`, mas hoje não é passado pelo fluxo de export). Passos:
 
-## Estrutura técnica
+1. Manter um registry `customSlideCanvasRefs: Map<slideId, HTMLDivElement>` em `slidesFlow.ts` populado pelo `CustomSlideEditor` quando montado.
+2. No export, antes de chamar `addCustomSlide`, abrir o editor fullscreen daquele slide (ou um host visível temporário renderizando o slide em escala 1:1 dentro do `body` com `opacity:0` mas dimensões reais e mesmo provider tree).
+3. Usar `html-to-image` com `pixelRatio: 2`, esperar `await new Promise(r => setTimeout(r, 600))` + duplo `requestAnimationFrame` para Recharts/imagens carregarem.
+4. Para Bridge especificamente, renderizar o `<Waterfall>` com `width`/`height` fixos (não 9999) usando o tamanho real do bloco × scale para garantir layout correto.
+5. Fallback: se o snapshot retornar dimensões 0, refazer com `dom-to-image-more` (mais tolerante a SVG).
 
-### Novos arquivos
-- `src/lib/customSlide.ts` — tipos `CustomBlock` (union: title/text/kpi/bridge/table/image/shape), `CustomSlideConfig`, helpers de coordenada e defaults.
-- `src/components/pricing/custom/CustomSlideEditor.tsx` — canvas WYSIWYG (drag + resize com `react-rnd` ou implementação manual leve).
-- `src/components/pricing/custom/BlockPalette.tsx` — paleta lateral de blocos.
-- `src/components/pricing/custom/BlockInspector.tsx` — painel de propriedades.
-- `src/components/pricing/custom/blocks/` — renderers de cada tipo de bloco (Title/Text/Kpi/Bridge/Table/Image/Shape).
-- `src/lib/exportCustomSlide.ts` — função `addCustomSlide(pptx, cfg, ctx)` que constrói o slide PPTX.
+### 2. KPI dinâmico
 
-### Arquivos editados
-- `src/lib/slidesFlow.ts` — novo `SlideKind = "custom"`, entry no `SLIDE_CATALOG`, `defaultItem("custom")`, `itemToFlow` chamando `addCustomSlide`, `isItemReady`.
-- `src/lib/exportPpt.ts` — extrair função `addHaraldFooter(slide)` (faixa vermelha + logo) reutilizável; usar em Bridge/Budget e no Custom.
-- `src/pages/SlidesBeta.tsx` — registrar tipo no catálogo e roteamento de editor (quando o item selecionado for `custom`, mostrar `CustomSlideEditor` no lugar do form padrão).
-- `src/components/pricing/SlidePreview.tsx` — case `custom` que renderiza o canvas em modo somente-leitura escalado.
+Estender `KpiBlock` em `customSlide.ts`:
 
-### Dependências
-- `react-rnd` para drag + resize (leve, mantida, ~30kb). Alternativa: implementação manual com pointer events se preferir zero dependência — recomendo `react-rnd` pela velocidade.
+```ts
+interface KpiBlock extends BaseBlock {
+  kind: "kpi";
+  label: string;
+  // novo:
+  source: "manual" | "dynamic";
+  manualValue?: string;          // usado quando source = "manual"
+  measure?: KpiMeasureId;        // rol | volume | cm | mb | cv | frete | comissao | cmPct | mbPct | precoMedio
+  period?: { mode: "fy"|"month"|"all"; value: string|null };
+  filters?: Filters;
+  format?: "currency"|"percent"|"tons"|"number"|"auto";
+  // visual existente:
+  valueSize: number;
+  color: string;
+}
+```
 
-## Faixa Harald
-A função `addHaraldFooter(slide, pptx)` será extraída do código atual de Bridge/Budget (mesma logo base64 + retângulo vermelho `#C8102E` + posição rodapé). Usada em **todos** os slides personalizados automaticamente, sem o usuário precisar configurar.
+- Catálogo `KPI_MEASURES` reutilizando os mesmos campos do DRE (`rol_real`, `cm_real`, `mb_real`, `volumeKg_real`, `custoVariavel_real`, `frete_real`, `comissao_real`) + derivados (`%CM`, `%MB`, `Preço médio = ROL/Volume`).
+- `KpiRender` lê `usePricing`/`useBudget`, aplica `applyFilters` + filtro de período, agrega e formata via `formatBRL`/`%`.
+- Inspector ganha um toggle "Manual / Dinâmico". Em Dinâmico mostra: select de medida, modo (FY/Mês/Geral), select de período, mini-painel de filtros (marca, canal, categoria, mercado — usa o `MultiSelectFilter` já existente), formato.
+- Compatibilidade: KPIs existentes (sem `source`) viram `manual` por padrão.
 
-## Escopo desta entrega
-Vou implementar tudo descrito acima em uma única passada. A tabela embutida no Custom usa um subconjunto simplificado do Pivot (escolha de linhas/colunas/medidas via popovers — não o Studio inteiro) para manter o escopo gerenciável. O Bridge embutido reaproveita o componente `Waterfall` existente e exporta como imagem renderizada.
+### 3. Novos blocos
 
-## O que NÃO está incluído
-- Templates pré-prontos de slide personalizado (pode vir num próximo passo via "Salvar como template").
-- Animações entre blocos no PPTX.
-- Edição colaborativa em tempo real.
+- **`chart`** — gráfico de linha ou barra ao longo do tempo (eixo X = período, Y = medida escolhida). Quebra opcional por dimensão (marca, canal). Usa Recharts.
+- **`topSku`** — lista ranqueada dos top N SKUs (ou top clientes / marcas) por uma medida, com filtros e período. Renderiza como tabela compacta (Posição · Nome · Valor · %total).
+
+Adicionados a `CustomBlockKind`, `newBlock`, `BLOCK_LABELS`, `BlockRenderer` e ao exporter (entram no PNG capturado, sem trabalho extra no PPTX).
+
+### 4. Snap / guias / atalhos
+
+- Snap visual: ao arrastar/redimensionar, calcular linhas-guia (bordas e centros de outros blocos + centro do canvas) e desenhar overlay tracejado quando alinhamento ≤ 6px.
+- Atalhos no editor (capturados em `keydown` quando o canvas tem foco):
+  - `Delete` / `Backspace` → remover bloco selecionado
+  - `Ctrl/Cmd+D` → duplicar
+  - `Setas` → mover 1px (`Shift+Setas` → 10px)
+  - `Ctrl/Cmd+]` / `[` → trazer pra frente / pra trás
+  - `Esc` → desselecionar
+
+### 5. Templates
+
+- **Templates prontos** (built-in): "Capa", "KPIs + Bridge", "Tabela cheia", "3 KPIs + Top SKUs", "Bridge + Tabela lateral". Cada um é um `CustomSlideConfig` predefinido. Mostrados num menu "Modelo" no topo do editor; aplicar substitui blocos atuais (com confirmação).
+- **Templates do usuário**: botão "Salvar como modelo" persiste o `CustomSlideConfig` atual no `localStorage` (`harald.customTemplates`) com nome. Lista de "Meus modelos" no mesmo menu, com renomear/excluir.
+
+### 6. Estrutura de arquivos
+
+**Editar**
+- `src/lib/customSlide.ts` — novos campos KPI, novos kinds (`chart`, `topSku`), defaults.
+- `src/components/pricing/custom/BlockRenderer.tsx` — renderers `KpiDynamic`, `Chart`, `TopSku`; KPI atualizado.
+- `src/components/pricing/custom/CustomSlideEditor.tsx` — inspector dinâmico para KPI/Chart/TopSku, snap/guias, atalhos, menu de templates, registro do canvas no registry.
+- `src/lib/exportCustomSlide.tsx` — captura do canvas montado (com fallback off-screen melhorado), espera correta de Recharts, fallback `dom-to-image-more`.
+- `src/lib/slidesFlow.ts` — registry de refs do canvas custom; passar ref ao `addCustomSlide`.
+- `src/pages/SlidesBeta.tsx` — registrar ref ao montar editor; entry de templates built-in.
+
+**Criar**
+- `src/lib/customTemplates.ts` — lista built-in + load/save de `localStorage`.
+- `src/components/pricing/custom/blocks/ChartBlock.tsx`, `TopSkuBlock.tsx` (se ficar grande; senão inline em `BlockRenderer`).
+
+### 7. Fora do escopo desta entrega
+- Edição colaborativa, undo/redo global, animações no PPT.
+- Sincronização de templates do usuário entre dispositivos (fica no `localStorage`).
