@@ -872,39 +872,46 @@ export default function SlidesBeta() {
         {/* ===== Coluna esquerda: catálogo + presets ===== */}
         <aside className="flex min-h-0 flex-col border-r border-border/40 bg-sidebar/40">
           <ScrollArea className="flex-1">
-            <div className="flex flex-col gap-4 p-4">
+            <div className="flex flex-col gap-4 p-3">
               <div>
-                <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  <Layers className="h-3 w-3" /> Catálogo
+                <div className="mb-2 flex items-center justify-center text-muted-foreground">
+                  <Layers className="h-3.5 w-3.5" />
                 </div>
-                <div className="space-y-1.5">
-                  {SLIDE_CATALOG.map((s) => {
-                    const Icon = ICON_MAP[s.icon];
-                    return (
-                      <button
-                        key={s.kind}
-                        onClick={() => addWithDefaults(s.kind)}
-                        className="group flex w-full items-start gap-3 rounded-xl border border-border/40 bg-card/40 p-3 text-left transition-all hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-sm"
-                      >
-                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[s.accent])}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-sm font-medium">{s.title}</span>
-                            <Plus className="h-3.5 w-3.5 text-muted-foreground/40 transition-colors group-hover:text-primary" />
-                          </div>
-                          <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{s.description}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                <TooltipProvider delayDuration={150}>
+                  <div className="flex flex-col items-center gap-2">
+                    {SLIDE_CATALOG.map((s) => {
+                      const Icon = ICON_MAP[s.icon];
+                      return (
+                        <Tooltip key={s.kind}>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => addWithDefaults(s.kind)}
+                              className={cn(
+                                "group relative flex h-11 w-11 items-center justify-center rounded-xl border transition-all hover:-translate-y-px hover:shadow-sm",
+                                ACCENT_BG[s.accent],
+                              )}
+                              aria-label={s.title}
+                            >
+                              <Icon className="h-5 w-5" />
+                              <Plus className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-background text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-[240px]">
+                            <div className="text-xs font-medium">{s.title}</div>
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">{s.description}</div>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                </TooltipProvider>
               </div>
 
+              <Separator />
+
               <div>
-                <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                  <Bookmark className="h-3 w-3" /> Pré-definições
+                <div className="mb-2 flex items-center justify-center text-muted-foreground">
+                  <Bookmark className="h-3.5 w-3.5" />
                 </div>
                 <PresetsPanel />
               </div>
