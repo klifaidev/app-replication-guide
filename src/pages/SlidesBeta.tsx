@@ -545,9 +545,11 @@ function CoverConfigPanel({
 // Editor do Slide Personalizado em modo "tela cheia" (overlay sobre a esteira)
 // ----------------------------------------------------------------------------
 function CustomSlideFullscreenEditor({
+  slideId,
   config,
   onChange,
 }: {
+  slideId: string;
   config: Extract<SlideItem, { kind: "custom" }>["config"];
   onChange: (cfg: Extract<SlideItem, { kind: "custom" }>["config"]) => void;
 }) {
