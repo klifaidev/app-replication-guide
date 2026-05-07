@@ -16,7 +16,9 @@ export type CustomBlockKind =
   | "image"
   | "shape"
   | "bridge"
-  | "table";
+  | "table"
+  | "chart"
+  | "topSku";
 
 export interface BaseBlock {
   id: string;
@@ -28,9 +30,9 @@ export interface BaseBlock {
 export interface TitleBlock extends BaseBlock {
   kind: "title";
   text: string;
-  size: number;     // px (no canvas)
+  size: number;
   bold: boolean;
-  color: string;    // hex sem #
+  color: string;
   align: "left" | "center" | "right";
 }
 
@@ -42,17 +44,40 @@ export interface TextBlock extends BaseBlock {
   align: "left" | "center" | "right";
 }
 
+// ---------------------------------------------------------------------------
+// KPI — agora suporta valor manual OU cálculo dinâmico a partir da base
+// ---------------------------------------------------------------------------
+export type KpiMeasureId =
+  | "rol" | "volume" | "cm" | "mb" | "cv" | "frete" | "comissao"
+  | "cmPct" | "mbPct" | "precoMedio";
+
+export type KpiPeriodMode = "fy" | "month" | "all";
+export type KpiFormat = "auto" | "currency" | "percent" | "tons" | "number";
+
 export interface KpiBlock extends BaseBlock {
   kind: "kpi";
   label: string;
-  value: string;          // formatado livremente pelo usuário
+  /** Tamanho do texto do valor */
   valueSize: number;
   color: string;
+  /** Modo de origem do valor */
+  source: "manual" | "dynamic";
+  /** Valor manual (usado quando source = manual) */
+  manualValue?: string;
+  /** Medida (usado quando source = dynamic) */
+  measure?: KpiMeasureId;
+  /** Período: fy/month/all */
+  periodMode?: KpiPeriodMode;
+  /** Período específico (FY string ou periodo "005.2025") */
+  periodValue?: string | null;
+  /** Filtros adicionais aplicados ao bloco */
+  filters?: Filters;
+  /** Formato; "auto" infere a partir da medida */
+  format?: KpiFormat;
 }
 
 export interface ImageBlock extends BaseBlock {
   kind: "image";
-  /** data URI (base64) */
   src: string;
   fit: "contain" | "cover";
 }
@@ -60,13 +85,13 @@ export interface ImageBlock extends BaseBlock {
 export interface ShapeBlock extends BaseBlock {
   kind: "shape";
   shape: "rect" | "line";
-  fill: string;     // hex sem #
+  fill: string;
   radius: number;
 }
 
 export interface BridgeBlock extends BaseBlock {
   kind: "bridge";
-  base: string | null;  // periodo
+  base: string | null;
   comp: string | null;
   mode: "fy" | "month";
   filters: Filters;
@@ -74,22 +99,55 @@ export interface BridgeBlock extends BaseBlock {
 
 export interface TableBlock extends BaseBlock {
   kind: "table";
-  source: "ke30";   // futuro: budget
-  measures: string[];      // ids de PivotMeasure
-  rowDims: string[];       // dimensões em linha
-  colDim: string | null;   // dimensão em coluna (opcional, ex.: periodo)
+  source: "ke30";
+  measures: string[];
+  rowDims: string[];
+  colDim: string | null;
   filters: Filters;
+}
+
+// ---------------------------------------------------------------------------
+// Chart — gráfico de linha/barra ao longo do tempo
+// ---------------------------------------------------------------------------
+export interface ChartBlock extends BaseBlock {
+  kind: "chart";
+  chartType: "line" | "bar";
+  measure: KpiMeasureId;
+  /** Quebra opcional por dimensão (ex.: marca, canal). null = série única */
+  breakdown: string | null;
+  /** Mostrar grade/eixos */
+  showGrid: boolean;
+  /** Mostrar legenda */
+  showLegend: boolean;
+  /** Mostrar valores nos pontos/barras */
+  showLabels: boolean;
+  filters: Filters;
+  title?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Top SKUs / Top X — ranking
+// ---------------------------------------------------------------------------
+export interface TopSkuBlock extends BaseBlock {
+  kind: "topSku";
+  /** Dimensão a ranquear */
+  dim: "sku" | "skuDesc" | "cliente" | "marca" | "categoria" | "canalAjustado";
+  measure: KpiMeasureId;
+  topN: number;
+  periodMode: KpiPeriodMode;
+  periodValue?: string | null;
+  filters: Filters;
+  showShare: boolean;
+  title?: string;
 }
 
 export type CustomBlock =
   | TitleBlock | TextBlock | KpiBlock | ImageBlock
-  | ShapeBlock | BridgeBlock | TableBlock;
+  | ShapeBlock | BridgeBlock | TableBlock | ChartBlock | TopSkuBlock;
 
 export interface CustomSlideConfig {
   blocks: CustomBlock[];
-  /** Cor de fundo do canvas (hex sem #) */
   background: string;
-  /** Mostrar a faixa Harald no rodapé (default true) */
   showHaraldFooter: boolean;
 }
 
@@ -127,8 +185,17 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
       return { id, kind, z, x: 60, y: 150, w: 600, h: 60,
         text: "Clique para editar este texto.", size: 18, color: "1C2430", align: "left" };
     case "kpi":
-      return { id, kind, z, x: 60, y: 200, w: 280, h: 130,
-        label: "ROL", value: "R$ 1.234.567", valueSize: 36, color: "C8102E" };
+      return {
+        id, kind, z, x: 60, y: 200, w: 280, h: 130,
+        label: "ROL", valueSize: 36, color: "C8102E",
+        source: "dynamic",
+        measure: "rol",
+        periodMode: "all",
+        periodValue: null,
+        filters: {},
+        format: "auto",
+        manualValue: "",
+      };
     case "image":
       return { id, kind, z, x: 80, y: 220, w: 360, h: 220, src: "", fit: "contain" };
     case "shape":
@@ -141,6 +208,20 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
       return { id, kind, z, x: 60, y: 200, w: 1200, h: 360,
         source: "ke30", measures: ["rol_real", "cm_real"],
         rowDims: ["marca"], colDim: "periodo", filters: {} };
+    case "chart":
+      return {
+        id, kind, z, x: 60, y: 180, w: 1200, h: 380,
+        chartType: "line", measure: "cm", breakdown: null,
+        showGrid: true, showLegend: true, showLabels: false,
+        filters: {}, title: "Evolução",
+      };
+    case "topSku":
+      return {
+        id, kind, z, x: 60, y: 180, w: 700, h: 420,
+        dim: "skuDesc", measure: "cm", topN: 10,
+        periodMode: "all", periodValue: null,
+        filters: {}, showShare: true, title: "Top SKUs",
+      };
   }
 }
 
@@ -152,4 +233,22 @@ export const BLOCK_LABELS: Record<CustomBlockKind, string> = {
   shape: "Forma",
   bridge: "Bridge PVM",
   table: "Tabela",
+  chart: "Gráfico",
+  topSku: "Top Ranking",
 };
+
+// ---------------------------------------------------------------------------
+// Catálogo de medidas KPI/chart
+// ---------------------------------------------------------------------------
+export const KPI_MEASURES: { id: KpiMeasureId; label: string; format: Exclude<KpiFormat, "auto"> }[] = [
+  { id: "rol",        label: "ROL",                 format: "currency" },
+  { id: "volume",     label: "Volume (Kg)",         format: "tons" },
+  { id: "cm",         label: "Contrib. Marginal",   format: "currency" },
+  { id: "cv",         label: "Custo Variável",      format: "currency" },
+  { id: "mb",         label: "Margem Bruta",        format: "currency" },
+  { id: "frete",      label: "Frete",               format: "currency" },
+  { id: "comissao",   label: "Comissão",            format: "currency" },
+  { id: "cmPct",      label: "CM %",                format: "percent" },
+  { id: "mbPct",      label: "MB %",                format: "percent" },
+  { id: "precoMedio", label: "Preço Médio (R$/Kg)", format: "currency" },
+];
