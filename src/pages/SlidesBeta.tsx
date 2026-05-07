@@ -541,6 +541,52 @@ function CoverConfigPanel({
 }
 
 // ----------------------------------------------------------------------------
+// Editor do Slide Personalizado em modo "tela cheia" (overlay sobre a esteira)
+// ----------------------------------------------------------------------------
+function CustomSlideFullscreenEditor({
+  config,
+  onChange,
+}: {
+  config: Extract<SlideItem, { kind: "custom" }>["config"];
+  onChange: (cfg: Extract<SlideItem, { kind: "custom" }>["config"]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div className="space-y-2">
+        <div className="rounded-lg border border-border/40 bg-card/40 p-3 text-[12px] text-muted-foreground">
+          O editor de slide personalizado abre em tela cheia para garantir o
+          espaço necessário ao canvas 16:9.
+        </div>
+        <Button onClick={() => setOpen(true)} className="w-full gap-2" size="sm">
+          <LayoutTemplate className="h-4 w-4" />
+          Abrir editor em tela cheia
+        </Button>
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          className="flex h-[100vh] w-[100vw] max-w-none flex-col gap-3 rounded-none border-0 p-4 sm:rounded-none"
+          style={{ height: "100vh", maxHeight: "100vh" }}
+        >
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <DialogTitle>Editor — Slide Personalizado</DialogTitle>
+              <DialogDescription>
+                Arraste e redimensione os blocos. As alterações são salvas automaticamente.
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+          <div className="min-h-0 flex-1">
+            <CustomSlideEditor config={config} onChange={onChange} />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// ----------------------------------------------------------------------------
 // Painel direito (inspector) — depende do slide selecionado
 // ----------------------------------------------------------------------------
 function Inspector({ item }: { item: SlideItem | null }) {
