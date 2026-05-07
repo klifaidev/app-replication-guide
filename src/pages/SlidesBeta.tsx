@@ -45,7 +45,7 @@ import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 import { toast } from "sonner";
 import {
   ArrowRight, BookOpen, Bookmark, Copy, Download, Filter as FilterIcon,
-  GitBranch, GripVertical, Layers, Plus, RotateCcw, Save, Sparkles, Target, Trash2, X,
+  GitBranch, GripVertical, Layers, LayoutTemplate, Plus, RotateCcw, Save, Sparkles, Target, Trash2, X,
 } from "lucide-react";
 
 import { usePricing } from "@/store/pricing";
@@ -94,7 +94,7 @@ function smartDefaults(
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
-const ICON_MAP = { GitBranch, Target, BookOpen } as const;
+const ICON_MAP = { GitBranch, Target, BookOpen, LayoutTemplate } as const;
 
 const ACCENT_BG = {
   blue: "bg-primary/15 text-primary border-primary/30",
