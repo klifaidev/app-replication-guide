@@ -545,9 +545,11 @@ function CoverConfigPanel({
 // Editor do Slide Personalizado em modo "tela cheia" (overlay sobre a esteira)
 // ----------------------------------------------------------------------------
 function CustomSlideFullscreenEditor({
+  slideId,
   config,
   onChange,
 }: {
+  slideId: string;
   config: Extract<SlideItem, { kind: "custom" }>["config"];
   onChange: (cfg: Extract<SlideItem, { kind: "custom" }>["config"]) => void;
 }) {
@@ -579,7 +581,7 @@ function CustomSlideFullscreenEditor({
             </div>
           </DialogHeader>
           <div className="min-h-0 flex-1">
-            <CustomSlideEditor config={config} onChange={onChange} />
+            <CustomSlideEditor slideId={slideId} config={config} onChange={onChange} />
           </div>
         </DialogContent>
       </Dialog>
@@ -644,6 +646,7 @@ function Inspector({ item }: { item: SlideItem | null }) {
         )}
         {item.kind === "custom" && (
           <CustomSlideFullscreenEditor
+            slideId={item.id}
             config={item.config}
             onChange={(cfg) => updateItem(item.id, (it) => (it.kind === "custom" ? { ...it, config: cfg } : it))}
           />
