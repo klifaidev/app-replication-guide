@@ -27,7 +27,7 @@ import { defaultCustomSlide, type CustomSlideConfig } from "./customSlide";
 // ---------------------------------------------------------------------------
 // Tipos
 // ---------------------------------------------------------------------------
-export type SlideKind = "bridge_pvm" | "budget_evo" | "cover";
+export type SlideKind = "bridge_pvm" | "budget_evo" | "cover" | "custom";
 
 export interface BaseSlideItem {
   /** Identificador estável (uuid) — usado para drag/drop e keys */
@@ -61,7 +61,8 @@ export interface CoverSlideConfig {
 export type SlideItem =
   | (BaseSlideItem & { kind: "bridge_pvm"; config: BridgePvmSlideConfig })
   | (BaseSlideItem & { kind: "budget_evo"; config: BudgetEvoSlideConfig })
-  | (BaseSlideItem & { kind: "cover"; config: CoverSlideConfig });
+  | (BaseSlideItem & { kind: "cover"; config: CoverSlideConfig })
+  | (BaseSlideItem & { kind: "custom"; config: CustomSlideConfig });
 
 // ---------------------------------------------------------------------------
 // Catálogo (metadados de cada tipo)
