@@ -581,7 +581,7 @@ function CustomSlideFullscreenEditor({
             </div>
           </DialogHeader>
           <div className="min-h-0 flex-1">
-            <CustomSlideEditor config={config} onChange={onChange} />
+            <CustomSlideEditor slideId={slideId} config={config} onChange={onChange} />
           </div>
         </DialogContent>
       </Dialog>
