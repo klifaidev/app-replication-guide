@@ -72,7 +72,7 @@ export interface SlideTypeMeta {
   title: string;
   description: string;
   /** Lucide icon name (resolvido na UI) */
-  icon: "GitBranch" | "Target" | "BookOpen";
+  icon: "GitBranch" | "Target" | "BookOpen" | "LayoutTemplate";
   accent: "blue" | "amber" | "neutral";
   supportsFilters: boolean;
 }
@@ -99,6 +99,14 @@ export const SLIDE_CATALOG: SlideTypeMeta[] = [
     title: "Capa / Divisor",
     description: "Slide de abertura ou divisor de seção com título e subtítulo customizáveis.",
     icon: "BookOpen",
+    accent: "neutral",
+    supportsFilters: false,
+  },
+  {
+    kind: "custom",
+    title: "Personalizado",
+    description: "Monte seu próprio slide arrastando blocos (título, KPI, bridge, tabela, imagem). Faixa Harald incluída.",
+    icon: "LayoutTemplate",
     accent: "neutral",
     supportsFilters: false,
   },
@@ -136,6 +144,11 @@ export function defaultItem(kind: SlideKind): SlideItem {
       return {
         id, kind, label: "Capa",
         config: { title: "Resultado Mensal", subtitle: "", variant: "cover" },
+      };
+    case "custom":
+      return {
+        id, kind, label: "Slide personalizado",
+        config: defaultCustomSlide(),
       };
   }
 }
