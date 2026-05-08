@@ -16,6 +16,7 @@ import {
   computeKpiBlock, computeChartSeries, computeTopRanking, formatValue, inferFormat,
 } from "@/lib/customKpi";
 import { KPI_MEASURES } from "@/lib/customSlide";
+import { resolveTableFit, resolveChartFit, resolveTopSkuFit } from "@/lib/customCapacity";
 
 export const CUSTOM_TABLE_MEASURES: PivotMeasure[] = [
   { id: "rol_real",  label: "ROL",            field: "rol_real",         agg: "sum", format: "currency", tone: "real" },
