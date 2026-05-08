@@ -231,13 +231,15 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
     case "table":
       return { id, kind, z, x: 60, y: 200, w: 1200, h: 360,
         source: "ke30", measures: ["rol_real", "cm_real"],
-        rowDims: ["marca"], colDim: "periodo", filters: {} };
+        rowDims: ["marca"], colDim: "periodo", filters: {},
+        autoFit: true, showOthers: false, exportNote: false };
     case "chart":
       return {
         id, kind, z, x: 60, y: 180, w: 1200, h: 380,
         chartType: "line", measure: "cm", breakdown: null,
         showGrid: true, showLegend: true, showLabels: false,
         filters: {}, title: "Evolução",
+        autoFit: true, showOthers: false, exportNote: false,
       };
     case "topSku":
       return {
@@ -245,6 +247,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         dim: "skuDesc", measure: "cm", topN: 10,
         periodMode: "all", periodValue: null,
         filters: {}, showShare: true, title: "Top SKUs",
+        autoFit: true, showOthers: false, exportNote: false,
       };
   }
 }
