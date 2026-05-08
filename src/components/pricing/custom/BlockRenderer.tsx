@@ -313,10 +313,28 @@ const CHART_COLORS = ["#C8102E", "#1C2430", "#0F766E", "#7C3AED", "#EA580C", "#2
 
 function ChartRender({ block: b }: { block: ChartBlock }) {
   const pricing = usePricing((s) => s.rows);
-  const data = useMemo(
+  const raw = useMemo(
     () => computeChartSeries(pricing, b.filters, b.measure, b.breakdown),
     [pricing, b.filters, b.measure, b.breakdown],
   );
+
+  // Aplica auto-fit + Outros nas séries (ordena por |total| desc)
+  const data = useMemo(() => {
+    const periodos = raw.periodos;
+    const ranked = [...raw.series].sort((a, z) =>
+      Math.abs(z.values.reduce((s, v) => s + (v || 0), 0))
+      - Math.abs(a.values.reduce((s, v) => s + (v || 0), 0))
+    );
+    const fit = resolveChartFit(b, ranked.length);
+    const visible = ranked.slice(0, fit.shown);
+    const hidden = ranked.slice(fit.shown);
+    if (b.showOthers && hidden.length > 0) {
+      const othersValues = periodos.map((_, i) =>
+        hidden.reduce((s, ser) => s + (ser.values[i] || 0), 0));
+      visible.push({ name: `Outros (${hidden.length})`, values: othersValues });
+    }
+    return { periodos, series: visible };
+  }, [raw, b.h, b.w, b.autoFit, b.maxSeries, b.showOthers]);
 
   if (data.periodos.length === 0 || data.series.length === 0) {
     return (
