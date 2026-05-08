@@ -170,9 +170,15 @@ async function renderBlockAsImage(
     const canvas = slideId ? getCustomCanvas(slideId) : null;
     const liveNode = canvas?.querySelector(`[data-block-id="${block.id}"]`) as HTMLElement | null;
     await waitFonts();
-    const dataUrl = liveNode
-      ? await captureNode(liveNode)
-      : await renderBlockOffscreen(block);
+    let dataUrl: string;
+    try {
+      // Preferimos o render offscreen: ele fica em 1:1, sem escala do editor e
+      // sem handles/overlays. O DOM ao vivo vira fallback quando necessário.
+      dataUrl = await renderBlockOffscreen(block);
+    } catch (offscreenErr) {
+      if (!liveNode) throw offscreenErr;
+      dataUrl = await captureNode(liveNode);
+    }
     slide.addImage({
       data: dataUrl,
       x: box.x, y: box.y, w: box.w, h: box.h,
