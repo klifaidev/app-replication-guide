@@ -960,7 +960,7 @@ export default function SlidesBeta() {
         {/* ===== Coluna central: esteira ===== */}
         <main className="flex flex-col overflow-hidden bg-background/60">
           {/* Header da esteira */}
-          <div className="flex items-center justify-between gap-3 border-b border-border/40 bg-card/30 px-6 py-3 backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-2 border-b border-border/40 bg-card/30 px-4 py-2.5 backdrop-blur-xl">
             <div className="flex items-center gap-2.5">
               <h2 className="text-sm font-semibold tracking-tight">Esteira</h2>
               <Badge variant="secondary" className="h-5 px-2 text-[10px] tabular-nums">
