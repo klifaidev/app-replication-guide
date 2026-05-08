@@ -166,7 +166,7 @@ export function defaultCustomSlide(): CustomSlideConfig {
     blocks: [
       {
         id: rid(), kind: "title", z: 1,
-        x: 40, y: 30, w: 900, h: 70,
+        x: 40, y: 30, w: 1240, h: 70,
         text: "Título do slide", size: 44, bold: true,
         color: "C8102E", align: "left",
       } as TitleBlock,
