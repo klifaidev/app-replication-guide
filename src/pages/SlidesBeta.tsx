@@ -1017,7 +1017,7 @@ export default function SlidesBeta() {
 
           {/* Conteúdo da esteira */}
           <ScrollArea className="flex-1">
-            <div className="mx-auto max-w-3xl p-6">
+            <div className="mx-auto max-w-2xl px-4 py-5">
               {items.length === 0 ? (
                 <EmptyFlow onAdd={addWithDefaults} />
               ) : (
