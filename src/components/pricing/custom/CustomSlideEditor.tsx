@@ -43,12 +43,14 @@ import {
 } from "@/lib/customTemplates";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
-import { resolveTableFit, resolveChartFit, resolveTopSkuFit, type FitInfo } from "@/lib/customCapacity";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { resolveTableFit, type FitInfo } from "@/lib/customCapacity";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { computePivot, type PivotConfig } from "@/lib/pivot";
 import { buildUnifiedRows } from "@/lib/pivotData";
-import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
+import type { Filters } from "@/lib/types";
+import { BlockFilters } from "./BlockFilters";
 
 const BLOCK_KINDS: { kind: CustomBlockKind; icon: React.ComponentType<{ className?: string }> }[] = [
   { kind: "title",  icon: TypeIcon },
@@ -532,7 +534,11 @@ function BlockSpecificEditor({ block, onChange }: {
     }
 
     case "kpi":
-      return <KpiInspector block={block} onChange={onChange} />;
+      return <FilteredInspector
+        design={<KpiInspector block={block} onChange={onChange} />}
+        filters={block.filters ?? {}}
+        onFiltersChange={(f) => onChange({ filters: f } as never)}
+      />;
 
     case "image":
       return (
@@ -584,17 +590,58 @@ function BlockSpecificEditor({ block, onChange }: {
       );
 
     case "bridge":
-      return <BridgeBlockEditor block={block} onChange={onChange} />;
+      return <FilteredInspector
+        design={<BridgeBlockEditor block={block} onChange={onChange} />}
+        filters={block.filters}
+        onFiltersChange={(f) => onChange({ filters: f } as never)}
+      />;
 
     case "table":
-      return <TableBlockEditor block={block} onChange={onChange} />;
+      return <FilteredInspector
+        design={<TableBlockEditor block={block} onChange={onChange} />}
+        filters={block.filters}
+        onFiltersChange={(f) => onChange({ filters: f } as never)}
+      />;
 
     case "chart":
-      return <ChartBlockEditor block={block} onChange={onChange} />;
+      return <FilteredInspector
+        design={<ChartBlockEditor block={block} onChange={onChange} />}
+        filters={block.filters}
+        onFiltersChange={(f) => onChange({ filters: f } as never)}
+      />;
 
     case "topSku":
-      return <TopSkuBlockEditor block={block} onChange={onChange} />;
+      return <FilteredInspector
+        design={<TopSkuBlockEditor block={block} onChange={onChange} />}
+        filters={block.filters}
+        onFiltersChange={(f) => onChange({ filters: f } as never)}
+      />;
   }
+}
+
+// Wrapper com abas Design / Filtros — dá aos blocos de dados a UX
+// próxima do PowerPoint (painel de formatação à direita).
+function FilteredInspector({
+  design, filters, onFiltersChange,
+}: {
+  design: React.ReactNode;
+  filters: Filters;
+  onFiltersChange: (f: Filters) => void;
+}) {
+  return (
+    <Tabs defaultValue="design" className="w-full">
+      <TabsList className="grid h-8 w-full grid-cols-2">
+        <TabsTrigger value="design" className="text-[11px]">Design</TabsTrigger>
+        <TabsTrigger value="filters" className="text-[11px]">Filtros</TabsTrigger>
+      </TabsList>
+      <TabsContent value="design" className="mt-2 space-y-2">
+        {design}
+      </TabsContent>
+      <TabsContent value="filters" className="mt-2">
+        <BlockFilters filters={filters} onChange={onFiltersChange} />
+      </TabsContent>
+    </Tabs>
+  );
 }
 
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
@@ -797,6 +844,20 @@ function TableBlockEditor({ block, onChange }: {
     onChange({ rowDims: next } as never);
   };
 
+  // Quando o usuário liga "Outros" e a tabela está truncada,
+  // crescemos a altura para garantir que a linha apareça no canvas.
+  const handleShowOthers = (v: boolean) => {
+    const patch: Partial<typeof block> = { showOthers: v };
+    if (v && fit.truncated) {
+      const extraRows = 1; // linha "Outros"
+      const ROW_H = 26;
+      const needed = block.h + extraRows * ROW_H + 4;
+      const maxH = CANVAS_H - block.y;
+      patch.h = Math.min(maxH, needed);
+    }
+    onChange(patch as never);
+  };
+
   return (
     <div className="space-y-3">
       <TruncationAlert blockId={block.id} fit={fit} unitPlural="linhas" />
@@ -871,18 +932,22 @@ function TableBlockEditor({ block, onChange }: {
       )}
 
       <Separator />
-      <FitControls
-        autoFit={block.autoFit !== false}
-        manualValue={block.maxRows ?? fit.shown}
-        manualLabel="Máx. linhas"
-        showOthers={!!block.showOthers}
-        exportNote={!!block.exportNote}
-        fit={fit}
-        onAutoFit={(v) => onChange({ autoFit: v } as never)}
-        onManual={(v) => onChange({ maxRows: v } as never)}
-        onShowOthers={(v) => onChange({ showOthers: v } as never)}
-        onExportNote={(v) => onChange({ exportNote: v } as never)}
-      />
+      <div className="space-y-1.5">
+        <ToggleRow label="Auto-ajustar ao tamanho"
+          value={block.autoFit !== false}
+          onChange={(v) => onChange({ autoFit: v } as never)} />
+        {block.autoFit === false && (
+          <NumField label="Máx. linhas" value={block.maxRows ?? fit.shown}
+            onChange={(v) => onChange({ maxRows: v } as never)} />
+        )}
+        <ToggleRow label="Linha “Outros”" value={!!block.showOthers}
+          onChange={handleShowOthers} />
+        <ToggleRow label="Nota no slide exportado" value={!!block.exportNote}
+          onChange={(v) => onChange({ exportNote: v } as never)} />
+        <p className="text-[10px] text-muted-foreground">
+          Mostrando {fit.shown} de {fit.total}
+        </p>
+      </div>
     </div>
   );
 }
@@ -891,16 +956,8 @@ function TableBlockEditor({ block, onChange }: {
 function ChartBlockEditor({ block, onChange }: {
   block: ChartBlock; onChange: (p: Partial<CustomBlock>) => void;
 }) {
-  const pricing = usePricing((s) => s.rows);
-  const totalSeries = useMemo(
-    () => computeChartSeries(pricing, block.filters, block.measure, block.breakdown).series.length,
-    [pricing, block.filters, block.measure, block.breakdown],
-  );
-  const fit = resolveChartFit(block, totalSeries);
-
   return (
     <div className="space-y-2">
-      <TruncationAlert blockId={block.id} fit={fit} unitPlural="séries" />
       <Field label="Título" value={block.title ?? ""}
         onChange={(v) => onChange({ title: v } as never)} />
       <div className="grid grid-cols-2 gap-2">
@@ -946,19 +1003,6 @@ function ChartBlockEditor({ block, onChange }: {
         <ToggleRow label="Legenda" value={block.showLegend} onChange={(v) => onChange({ showLegend: v } as never)} />
         <ToggleRow label="Rótulos" value={block.showLabels} onChange={(v) => onChange({ showLabels: v } as never)} />
       </div>
-      <Separator />
-      <FitControls
-        autoFit={block.autoFit !== false}
-        manualValue={block.maxSeries ?? fit.shown}
-        manualLabel="Máx. séries"
-        showOthers={!!block.showOthers}
-        exportNote={!!block.exportNote}
-        fit={fit}
-        onAutoFit={(v) => onChange({ autoFit: v } as never)}
-        onManual={(v) => onChange({ maxSeries: v } as never)}
-        onShowOthers={(v) => onChange({ showOthers: v } as never)}
-        onExportNote={(v) => onChange({ exportNote: v } as never)}
-      />
     </div>
   );
 }
@@ -968,12 +1012,6 @@ function TopSkuBlockEditor({ block, onChange }: {
 }) {
   const months = useMonthsInfo();
   const fyList = useFyList();
-  const pricing = usePricing((s) => s.rows);
-  const totalItems = useMemo(
-    () => computeTopRanking(pricing, block.filters, block.dim, block.measure, 9999, block.periodMode, block.periodValue).length,
-    [pricing, block.filters, block.dim, block.measure, block.periodMode, block.periodValue],
-  );
-  const fit = resolveTopSkuFit(block, totalItems);
   const periodOpts = block.periodMode === "fy"
     ? fyList.map((f) => ({ value: f, label: f }))
     : block.periodMode === "month"
@@ -981,7 +1019,6 @@ function TopSkuBlockEditor({ block, onChange }: {
       : [];
   return (
     <div className="space-y-2">
-      <TruncationAlert blockId={block.id} fit={fit} unitPlural="itens" />
       <Field label="Título" value={block.title ?? ""}
         onChange={(v) => onChange({ title: v } as never)} />
       <div className="grid grid-cols-2 gap-2">
@@ -1035,21 +1072,10 @@ function TopSkuBlockEditor({ block, onChange }: {
           </Select>
         </div>
       )}
+      <NumField label="Top N" value={block.topN}
+        onChange={(v) => onChange({ topN: Math.max(1, Math.min(50, v)) } as never)} />
       <ToggleRow label="Mostrar % do total" value={block.showShare}
         onChange={(v) => onChange({ showShare: v } as never)} />
-      <Separator />
-      <FitControls
-        autoFit={block.autoFit !== false}
-        manualValue={block.topN}
-        manualLabel="Top N"
-        showOthers={!!block.showOthers}
-        exportNote={!!block.exportNote}
-        fit={fit}
-        onAutoFit={(v) => onChange({ autoFit: v } as never)}
-        onManual={(v) => onChange({ topN: Math.max(1, Math.min(50, v)) } as never)}
-        onShowOthers={(v) => onChange({ showOthers: v } as never)}
-        onExportNote={(v) => onChange({ exportNote: v } as never)}
-      />
     </div>
   );
 }
@@ -1063,30 +1089,8 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   );
 }
 
-// ---------------------------------------------------------------------------
-// Auto-fit / Outros / Nota — controles compartilhados
-// ---------------------------------------------------------------------------
-function FitControls({
-  autoFit, manualValue, manualLabel, showOthers, exportNote, fit,
-  onAutoFit, onManual, onShowOthers, onExportNote,
-}: {
-  autoFit: boolean; manualValue: number; manualLabel: string;
-  showOthers: boolean; exportNote: boolean; fit: FitInfo;
-  onAutoFit: (v: boolean) => void; onManual: (v: number) => void;
-  onShowOthers: (v: boolean) => void; onExportNote: (v: boolean) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <ToggleRow label="Auto-ajustar ao tamanho" value={autoFit} onChange={onAutoFit} />
-      {!autoFit && <NumField label={manualLabel} value={manualValue} onChange={onManual} />}
-      <ToggleRow label="Linha “Outros”" value={showOthers} onChange={onShowOthers} />
-      <ToggleRow label="Nota no slide exportado" value={exportNote} onChange={onExportNote} />
-      <p className="text-[10px] text-muted-foreground">
-        Mostrando {fit.shown} de {fit.total}
-      </p>
-    </div>
-  );
-}
+// (FitControls compartilhado removido — apenas tabela usa estes toggles agora,
+// inlined em TableBlockEditor.)
 
 // Alerta dismissível mostrado quando o conteúdo está sendo cortado.
 // Reaparece quando capacidade muda (ex.: usuário redimensiona o bloco).
