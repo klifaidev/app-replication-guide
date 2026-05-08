@@ -322,6 +322,7 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
                 />
               )}
             </div>
+            </div>
           </div>
         </div>
 
