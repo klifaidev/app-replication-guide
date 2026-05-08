@@ -1089,30 +1089,8 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
   );
 }
 
-// ---------------------------------------------------------------------------
-// Auto-fit / Outros / Nota — controles compartilhados
-// ---------------------------------------------------------------------------
-function FitControls({
-  autoFit, manualValue, manualLabel, showOthers, exportNote, fit,
-  onAutoFit, onManual, onShowOthers, onExportNote,
-}: {
-  autoFit: boolean; manualValue: number; manualLabel: string;
-  showOthers: boolean; exportNote: boolean; fit: FitInfo;
-  onAutoFit: (v: boolean) => void; onManual: (v: number) => void;
-  onShowOthers: (v: boolean) => void; onExportNote: (v: boolean) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <ToggleRow label="Auto-ajustar ao tamanho" value={autoFit} onChange={onAutoFit} />
-      {!autoFit && <NumField label={manualLabel} value={manualValue} onChange={onManual} />}
-      <ToggleRow label="Linha “Outros”" value={showOthers} onChange={onShowOthers} />
-      <ToggleRow label="Nota no slide exportado" value={exportNote} onChange={onExportNote} />
-      <p className="text-[10px] text-muted-foreground">
-        Mostrando {fit.shown} de {fit.total}
-      </p>
-    </div>
-  );
-}
+// (FitControls compartilhado removido — apenas tabela usa estes toggles agora,
+// inlined em TableBlockEditor.)
 
 // Alerta dismissível mostrado quando o conteúdo está sendo cortado.
 // Reaparece quando capacidade muda (ex.: usuário redimensiona o bloco).
