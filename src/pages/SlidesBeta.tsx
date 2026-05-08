@@ -171,23 +171,35 @@ function uniqueValues(
 // ----------------------------------------------------------------------------
 function EmptyFlow({ onAdd }: { onAdd: (k: SlideKind) => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-border/50 bg-secondary/10 px-6 py-16 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-        <Sparkles className="h-7 w-7" />
+    <div className="relative flex flex-col items-center gap-8 overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-b from-card/40 to-card/10 px-8 py-16 text-center animate-fade-in">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 -top-24 h-64 opacity-60"
+        style={{ background: "radial-gradient(60% 60% at 50% 50%, hsl(var(--primary)/0.18), transparent 70%)" }}
+      />
+      <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20">
+        <Sparkles className="h-8 w-8" />
       </div>
-      <div className="space-y-1">
-        <h3 className="text-base font-medium">Comece sua apresentação</h3>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Adicione slides do catálogo à esquerda. Reordene arrastando, configure filtros independentes por slide e exporte tudo em um único PPTX.
+      <div className="relative max-w-md space-y-2">
+        <h3 className="text-xl font-semibold tracking-tight">Comece sua apresentação</h3>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Escolha um modelo abaixo para iniciar. Combine quantos slides quiser, configure filtros independentes e exporte tudo em um único PPTX.
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="relative grid w-full max-w-2xl grid-cols-2 gap-2.5 sm:grid-cols-4">
         {SLIDE_CATALOG.map((s) => {
           const Icon = ICON_MAP[s.icon];
           return (
-            <Button key={s.kind} variant="outline" size="sm" className="gap-2" onClick={() => onAdd(s.kind)}>
-              <Icon className="h-4 w-4" /> {s.title}
-            </Button>
+            <button
+              key={s.kind}
+              onClick={() => onAdd(s.kind)}
+              className="group flex flex-col items-center gap-2 rounded-2xl border border-border/40 bg-card/50 p-4 text-center transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:bg-card hover:shadow-[0_8px_24px_-12px_hsl(var(--primary)/0.4)]"
+            >
+              <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl border transition-transform group-hover:scale-105", ACCENT_BG[s.accent])}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <div className="text-xs font-medium leading-tight">{s.title}</div>
+            </button>
           );
         })}
       </div>
