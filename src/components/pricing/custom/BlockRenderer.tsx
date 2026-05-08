@@ -203,10 +203,20 @@ function TableRender({ block: b }: { block: TableBlock }) {
       filters: Object.fromEntries(Object.entries(b.filters).map(([k, v]) => [k, new Set(v ?? [])])),
     };
     const result = computePivot(unified as unknown as Record<string, unknown>[], cfg);
-    return { result, measures };
-  }, [pricing, budget, b.rowDims, b.colDim, b.measures, b.filters]);
 
-  if (!data || data.result.rowHeaders.length === 0) {
+    // Ordena rowHeaders pela sortMeasure (ou primeira measure) desc
+    const sortKey = b.sortMeasure && measures.find((m) => m.id === b.sortMeasure)
+      ? b.sortMeasure
+      : measures[0].id;
+    const sortedHeaders = [...result.rowHeaders].sort((a, z) => {
+      const va = result.rowTotals.get(a.key)?.[sortKey] ?? 0;
+      const vz = result.rowTotals.get(z.key)?.[sortKey] ?? 0;
+      return vz - va;
+    });
+    return { result, measures, sortedHeaders };
+  }, [pricing, budget, b.rowDims, b.colDim, b.measures, b.filters, b.sortMeasure]);
+
+  if (!data || data.sortedHeaders.length === 0) {
     return (
       <div style={{
         width: "100%", height: "100%",
@@ -219,12 +229,33 @@ function TableRender({ block: b }: { block: TableBlock }) {
     );
   }
 
-  const { result, measures } = data;
+  const { result, measures, sortedHeaders } = data;
+  const fit = resolveTableFit(b, sortedHeaders.length);
+  const visibleHeaders = sortedHeaders.slice(0, fit.shown);
+  const hiddenHeaders = sortedHeaders.slice(fit.shown);
+  const showOthers = !!b.showOthers && hiddenHeaders.length > 0;
   const cols = result.colHeaders;
   const showCols = cols.length > 0 && cols[0].values.length > 0;
 
+  // Agrega "Outros" cell-by-cell
+  const othersRow: Record<string, Record<string, number>> | null = showOthers ? (() => {
+    const acc: Record<string, Record<string, number>> = { __row__: {} };
+    for (const m of measures) acc.__row__[m.id] = 0;
+    if (showCols) for (const c of cols) {
+      acc[c.key] = {};
+      for (const m of measures) acc[c.key][m.id] = 0;
+    }
+    for (const rh of hiddenHeaders) {
+      for (const m of measures) acc.__row__[m.id] += result.rowTotals.get(rh.key)?.[m.id] ?? 0;
+      if (showCols) for (const c of cols) for (const m of measures) {
+        acc[c.key][m.id] += result.cells.get(rh.key)?.get(c.key)?.[m.id] ?? 0;
+      }
+    }
+    return acc;
+  })() : null;
+
   return (
-    <div style={{ width: "100%", height: "100%", overflow: "auto", fontFamily: "Calibri", fontSize: 12 }}>
+    <div style={{ width: "100%", height: "100%", overflow: "hidden", fontFamily: "Calibri", fontSize: 12 }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -237,7 +268,7 @@ function TableRender({ block: b }: { block: TableBlock }) {
           </tr>
         </thead>
         <tbody>
-          {result.rowHeaders.map((rh) => (
+          {visibleHeaders.map((rh) => (
             <tr key={rh.key}>
               <td style={cellLabel}>{rh.values.join(" / ") || "Total"}</td>
               {showCols
@@ -251,6 +282,24 @@ function TableRender({ block: b }: { block: TableBlock }) {
                   })}
             </tr>
           ))}
+          {othersRow && (
+            <tr style={{ background: "#F1F5F9" }}>
+              <td style={{ ...cellLabel, fontStyle: "italic" }}>
+                Outros ({hiddenHeaders.length})
+              </td>
+              {showCols
+                ? cols.flatMap((c) => measures.map((m) => (
+                    <td key={`oth-${c.key}-${m.id}`} style={{ ...cellVal, fontStyle: "italic" }}>
+                      {fmtMeasure(m, othersRow[c.key][m.id])}
+                    </td>
+                  )))
+                : measures.map((m) => (
+                    <td key={`oth-${m.id}`} style={{ ...cellVal, fontStyle: "italic" }}>
+                      {fmtMeasure(m, othersRow.__row__[m.id])}
+                    </td>
+                  ))}
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
