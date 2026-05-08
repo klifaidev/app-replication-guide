@@ -1,25 +1,66 @@
-Pelo código e pelo print, o sintoma mais provável é este: o export captura o canvas do editor com `html-to-image`, mas o canvas ao vivo está com `transform: scale(...)`. A captura força `transform: none` só no elemento raiz; com isso, dependendo do estado do diálogo/escala e dos filhos SVG/tabela, a imagem pode sair como fundo branco e depois a faixa Harald é adicionada por cima no PPT. Além disso, o fallback de export renderiza o slide em um host oculto sem aguardar explicitamente o React terminar de montar os blocos de bridge/tabela, o que pode gerar uma captura antes dos componentes estarem prontos.
+## Objetivo
 
-Plano de correção:
+Resolver dois problemas no slide Personalizado:
 
-1. Tornar o canvas capturável em tamanho real
-   - Registrar/capturar um elemento sem `transform` aplicado diretamente.
-   - Manter o zoom visual no editor, mas impedir que o elemento usado no export dependa da escala do viewport.
+1. **Título cortado à direita** quando exportado (a captura PNG está estourando ou o canvas excede a largura útil).
+2. **Elementos não editáveis no PowerPoint** — hoje o slide vai como uma única imagem PNG. Quero que cada bloco vire um elemento nativo do PPTX (caixa de texto editável, tabela editável, forma, imagem) que possa ser movido, redimensionado e ter texto alterado direto no PowerPoint.
 
-2. Melhorar o snapshot do export
-   - Antes de chamar `toPng`, remover temporariamente sombras/outline/transform do canvas capturado e restaurar depois.
-   - Aguardar fontes, frames de renderização e dimensões reais do DOM/SVG antes da captura.
-   - Adicionar validação: se a captura vier vazia/quase branca, usar fallback confiável em vez de gerar PPT branco.
+## Estratégia
 
-3. Corrigir fallback off-screen
-   - Renderizar o fallback em um container visível para layout (`opacity: 0`, mas com tamanho real e sem `z-index: -1`).
-   - Usar `flushSync`/espera de frames para garantir que bridge, tabela e dados dos stores montem antes da captura.
-   - Incluir o rodapé Harald dentro da captura fallback só uma vez, evitando divergência visual.
+Reescrever `src/lib/exportCustomSlide.tsx` para emitir **elementos nativos do pptxgenjs por bloco**, em vez de um único PNG. Isso resolve ambos os problemas: o título passa a ser uma caixa de texto real (sem corte por captura), e tudo fica editável.
 
-4. Garantir fidelidade de bridge e tabela
-   - Revisar `BridgeRender` e `TableRender` para evitar dependência de scroll/overflow que o `html-to-image` possa recortar.
-   - Ajustar wrappers para SVG/tabela renderizarem com largura/altura estáveis no export.
+Manter o sistema de coordenadas atual (1333×750 → 13.33"×7.5", divisor de 100).
 
-5. Validar no navegador
-   - Testar export de um slide personalizado contendo bridge + tabela.
-   - Confirmar que o PPT exportado contém os blocos visíveis, não apenas a faixa Harald.
+## Mapeamento bloco → elemento PPTX
+
+| Bloco | Elemento PPTX | Editável? |
+|---|---|---|
+| `title` | `slide.addText` (bold, cor, alinhamento, tamanho) | ✅ texto + caixa |
+| `text` | `slide.addText` | ✅ texto + caixa |
+| `kpi` | 1 `addShape` (rect arredondado de fundo) + 2 `addText` (label e valor calculado) | ✅ tudo |
+| `shape` (rect) | `addShape` (rect/roundRect com fill e radius) | ✅ |
+| `shape` (line) | `addShape` line | ✅ |
+| `image` | `addImage` com data URL | ✅ (mover/redimensionar) |
+| `table` | `slide.addTable` com linhas/colunas calculadas via `computePivot` (mesmas medidas/dims do editor) | ✅ tabela nativa, células editáveis |
+| `chart` | `slide.addChart` (LINE ou BAR) com séries calculadas via `computeChartSeries` | ✅ gráfico nativo do PPT |
+| `topSku` | `slide.addTable` com ranking calculado via `computeTopRanking` | ✅ tabela nativa |
+| `bridge` | `slide.addChart` BAR empilhada (waterfall manual) usando dados do `calcPVM`. *Fallback*: se a montagem ficar ruim, capturar **apenas o bounding box do bloco** como PNG via host off-screen e inserir como imagem dimensionada — assim só a Bridge vira imagem, não o slide inteiro. | Parcial (gráfico nativo) ou imagem (fallback) |
+
+Footer Harald continua como `addImage` no rodapé.
+
+## Detalhes do título cortado
+
+Hoje o título usa `w: 900, h: 70` em x=40, mas com `overflow: hidden` no DOM e `whiteSpace: nowrap` implícito quando vai pra captura escalada. Ao virar `addText` nativo, o PowerPoint controla wrap/auto-fit nativamente. Adicionalmente, ajustar default do título novo para `w: 1200` (margem segura ≈ 60 de cada lado).
+
+## Cálculo dos dados no export
+
+A função export precisa ler os stores Zustand (`usePricing.getState()`, `useBudget.getState()`) — fora de componentes — para alimentar tabela/chart/bridge/topSku/kpi sem montar React. Reusar:
+- `computeKpiBlock` (já existe em `customKpi.ts`)
+- `computePivot` + `buildUnifiedRows`
+- `computeChartSeries`
+- `computeTopRanking`
+- `applyFilters` + `calcPVM` para Bridge
+
+## Arquivos a editar
+
+- `src/lib/exportCustomSlide.tsx` — reescrita completa: nova função `addCustomSlide` que itera blocos e mapeia cada um para chamadas nativas pptxgenjs. Remover dependência de `html-to-image`/`createRoot` para o caminho principal.
+- `src/lib/customSlide.ts` — ajustar default do `TitleBlock` em `defaultCustomSlide` e `newBlock("title")` para `w: 1200` (evita corte mesmo na pré-visualização).
+- (Opcional) `src/components/pricing/custom/CustomSlideEditor.tsx` — pequenos ajustes visuais se necessário, mas a captura ao vivo deixa de ser o caminho principal.
+
+Não mexer em `BlockRenderer.tsx` (continua sendo a fonte da renderização visual no editor).
+
+## Validação
+
+1. Criar um slide com título longo + KPI + tabela + bridge.
+2. Exportar PPT, abrir e confirmar:
+   - Título inteiro visível, sem corte.
+   - Clicar no título e editar texto.
+   - Selecionar tabela e arrastar célula/redimensionar.
+   - Mover blocos livremente.
+3. Verificar que valores numéricos batem com o que o editor mostra.
+
+## Não-objetivo
+
+- Não vou redesenhar o editor.
+- Não vou trocar pptxgenjs por outra lib.
+- Bridge nativa pode ficar como gráfico de barras simplificado; se ficar visualmente ruim, usar fallback de imagem só para esse bloco.

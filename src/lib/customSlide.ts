@@ -166,7 +166,7 @@ export function defaultCustomSlide(): CustomSlideConfig {
     blocks: [
       {
         id: rid(), kind: "title", z: 1,
-        x: 40, y: 30, w: 900, h: 70,
+        x: 40, y: 30, w: 1240, h: 70,
         text: "Título do slide", size: 44, bold: true,
         color: "C8102E", align: "left",
       } as TitleBlock,
@@ -179,7 +179,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
   const z = zTop + 1;
   switch (kind) {
     case "title":
-      return { id, kind, z, x: 60, y: 60, w: 800, h: 70,
+      return { id, kind, z, x: 60, y: 60, w: 1200, h: 70,
         text: "Novo título", size: 40, bold: true, color: "C8102E", align: "left" };
     case "text":
       return { id, kind, z, x: 60, y: 150, w: 600, h: 60,
