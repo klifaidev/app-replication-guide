@@ -992,8 +992,12 @@ export default function SlidesBeta() {
                 <div className="mx-1 h-5 w-px bg-border/50" />
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-normal text-muted-foreground">
-                      <span className="max-w-[180px] truncate">{fileName}</span>
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
+                      aria-label="Nome do arquivo"
+                      title={`Nome do arquivo: ${fileName}`}
+                    >
+                      <FileText className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-72 p-3">
