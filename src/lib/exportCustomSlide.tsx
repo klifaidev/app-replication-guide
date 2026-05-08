@@ -1,9 +1,10 @@
 // Exportador do slide "Personalizado" para PPTX — modo NATIVO.
 // Cada bloco vira um elemento editável do PowerPoint (texto, forma,
-// imagem, tabela ou gráfico). Assim o usuário pode editar livremente o
-// resultado e o título nunca aparece cortado.
+// imagem, tabela ou gráfico). A Bridge é capturada como PNG fiel ao canvas
+// (mantém o visual de waterfall) — os demais blocos seguem editáveis.
 
 import type PptxGenJS from "pptxgenjs";
+import { toPng } from "html-to-image";
 import { CANVAS_W, CANVAS_H, type CustomSlideConfig, type CustomBlock,
   type TitleBlock, type TextBlock, type KpiBlock, type ImageBlock,
   type ShapeBlock, type BridgeBlock, type TableBlock, type ChartBlock,
@@ -17,6 +18,8 @@ import { buildUnifiedRows, ALL_DIMENSIONS } from "./pivotData";
 import { computeKpiBlock, computeChartSeries, computeTopRanking,
   formatValue, inferFormat } from "./customKpi";
 import { monthLabel, formatBRL } from "./format";
+import { resolveTableFit, resolveChartFit, resolveTopSkuFit } from "./customCapacity";
+import { getCustomCanvas } from "./customCanvasRegistry";
 
 const SLIDE_W_IN = 13.33;
 const SLIDE_H_IN = 7.5;
