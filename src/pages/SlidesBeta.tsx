@@ -699,14 +699,14 @@ function SavePresetDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" disabled={items.length === 0} aria-label="Salvar pré-definição">
-              <Save className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Salvar pré-definição</TooltipContent>
-        </Tooltip>
+        <Button
+          variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
+          disabled={items.length === 0}
+          aria-label="Salvar pré-definição"
+          title="Salvar pré-definição"
+        >
+          <Save className="h-4 w-4" />
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
