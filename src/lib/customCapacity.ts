@@ -29,3 +29,34 @@ export function chartSeriesCapacity(blockH: number, blockW: number): number {
   const cap = Math.min(12, Math.max(byHeight, byWidth));
   return Math.max(1, cap);
 }
+
+import type { TableBlock, ChartBlock, TopSkuBlock } from "./customSlide";
+
+export interface FitInfo { shown: number; total: number; truncated: boolean }
+
+export function resolveTableFit(block: TableBlock, totalRows: number): FitInfo {
+  const cap = tableCapacity(block.h);
+  const limit = block.autoFit !== false
+    ? cap
+    : Math.max(1, block.maxRows ?? cap);
+  const shown = Math.min(limit, totalRows);
+  return { shown, total: totalRows, truncated: totalRows > shown };
+}
+
+export function resolveTopSkuFit(block: TopSkuBlock, totalItems: number): FitInfo {
+  const cap = topSkuCapacity(block.h, !!block.title);
+  const limit = block.autoFit !== false
+    ? cap
+    : Math.max(1, block.topN || cap);
+  const shown = Math.min(limit, totalItems);
+  return { shown, total: totalItems, truncated: totalItems > shown };
+}
+
+export function resolveChartFit(block: ChartBlock, totalSeries: number): FitInfo {
+  const cap = chartSeriesCapacity(block.h, block.w);
+  const limit = block.autoFit !== false
+    ? cap
+    : Math.max(1, block.maxSeries ?? cap);
+  const shown = Math.min(limit, totalSeries);
+  return { shown, total: totalSeries, truncated: totalSeries > shown };
+}
