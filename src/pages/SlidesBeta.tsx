@@ -894,92 +894,128 @@ export default function SlidesBeta() {
         )}
       >
         {/* ===== Coluna esquerda: catálogo + presets ===== */}
-        <aside className="flex min-h-0 flex-col border-r border-border/40 bg-sidebar/40">
-          <ScrollArea className="flex-1">
-            <div className="flex flex-col gap-4 p-3">
-              <div>
-                <div className="mb-2 flex items-center justify-center text-muted-foreground">
-                  <Layers className="h-3.5 w-3.5" />
-                </div>
-                <TooltipProvider delayDuration={150}>
-                  <div className="flex flex-col items-center gap-2">
-                    {SLIDE_CATALOG.map((s) => {
-                      const Icon = ICON_MAP[s.icon];
-                      return (
-                        <Tooltip key={s.kind}>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => addWithDefaults(s.kind)}
-                              className={cn(
-                                "group relative flex h-11 w-11 items-center justify-center rounded-xl border transition-all hover:-translate-y-px hover:shadow-sm",
-                                ACCENT_BG[s.accent],
-                              )}
-                              aria-label={s.title}
-                            >
-                              <Icon className="h-5 w-5" />
-                              <Plus className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-background text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="right" className="max-w-[240px]">
-                            <div className="text-xs font-medium">{s.title}</div>
-                            <div className="mt-0.5 text-[11px] text-muted-foreground">{s.description}</div>
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    })}
-                  </div>
-                </TooltipProvider>
+        <aside className="flex min-h-0 flex-col items-center gap-3 border-r border-border/40 bg-sidebar/40 py-4">
+          <TooltipProvider delayDuration={150}>
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
+                Slides
               </div>
+              {SLIDE_CATALOG.map((s) => {
+                const Icon = ICON_MAP[s.icon];
+                return (
+                  <Tooltip key={s.kind}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => addWithDefaults(s.kind)}
+                        className={cn(
+                          "group relative flex h-11 w-11 items-center justify-center rounded-xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_hsl(var(--primary)/0.5)]",
+                          ACCENT_BG[s.accent],
+                        )}
+                        aria-label={s.title}
+                      >
+                        <Icon className="h-5 w-5" />
+                        <Plus className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-background p-0.5 text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-[240px]">
+                      <div className="text-xs font-medium">{s.title}</div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">{s.description}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
 
-              <Separator />
+            <div className="h-px w-8 bg-border/50" />
 
-              <div>
-                <div className="mb-2 flex items-center justify-center text-muted-foreground">
-                  <Bookmark className="h-3.5 w-3.5" />
+            <Popover>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <button
+                      className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border/40 bg-card/50 text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-border/70 hover:text-foreground"
+                      aria-label="Pré-definições"
+                    >
+                      <Bookmark className="h-4 w-4" />
+                    </button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <div className="text-xs font-medium">Pré-definições</div>
+                </TooltipContent>
+              </Tooltip>
+              <PopoverContent side="right" align="start" className="w-72 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Bookmark className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-sm font-medium">Pré-definições</span>
                 </div>
                 <PresetsPanel />
-              </div>
-            </div>
-          </ScrollArea>
+              </PopoverContent>
+            </Popover>
+          </TooltipProvider>
         </aside>
 
         {/* ===== Coluna central: esteira ===== */}
         <main className="flex flex-col overflow-hidden bg-background/60">
           {/* Header da esteira */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 bg-card/30 px-6 py-3 backdrop-blur">
-            <div className="flex items-center gap-3">
-              <h2 className="text-sm font-medium">Esteira de slides</h2>
-              <Badge variant="secondary" className="text-[10px]">{items.length} slide(s)</Badge>
+          <div className="flex items-center justify-between gap-3 border-b border-border/40 bg-card/30 px-6 py-3 backdrop-blur-xl">
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-sm font-semibold tracking-tight">Esteira</h2>
+              <Badge variant="secondary" className="h-5 px-2 text-[10px] tabular-nums">
+                {items.length}
+              </Badge>
               {!readyAll && items.length > 0 && (
-                <Badge variant="outline" className="border-warning/40 text-warning text-[10px]">
-                  Há slides incompletos
+                <Badge variant="outline" className="h-5 border-warning/40 px-2 text-[10px] text-warning">
+                  Slides incompletos
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Input
-                value={fileName}
-                onChange={(e) => setFileName(e.target.value)}
-                className="h-8 w-56 text-xs"
-                placeholder="nome-do-arquivo.pptx"
-              />
-              <SavePresetDialog />
-              {items.length > 0 && (
-                <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" onClick={() => {
-                  if (confirm("Limpar a esteira atual?")) clearItems();
-                }}>
-                  <X className="h-4 w-4" /> Limpar
+            <TooltipProvider delayDuration={200}>
+              <div className="flex items-center gap-1.5">
+                <SavePresetDialog />
+                {items.length > 0 && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
+                        onClick={() => { if (confirm("Limpar a esteira atual?")) clearItems(); }}
+                        aria-label="Limpar esteira"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Limpar esteira</TooltipContent>
+                  </Tooltip>
+                )}
+                <div className="mx-1 h-5 w-px bg-border/50" />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-normal text-muted-foreground">
+                      <span className="max-w-[180px] truncate">{fileName}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 p-3">
+                    <Label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Nome do arquivo
+                    </Label>
+                    <Input
+                      value={fileName}
+                      onChange={(e) => setFileName(e.target.value)}
+                      className="mt-1.5 h-9 text-sm"
+                      placeholder="apresentacao.pptx"
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  size="sm" className="h-8 gap-2 shadow-[0_4px_12px_-4px_hsl(var(--primary)/0.5)]"
+                  disabled={items.length === 0 || exporting || !readyAll}
+                  onClick={handleExport}
+                >
+                  <Download className="h-4 w-4" />
+                  {exporting ? "Gerando..." : "Exportar"}
                 </Button>
-              )}
-              <Button
-                size="sm" className="gap-2"
-                disabled={items.length === 0 || exporting || !readyAll}
-                onClick={handleExport}
-              >
-                <Download className="h-4 w-4" />
-                {exporting ? "Gerando..." : "Exportar PPTX"}
-              </Button>
-            </div>
+              </div>
+            </TooltipProvider>
           </div>
 
           {/* Conteúdo da esteira */}
@@ -1015,7 +1051,7 @@ export default function SlidesBeta() {
           <button
             type="button"
             onClick={() => setInspectorOpen((v) => !v)}
-            className="absolute left-0 top-3 z-10 flex h-8 w-6 -translate-x-1/2 items-center justify-center rounded-full border border-border/60 bg-background text-muted-foreground shadow-sm transition-colors hover:text-foreground"
+            className="absolute left-0 top-4 z-10 flex h-9 w-7 -translate-x-1/2 items-center justify-center rounded-full border border-border/60 bg-card text-muted-foreground shadow-md transition-all hover:scale-105 hover:text-foreground"
             aria-label={inspectorOpen ? "Recolher painel" : "Expandir painel"}
             title={inspectorOpen ? "Recolher prévia e filtros" : "Expandir prévia e filtros"}
           >
@@ -1024,7 +1060,7 @@ export default function SlidesBeta() {
           {inspectorOpen ? (
             <Inspector item={selected} />
           ) : (
-            <div className="flex h-full items-center justify-center px-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground [writing-mode:vertical-rl]">
+            <div className="flex h-full items-center justify-center px-1 text-[10px] font-medium uppercase tracking-[0.25em] text-muted-foreground/70 [writing-mode:vertical-rl]">
               Prévia & Filtros
             </div>
           )}
