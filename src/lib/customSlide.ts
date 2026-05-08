@@ -104,6 +104,16 @@ export interface TableBlock extends BaseBlock {
   rowDims: string[];
   colDim: string | null;
   filters: Filters;
+  /** Se true, calcula N de linhas a partir da altura. Default: true */
+  autoFit?: boolean;
+  /** Limite manual de linhas quando autoFit=false. */
+  maxRows?: number;
+  /** Agrega o restante numa linha "Outros". Default: false */
+  showOthers?: boolean;
+  /** Imprime nota "Mostrando X de Y" no PPT exportado. Default: false */
+  exportNote?: boolean;
+  /** Medida usada para ordenar/ranquear linhas. Default: primeira de measures. */
+  sortMeasure?: string;
 }
 
 // ---------------------------------------------------------------------------
