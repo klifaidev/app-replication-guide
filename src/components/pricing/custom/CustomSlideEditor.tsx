@@ -43,12 +43,14 @@ import {
 } from "@/lib/customTemplates";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
-import { resolveTableFit, resolveChartFit, resolveTopSkuFit, type FitInfo } from "@/lib/customCapacity";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { resolveTableFit, type FitInfo } from "@/lib/customCapacity";
 import { usePricing } from "@/store/pricing";
 import { useBudget } from "@/store/budget";
 import { computePivot, type PivotConfig } from "@/lib/pivot";
 import { buildUnifiedRows } from "@/lib/pivotData";
-import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
+import type { Filters } from "@/lib/types";
+import { BlockFilters } from "./BlockFilters";
 
 const BLOCK_KINDS: { kind: CustomBlockKind; icon: React.ComponentType<{ className?: string }> }[] = [
   { kind: "title",  icon: TypeIcon },
