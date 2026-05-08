@@ -612,9 +612,16 @@ function Inspector({ item }: { item: SlideItem | null }) {
 
   if (!item) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
-        <Layers className="h-8 w-8 opacity-40" />
-        <p className="text-sm">Selecione um slide para configurar.</p>
+      <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/40 text-muted-foreground/60">
+          <Layers className="h-5 w-5" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium tracking-tight">Nenhum slide selecionado</p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Selecione um slide na esteira para ver a prévia e ajustar filtros.
+          </p>
+        </div>
       </div>
     );
   }
