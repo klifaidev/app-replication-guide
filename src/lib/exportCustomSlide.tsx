@@ -1,9 +1,10 @@
 // Exportador do slide "Personalizado" para PPTX — modo NATIVO.
 // Cada bloco vira um elemento editável do PowerPoint (texto, forma,
-// imagem, tabela ou gráfico). Assim o usuário pode editar livremente o
-// resultado e o título nunca aparece cortado.
+// imagem, tabela ou gráfico). A Bridge é capturada como PNG fiel ao canvas
+// (mantém o visual de waterfall) — os demais blocos seguem editáveis.
 
 import type PptxGenJS from "pptxgenjs";
+import { toPng } from "html-to-image";
 import { CANVAS_W, CANVAS_H, type CustomSlideConfig, type CustomBlock,
   type TitleBlock, type TextBlock, type KpiBlock, type ImageBlock,
   type ShapeBlock, type BridgeBlock, type TableBlock, type ChartBlock,
@@ -17,6 +18,8 @@ import { buildUnifiedRows, ALL_DIMENSIONS } from "./pivotData";
 import { computeKpiBlock, computeChartSeries, computeTopRanking,
   formatValue, inferFormat } from "./customKpi";
 import { monthLabel, formatBRL } from "./format";
+import { resolveTableFit, resolveChartFit, resolveTopSkuFit } from "./customCapacity";
+import { getCustomCanvas } from "./customCanvasRegistry";
 
 const SLIDE_W_IN = 13.33;
 const SLIDE_H_IN = 7.5;
@@ -150,6 +153,16 @@ function renderImage(slide: PptxGenJS.Slide, b: ImageBlock) {
   });
 }
 
+function noteText(slide: PptxGenJS.Slide, box: { x: number; y: number; w: number; h: number },
+  shown: number, total: number, unit: string,
+) {
+  slide.addText(`Mostrando ${shown} de ${total} ${unit}`, {
+    x: box.x, y: box.y + box.h - 0.22, w: box.w, h: 0.2,
+    fontFace: "Calibri", fontSize: 8, italic: true, color: "94A3B8",
+    align: "right", margin: 0,
+  });
+}
+
 function renderTable(slide: PptxGenJS.Slide, b: TableBlock,
   pricing: ReturnType<typeof usePricing.getState>["rows"],
   budget: ReturnType<typeof useBudget.getState>["rows"],
@@ -176,6 +189,19 @@ function renderTable(slide: PptxGenJS.Slide, b: TableBlock,
   const cols = result.colHeaders;
   const showCols = cols.length > 0 && cols[0].values.length > 0;
 
+  // Ordena rowHeaders pela sortMeasure (ou primeira) desc — espelha o canvas
+  const sortKey = b.sortMeasure && measures.find((m) => m.id === b.sortMeasure)
+    ? b.sortMeasure : measures[0].id;
+  const sortedHeaders = [...result.rowHeaders].sort((a, z) => {
+    const va = result.rowTotals.get(a.key)?.[sortKey] ?? 0;
+    const vz = result.rowTotals.get(z.key)?.[sortKey] ?? 0;
+    return vz - va;
+  });
+  const fit = resolveTableFit(b, sortedHeaders.length);
+  const visible = sortedHeaders.slice(0, fit.shown);
+  const hidden = sortedHeaders.slice(fit.shown);
+  const showOthers = !!b.showOthers && hidden.length > 0;
+
   const headerCells: PptxGenJS.TableCell[] = [{
     text: b.rowDims.map(dimLabel).join(" / ") || "Total",
     options: { bold: true, color: "FFFFFF", fill: { color: "C8102E" }, align: "center", valign: "middle" },
@@ -192,7 +218,7 @@ function renderTable(slide: PptxGenJS.Slide, b: TableBlock,
     }));
   }
 
-  const bodyRows: PptxGenJS.TableRow[] = result.rowHeaders.map((rh) => {
+  const bodyRows: PptxGenJS.TableRow[] = visible.map((rh) => {
     const cells: PptxGenJS.TableCell[] = [{
       text: rh.values.join(" / ") || "Total",
       options: { bold: true, color: "1C2430", align: "left", valign: "middle" },
@@ -211,20 +237,53 @@ function renderTable(slide: PptxGenJS.Slide, b: TableBlock,
     return cells;
   });
 
+  if (showOthers) {
+    const cells: PptxGenJS.TableCell[] = [{
+      text: `Outros (${hidden.length})`,
+      options: { italic: true, color: "475569", fill: { color: "F1F5F9" }, align: "left", valign: "middle" },
+    }];
+    if (showCols) {
+      cols.forEach((c) => measures.forEach((m) => {
+        const v = hidden.reduce((s, rh) => s + (result.cells.get(rh.key)?.get(c.key)?.[m.id] ?? 0), 0);
+        cells.push({ text: fmtMeasure(m, v), options: { italic: true, color: "475569", fill: { color: "F1F5F9" }, align: "right", valign: "middle" } });
+      }));
+    } else {
+      measures.forEach((m) => {
+        const v = hidden.reduce((s, rh) => s + (result.rowTotals.get(rh.key)?.[m.id] ?? 0), 0);
+        cells.push({ text: fmtMeasure(m, v), options: { italic: true, color: "475569", fill: { color: "F1F5F9" }, align: "right", valign: "middle" } });
+      });
+    }
+    bodyRows.push(cells);
+  }
+
+  const tableH = b.exportNote && fit.truncated ? box.h - 0.22 : box.h;
   slide.addTable([headerCells, ...bodyRows], {
-    ...box,
+    x: box.x, y: box.y, w: box.w, h: tableH,
     fontFace: "Calibri", fontSize: 9,
     border: { type: "solid", pt: 0.5, color: "E2E8F0" },
     margin: 0.04,
     autoPage: false,
   });
+
+  if (b.exportNote && fit.truncated) noteText(slide, box, fit.shown, fit.total, "linhas");
 }
 
 function renderTopSku(slide: PptxGenJS.Slide, b: TopSkuBlock,
   pricing: ReturnType<typeof usePricing.getState>["rows"],
 ) {
   const box = BOX(b);
-  const items = computeTopRanking(pricing, b.filters, b.dim, b.measure, b.topN, b.periodMode, b.periodValue);
+  const all = computeTopRanking(pricing, b.filters, b.dim, b.measure, 9999, b.periodMode, b.periodValue);
+  const fit = resolveTopSkuFit(b, all.length);
+  const visible = all.slice(0, fit.shown);
+  const hidden = all.slice(fit.shown);
+  const items = b.showOthers && hidden.length > 0
+    ? [...visible, {
+        name: `Outros (${hidden.length})`,
+        value: hidden.reduce((s, x) => s + x.value, 0),
+        share: hidden.reduce((s, x) => s + x.share, 0),
+        __others: true as const,
+      }]
+    : visible.map((it) => ({ ...it, __others: false as const }));
   const fmt = (v: number) => formatValue(v, inferFormat(b.measure), b.measure);
 
   let y = box.y;
@@ -244,31 +303,38 @@ function renderTopSku(slide: PptxGenJS.Slide, b: TopSkuBlock,
   if (b.showShare) header.push({ text: "%", options: { bold: true, color: "FFFFFF", fill: { color: "C8102E" }, align: "right" } });
 
   const rows: PptxGenJS.TableRow[] = items.map((it, i) => {
+    const isOthers = "__others" in it && it.__others;
+    const baseOpts = isOthers
+      ? { italic: true, color: "475569", fill: { color: "F1F5F9" } }
+      : {};
     const r: PptxGenJS.TableCell[] = [
-      { text: String(i + 1), options: { color: "64748B", bold: true, align: "center" } },
-      { text: it.name, options: { color: "1C2430", align: "left" } },
-      { text: fmt(it.value), options: { color: "1C2430", bold: true, align: "right" } },
+      { text: isOthers ? "—" : String(i + 1), options: { ...baseOpts, color: isOthers ? "475569" : "64748B", bold: true, align: "center" } },
+      { text: it.name, options: { ...baseOpts, color: isOthers ? "475569" : "1C2430", align: "left" } },
+      { text: fmt(it.value), options: { ...baseOpts, color: isOthers ? "475569" : "1C2430", bold: !isOthers, align: "right" } },
     ];
-    if (b.showShare) r.push({ text: `${(it.share * 100).toFixed(1)}%`, options: { color: "64748B", align: "right" } });
+    if (b.showShare) r.push({ text: `${(it.share * 100).toFixed(1)}%`, options: { ...baseOpts, color: isOthers ? "475569" : "64748B", align: "right" } });
     return r;
   });
 
+  const tableH = box.h - (y - box.y) - (b.exportNote && fit.truncated ? 0.22 : 0);
   slide.addTable([header, ...rows], {
-    x: box.x, y, w: box.w, h: box.h - (y - box.y),
+    x: box.x, y, w: box.w, h: tableH,
     fontFace: "Calibri", fontSize: 9,
     border: { type: "solid", pt: 0.5, color: "E2E8F0" },
     colW: b.showShare ? [0.4, box.w - 2.0, 1.0, 0.6] : [0.4, box.w - 1.4, 1.0],
     margin: 0.04,
     autoPage: false,
   });
+
+  if (b.exportNote && fit.truncated) noteText(slide, box, fit.shown, fit.total, "itens");
 }
 
 function renderChart(slide: PptxGenJS.Slide, b: ChartBlock,
   pricing: ReturnType<typeof usePricing.getState>["rows"],
 ) {
   const box = BOX(b);
-  const data = computeChartSeries(pricing, b.filters, b.measure, b.breakdown);
-  if (data.periodos.length === 0 || data.series.length === 0) {
+  const raw = computeChartSeries(pricing, b.filters, b.measure, b.breakdown);
+  if (raw.periodos.length === 0 || raw.series.length === 0) {
     slide.addText("Sem dados para os filtros escolhidos", {
       ...box, fontFace: "Calibri", fontSize: 10, color: "64748B",
       align: "center", valign: "middle", italic: true,
@@ -276,8 +342,22 @@ function renderChart(slide: PptxGenJS.Slide, b: ChartBlock,
     return;
   }
 
-  const labels = data.periodos.map((p) => p.label);
-  const chartData = data.series.map((s) => ({ name: s.name, labels, values: s.values }));
+  // Auto-fit + Outros (mesma lógica do canvas)
+  const ranked = [...raw.series].sort((a, z) =>
+    Math.abs(z.values.reduce((s, v) => s + (v || 0), 0))
+    - Math.abs(a.values.reduce((s, v) => s + (v || 0), 0))
+  );
+  const fit = resolveChartFit(b, ranked.length);
+  const visibleSeries = ranked.slice(0, fit.shown);
+  const hidden = ranked.slice(fit.shown);
+  if (b.showOthers && hidden.length > 0) {
+    const othersValues = raw.periodos.map((_, i) =>
+      hidden.reduce((s, ser) => s + (ser.values[i] || 0), 0));
+    visibleSeries.push({ name: `Outros (${hidden.length})`, values: othersValues });
+  }
+
+  const labels = raw.periodos.map((p) => p.label);
+  const chartData = visibleSeries.map((s) => ({ name: s.name, labels, values: s.values }));
 
   let y = box.y, h = box.h;
   if (b.title) {
@@ -287,6 +367,7 @@ function renderChart(slide: PptxGenJS.Slide, b: ChartBlock,
     });
     y += 0.32; h -= 0.32;
   }
+  if (b.exportNote && fit.truncated) h -= 0.22;
 
   const palette = ["C8102E", "1C2430", "0F766E", "7C3AED", "EA580C", "2563EB", "0EA5E9", "16A34A"];
   slide.addChart(b.chartType === "bar" ? "bar" : "line", chartData, {
@@ -305,12 +386,11 @@ function renderChart(slide: PptxGenJS.Slide, b: ChartBlock,
     lineDataSymbol: "circle",
     lineDataSymbolSize: 6,
   });
+
+  if (b.exportNote && fit.truncated) noteText(slide, box, fit.shown, fit.total, "séries");
 }
 
-function renderBridge(slide: PptxGenJS.Slide, b: BridgeBlock,
-  pricing: ReturnType<typeof usePricing.getState>["rows"],
-  metric: ReturnType<typeof usePricing.getState>["metric"],
-) {
+async function renderBridge(slide: PptxGenJS.Slide, b: BridgeBlock, slideId?: string) {
   const box = BOX(b);
   if (!b.base || !b.comp || b.base === b.comp) {
     slide.addText("Configure base e comparação para a Bridge", {
@@ -319,43 +399,47 @@ function renderBridge(slide: PptxGenJS.Slide, b: BridgeBlock,
     });
     return;
   }
-  const filtered = applyFilters(pricing, b.filters, null);
-  const labels = b.mode === "month" ? {
-    base: (() => { const r = filtered.find((x) => x.periodo === b.base); return r ? monthLabel(r.mes, r.ano) : b.base!; })(),
-    comp: (() => { const r = filtered.find((x) => x.periodo === b.comp); return r ? monthLabel(r.mes, r.ano) : b.comp!; })(),
-  } : undefined;
 
-  let pvm;
-  try { pvm = calcPVM(filtered, metric, b.base, b.comp, b.mode, labels); }
-  catch {
-    slide.addText("Não foi possível calcular a Bridge", {
+  // Captura o bloco bridge diretamente do canvas registrado (PNG fiel ao preview)
+  const canvas = slideId ? getCustomCanvas(slideId) : null;
+  const node = canvas?.querySelector(`[data-block-id="${b.id}"]`) as HTMLElement | null;
+  if (!node) {
+    slide.addText("Bridge indisponível para captura", {
       ...box, fontFace: "Calibri", fontSize: 10, color: "64748B",
       align: "center", valign: "middle", italic: true,
     });
     return;
   }
 
-  // Bar chart simples: base, efeitos, atual. Editável no PowerPoint.
-  const labelsArr = [
-    pvm.baseLabel, "Volume", "Preço", "Custo", "Frete", "Comissão", "Outros", pvm.currentLabel,
-  ];
-  const values = [pvm.base, pvm.volume, pvm.price, pvm.cost, pvm.freight, pvm.commission, pvm.others, pvm.current];
-
-  slide.addChart("bar", [{ name: "PVM", labels: labelsArr, values }], {
-    ...box,
-    barDir: "col",
-    chartColors: ["C8102E"],
-    showLegend: false,
-    showValue: true,
-    dataLabelFontFace: "Calibri",
-    dataLabelFontSize: 8,
-    catAxisLabelFontFace: "Calibri",
-    catAxisLabelFontSize: 9,
-    valAxisLabelFontFace: "Calibri",
-    valAxisLabelFontSize: 8,
-    valGridLine: { color: "E2E8F0", size: 0.5 },
-    showTitle: false,
-  });
+  try {
+    // Espera fontes/SVG estabilizarem
+    if ((document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready) {
+      await (document as Document & { fonts: { ready: Promise<unknown> } }).fonts.ready;
+    }
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+    const dataUrl = await toPng(node, {
+      pixelRatio: 2,
+      backgroundColor: "#FFFFFF",
+      cacheBust: true,
+      // Filtra qualquer ornamento de seleção do react-rnd, se vazar
+      filter: (n) => {
+        if (!(n instanceof Element)) return true;
+        const cls = n.getAttribute("class") ?? "";
+        return !/react-resizable-handle|outline-primary/.test(cls);
+      },
+    });
+    slide.addImage({
+      data: dataUrl,
+      x: box.x, y: box.y, w: box.w, h: box.h,
+      sizing: { type: "contain", w: box.w, h: box.h },
+    });
+  } catch (err) {
+    console.error("[customSlide export] falha ao capturar bridge", err);
+    slide.addText("Falha ao renderizar Bridge", {
+      ...box, fontFace: "Calibri", fontSize: 10, color: "C8102E",
+      align: "center", valign: "middle", italic: true,
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -375,13 +459,12 @@ async function fetchAsDataUrl(url: string): Promise<string> {
 export async function addCustomSlide(
   pptx: PptxGenJS,
   config: CustomSlideConfig,
-  _opts?: { slideId?: string },
+  opts?: { slideId?: string },
 ) {
   const slide = pptx.addSlide();
   slide.background = { color: config.background };
 
   const pricing = usePricing.getState().rows;
-  const metric = usePricing.getState().metric;
   const budget = useBudget.getState().rows;
 
   // Renderiza por z-index
@@ -397,7 +480,7 @@ export async function addCustomSlide(
         case "table":  renderTable(slide, blk, pricing, budget); break;
         case "topSku": renderTopSku(slide, blk, pricing); break;
         case "chart":  renderChart(slide, blk, pricing); break;
-        case "bridge": renderBridge(slide, blk, pricing, metric); break;
+        case "bridge": await renderBridge(slide, blk, opts?.slideId); break;
       }
     } catch (err) {
       console.error("[customSlide export] erro no bloco", blk.kind, err);
@@ -413,3 +496,4 @@ export async function addCustomSlide(
     });
   }
 }
+

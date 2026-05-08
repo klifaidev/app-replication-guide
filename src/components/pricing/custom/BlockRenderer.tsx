@@ -16,6 +16,7 @@ import {
   computeKpiBlock, computeChartSeries, computeTopRanking, formatValue, inferFormat,
 } from "@/lib/customKpi";
 import { KPI_MEASURES } from "@/lib/customSlide";
+import { resolveTableFit, resolveChartFit, resolveTopSkuFit } from "@/lib/customCapacity";
 
 export const CUSTOM_TABLE_MEASURES: PivotMeasure[] = [
   { id: "rol_real",  label: "ROL",            field: "rol_real",         agg: "sum", format: "currency", tone: "real" },
@@ -202,10 +203,20 @@ function TableRender({ block: b }: { block: TableBlock }) {
       filters: Object.fromEntries(Object.entries(b.filters).map(([k, v]) => [k, new Set(v ?? [])])),
     };
     const result = computePivot(unified as unknown as Record<string, unknown>[], cfg);
-    return { result, measures };
-  }, [pricing, budget, b.rowDims, b.colDim, b.measures, b.filters]);
 
-  if (!data || data.result.rowHeaders.length === 0) {
+    // Ordena rowHeaders pela sortMeasure (ou primeira measure) desc
+    const sortKey = b.sortMeasure && measures.find((m) => m.id === b.sortMeasure)
+      ? b.sortMeasure
+      : measures[0].id;
+    const sortedHeaders = [...result.rowHeaders].sort((a, z) => {
+      const va = result.rowTotals.get(a.key)?.[sortKey] ?? 0;
+      const vz = result.rowTotals.get(z.key)?.[sortKey] ?? 0;
+      return vz - va;
+    });
+    return { result, measures, sortedHeaders };
+  }, [pricing, budget, b.rowDims, b.colDim, b.measures, b.filters, b.sortMeasure]);
+
+  if (!data || data.sortedHeaders.length === 0) {
     return (
       <div style={{
         width: "100%", height: "100%",
@@ -218,12 +229,33 @@ function TableRender({ block: b }: { block: TableBlock }) {
     );
   }
 
-  const { result, measures } = data;
+  const { result, measures, sortedHeaders } = data;
+  const fit = resolveTableFit(b, sortedHeaders.length);
+  const visibleHeaders = sortedHeaders.slice(0, fit.shown);
+  const hiddenHeaders = sortedHeaders.slice(fit.shown);
+  const showOthers = !!b.showOthers && hiddenHeaders.length > 0;
   const cols = result.colHeaders;
   const showCols = cols.length > 0 && cols[0].values.length > 0;
 
+  // Agrega "Outros" cell-by-cell
+  const othersRow: Record<string, Record<string, number>> | null = showOthers ? (() => {
+    const acc: Record<string, Record<string, number>> = { __row__: {} };
+    for (const m of measures) acc.__row__[m.id] = 0;
+    if (showCols) for (const c of cols) {
+      acc[c.key] = {};
+      for (const m of measures) acc[c.key][m.id] = 0;
+    }
+    for (const rh of hiddenHeaders) {
+      for (const m of measures) acc.__row__[m.id] += result.rowTotals.get(rh.key)?.[m.id] ?? 0;
+      if (showCols) for (const c of cols) for (const m of measures) {
+        acc[c.key][m.id] += result.cells.get(rh.key)?.get(c.key)?.[m.id] ?? 0;
+      }
+    }
+    return acc;
+  })() : null;
+
   return (
-    <div style={{ width: "100%", height: "100%", overflow: "auto", fontFamily: "Calibri", fontSize: 12 }}>
+    <div style={{ width: "100%", height: "100%", overflow: "hidden", fontFamily: "Calibri", fontSize: 12 }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -236,7 +268,7 @@ function TableRender({ block: b }: { block: TableBlock }) {
           </tr>
         </thead>
         <tbody>
-          {result.rowHeaders.map((rh) => (
+          {visibleHeaders.map((rh) => (
             <tr key={rh.key}>
               <td style={cellLabel}>{rh.values.join(" / ") || "Total"}</td>
               {showCols
@@ -250,6 +282,24 @@ function TableRender({ block: b }: { block: TableBlock }) {
                   })}
             </tr>
           ))}
+          {othersRow && (
+            <tr style={{ background: "#F1F5F9" }}>
+              <td style={{ ...cellLabel, fontStyle: "italic" }}>
+                Outros ({hiddenHeaders.length})
+              </td>
+              {showCols
+                ? cols.flatMap((c) => measures.map((m) => (
+                    <td key={`oth-${c.key}-${m.id}`} style={{ ...cellVal, fontStyle: "italic" }}>
+                      {fmtMeasure(m, othersRow[c.key][m.id])}
+                    </td>
+                  )))
+                : measures.map((m) => (
+                    <td key={`oth-${m.id}`} style={{ ...cellVal, fontStyle: "italic" }}>
+                      {fmtMeasure(m, othersRow.__row__[m.id])}
+                    </td>
+                  ))}
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
@@ -263,10 +313,28 @@ const CHART_COLORS = ["#C8102E", "#1C2430", "#0F766E", "#7C3AED", "#EA580C", "#2
 
 function ChartRender({ block: b }: { block: ChartBlock }) {
   const pricing = usePricing((s) => s.rows);
-  const data = useMemo(
+  const raw = useMemo(
     () => computeChartSeries(pricing, b.filters, b.measure, b.breakdown),
     [pricing, b.filters, b.measure, b.breakdown],
   );
+
+  // Aplica auto-fit + Outros nas séries (ordena por |total| desc)
+  const data = useMemo(() => {
+    const periodos = raw.periodos;
+    const ranked = [...raw.series].sort((a, z) =>
+      Math.abs(z.values.reduce((s, v) => s + (v || 0), 0))
+      - Math.abs(a.values.reduce((s, v) => s + (v || 0), 0))
+    );
+    const fit = resolveChartFit(b, ranked.length);
+    const visible = ranked.slice(0, fit.shown);
+    const hidden = ranked.slice(fit.shown);
+    if (b.showOthers && hidden.length > 0) {
+      const othersValues = periodos.map((_, i) =>
+        hidden.reduce((s, ser) => s + (ser.values[i] || 0), 0));
+      visible.push({ name: `Outros (${hidden.length})`, values: othersValues });
+    }
+    return { periodos, series: visible };
+  }, [raw, b.h, b.w, b.autoFit, b.maxSeries, b.showOthers]);
 
   if (data.periodos.length === 0 || data.series.length === 0) {
     return (
@@ -389,10 +457,21 @@ function ChartRender({ block: b }: { block: ChartBlock }) {
 // ---------------------------------------------------------------------------
 function TopSkuRender({ block: b }: { block: TopSkuBlock }) {
   const pricing = usePricing((s) => s.rows);
-  const items = useMemo(
-    () => computeTopRanking(pricing, b.filters, b.dim, b.measure, b.topN, b.periodMode, b.periodValue),
-    [pricing, b.filters, b.dim, b.measure, b.topN, b.periodMode, b.periodValue],
+  // Sempre busca todos para podermos calcular o efetivo + Outros
+  const allItems = useMemo(
+    () => computeTopRanking(pricing, b.filters, b.dim, b.measure, 9999, b.periodMode, b.periodValue),
+    [pricing, b.filters, b.dim, b.measure, b.periodMode, b.periodValue],
   );
+  const fit = resolveTopSkuFit(b, allItems.length);
+  const visible = allItems.slice(0, fit.shown);
+  const hidden = allItems.slice(fit.shown);
+  const items = b.showOthers && hidden.length > 0
+    ? [...visible, {
+        name: `Outros (${hidden.length})`,
+        value: hidden.reduce((s, x) => s + x.value, 0),
+        share: hidden.reduce((s, x) => s + x.share, 0),
+      }]
+    : visible;
   const fmt = (v: number) => formatValue(v, inferFormat(b.measure), b.measure);
   const max = Math.max(...items.map((i) => i.value), 1);
 
@@ -403,7 +482,7 @@ function TopSkuRender({ block: b }: { block: TopSkuBlock }) {
           {b.title}
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 8px" }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden", padding: "0 8px" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ background: "#C8102E", color: "#fff" }}>
@@ -414,27 +493,30 @@ function TopSkuRender({ block: b }: { block: TopSkuBlock }) {
             </tr>
           </thead>
           <tbody>
-            {items.map((it, i) => (
-              <tr key={it.name} style={{ borderBottom: "1px solid #E2E8F0" }}>
-                <td style={{ padding: "4px 6px", color: "#64748B", fontWeight: 600 }}>{i + 1}</td>
-                <td style={{ padding: "4px 6px", maxWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  <div style={{ position: "relative" }}>
-                    <div style={{
-                      position: "absolute", left: 0, top: 0, bottom: 0,
-                      width: `${(it.value / max) * 100}%`,
-                      background: "rgba(200,16,46,0.08)", zIndex: 0,
-                    }} />
-                    <span style={{ position: "relative", zIndex: 1 }}>{it.name}</span>
-                  </div>
-                </td>
-                <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>{fmt(it.value)}</td>
-                {b.showShare && (
-                  <td style={{ padding: "4px 6px", textAlign: "right", color: "#64748B" }}>
-                    {(it.share * 100).toFixed(1)}%
+            {items.map((it, i) => {
+              const isOthers = b.showOthers && i === items.length - 1 && hidden.length > 0;
+              return (
+                <tr key={it.name} style={{ borderBottom: "1px solid #E2E8F0", background: isOthers ? "#F1F5F9" : undefined }}>
+                  <td style={{ padding: "4px 6px", color: "#64748B", fontWeight: 600 }}>{isOthers ? "—" : i + 1}</td>
+                  <td style={{ padding: "4px 6px", maxWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: isOthers ? "italic" : undefined }}>
+                    <div style={{ position: "relative" }}>
+                      <div style={{
+                        position: "absolute", left: 0, top: 0, bottom: 0,
+                        width: `${(it.value / max) * 100}%`,
+                        background: "rgba(200,16,46,0.08)", zIndex: 0,
+                      }} />
+                      <span style={{ position: "relative", zIndex: 1 }}>{it.name}</span>
+                    </div>
                   </td>
-                )}
-              </tr>
-            ))}
+                  <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600, fontStyle: isOthers ? "italic" : undefined }}>{fmt(it.value)}</td>
+                  {b.showShare && (
+                    <td style={{ padding: "4px 6px", textAlign: "right", color: "#64748B" }}>
+                      {(it.share * 100).toFixed(1)}%
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

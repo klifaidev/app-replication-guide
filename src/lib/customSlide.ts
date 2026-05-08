@@ -104,6 +104,16 @@ export interface TableBlock extends BaseBlock {
   rowDims: string[];
   colDim: string | null;
   filters: Filters;
+  /** Se true, calcula N de linhas a partir da altura. Default: true */
+  autoFit?: boolean;
+  /** Limite manual de linhas quando autoFit=false. */
+  maxRows?: number;
+  /** Agrega o restante numa linha "Outros". Default: false */
+  showOthers?: boolean;
+  /** Imprime nota "Mostrando X de Y" no PPT exportado. Default: false */
+  exportNote?: boolean;
+  /** Medida usada para ordenar/ranquear linhas. Default: primeira de measures. */
+  sortMeasure?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +133,14 @@ export interface ChartBlock extends BaseBlock {
   showLabels: boolean;
   filters: Filters;
   title?: string;
+  /** Auto-ajustar nº de séries pela altura do bloco. Default: true */
+  autoFit?: boolean;
+  /** Limite manual de séries quando autoFit=false. */
+  maxSeries?: number;
+  /** Agrega séries restantes em uma série "Outros". Default: false */
+  showOthers?: boolean;
+  /** Imprime nota "Mostrando X de Y" no PPT. Default: false */
+  exportNote?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +157,12 @@ export interface TopSkuBlock extends BaseBlock {
   filters: Filters;
   showShare: boolean;
   title?: string;
+  /** Auto-ajustar nº de itens pela altura. Default: true */
+  autoFit?: boolean;
+  /** Agrega itens restantes em "Outros". Default: false */
+  showOthers?: boolean;
+  /** Imprime nota "Mostrando X de Y" no PPT. Default: false */
+  exportNote?: boolean;
 }
 
 export type CustomBlock =
@@ -207,13 +231,15 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
     case "table":
       return { id, kind, z, x: 60, y: 200, w: 1200, h: 360,
         source: "ke30", measures: ["rol_real", "cm_real"],
-        rowDims: ["marca"], colDim: "periodo", filters: {} };
+        rowDims: ["marca"], colDim: "periodo", filters: {},
+        autoFit: true, showOthers: false, exportNote: false };
     case "chart":
       return {
         id, kind, z, x: 60, y: 180, w: 1200, h: 380,
         chartType: "line", measure: "cm", breakdown: null,
         showGrid: true, showLegend: true, showLabels: false,
         filters: {}, title: "Evolução",
+        autoFit: true, showOthers: false, exportNote: false,
       };
     case "topSku":
       return {
@@ -221,6 +247,7 @@ export function newBlock(kind: CustomBlockKind, zTop: number): CustomBlock {
         dim: "skuDesc", measure: "cm", topN: 10,
         periodMode: "all", periodValue: null,
         filters: {}, showShare: true, title: "Top SKUs",
+        autoFit: true, showOthers: false, exportNote: false,
       };
   }
 }
