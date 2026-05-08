@@ -133,6 +133,14 @@ export interface ChartBlock extends BaseBlock {
   showLabels: boolean;
   filters: Filters;
   title?: string;
+  /** Auto-ajustar nº de séries pela altura do bloco. Default: true */
+  autoFit?: boolean;
+  /** Limite manual de séries quando autoFit=false. */
+  maxSeries?: number;
+  /** Agrega séries restantes em uma série "Outros". Default: false */
+  showOthers?: boolean;
+  /** Imprime nota "Mostrando X de Y" no PPT. Default: false */
+  exportNote?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +157,12 @@ export interface TopSkuBlock extends BaseBlock {
   filters: Filters;
   showShare: boolean;
   title?: string;
+  /** Auto-ajustar nº de itens pela altura. Default: true */
+  autoFit?: boolean;
+  /** Agrega itens restantes em "Outros". Default: false */
+  showOthers?: boolean;
+  /** Imprime nota "Mostrando X de Y" no PPT. Default: false */
+  exportNote?: boolean;
 }
 
 export type CustomBlock =
