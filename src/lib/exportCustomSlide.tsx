@@ -15,34 +15,68 @@ const SLIDE_W_IN = 13.33;
 const SLIDE_H_IN = 7.5;
 const FOOTER_H_IN = 0.85;
 
+async function waitForReady() {
+  if ("fonts" in document) {
+    try { await (document as Document & { fonts: { ready: Promise<unknown> } }).fonts.ready; }
+    catch { /* noop */ }
+  }
+  // 3 frames + delay para Recharts/SVG/tabela terminarem layout
+  for (let i = 0; i < 3; i++) {
+    await new Promise((r) => requestAnimationFrame(r));
+  }
+  await new Promise((r) => setTimeout(r, 350));
+}
+
 async function snapshotElement(el: HTMLElement): Promise<string> {
-  // Espera fontes + 2 frames + delay para Recharts/SVG layout
-  if ("fonts" in document) { try { await (document as Document & { fonts: { ready: Promise<unknown> } }).fonts.ready; } catch { /* noop */ } }
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  await new Promise((r) => setTimeout(r, 250));
-  return toPng(el, {
-    pixelRatio: 2,
-    width: CANVAS_W,
-    height: CANVAS_H,
-    backgroundColor: "#FFFFFF",
-    cacheBust: true,
-    style: { transform: "none", transformOrigin: "top left" },
-  });
+  await waitForReady();
+  // Salva e neutraliza propriedades visuais que atrapalham a captura
+  const prev = {
+    transform: el.style.transform,
+    boxShadow: el.style.boxShadow,
+    outline: el.style.outline,
+  };
+  el.style.transform = "none";
+  el.style.boxShadow = "none";
+  el.style.outline = "none";
+  try {
+    return await toPng(el, {
+      pixelRatio: 2,
+      width: CANVAS_W,
+      height: CANVAS_H,
+      backgroundColor: "#FFFFFF",
+      cacheBust: true,
+      style: { transform: "none", transformOrigin: "top left" },
+      // Evita que filhos com transform/scroll quebrem a captura
+      filter: (node) => {
+        if (node instanceof HTMLElement) {
+          // Remove outlines de seleção do react-rnd
+          if (node.classList.contains("group/block")) {
+            node.style.outline = "none";
+          }
+        }
+        return true;
+      },
+    });
+  } finally {
+    el.style.transform = prev.transform;
+    el.style.boxShadow = prev.boxShadow;
+    el.style.outline = prev.outline;
+  }
 }
 
 async function renderConfigToPng(config: CustomSlideConfig): Promise<string> {
   const host = document.createElement("div");
-  // Mantém VISÍVEL no fluxo (opacity 0) para Recharts medir corretamente
+  // Renderiza VISÍVEL fora da tela (à direita) para que Recharts/tabelas
+  // tenham layout real. Evitamos opacity:0 + z-index negativo, que em alguns
+  // browsers degradam a renderização de SVG.
   host.style.position = "fixed";
-  host.style.left = "0";
+  host.style.left = "100vw";
   host.style.top = "0";
   host.style.width = `${CANVAS_W}px`;
   host.style.height = `${CANVAS_H}px`;
   host.style.background = `#${config.background}`;
   host.style.overflow = "hidden";
-  host.style.opacity = "0";
   host.style.pointerEvents = "none";
-  host.style.zIndex = "-1";
   document.body.appendChild(host);
 
   let root: Root | null = null;
@@ -60,6 +94,8 @@ async function renderConfigToPng(config: CustomSlideConfig): Promise<string> {
         ))}
       </div>,
     );
+    // Espera extra para garantir que stores (Zustand) e SVG estejam prontos
+    await new Promise((r) => setTimeout(r, 500));
     return await snapshotElement(host);
   } finally {
     if (root) root.unmount();
@@ -78,7 +114,7 @@ export async function addCustomSlide(
   // Tenta capturar o canvas REAL no editor; se não encontrar, fallback off-DOM
   let png: string;
   const live = opts?.slideId ? getCustomCanvas(opts.slideId) : undefined;
-  if (live) {
+  if (live && live.isConnected && live.offsetWidth > 0) {
     png = await snapshotElement(live);
   } else {
     png = await renderConfigToPng(config);
