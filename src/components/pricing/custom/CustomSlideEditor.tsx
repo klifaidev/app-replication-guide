@@ -236,19 +236,25 @@ export function CustomSlideEditor({ slideId, config, onChange }: Props) {
               margin: "12px auto",
             }}
           >
+            {/* Wrapper escala visualmente o canvas. O canvas em si NÃO recebe
+                transform — assim o export captura o DOM em 1:1 sem distorção. */}
+            <div
+              style={{
+                position: "absolute", top: 0, left: 0,
+                width: CANVAS_W, height: CANVAS_H,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+                boxShadow: "0 10px 40px hsl(0 0% 0% / 0.25)",
+              }}
+            >
             <div
               ref={canvasRef}
               onClick={(e) => e.stopPropagation()}
               style={{
                 width: CANVAS_W,
                 height: CANVAS_H,
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
                 background: `#${config.background}`,
-                position: "absolute",
-                top: 0,
-                left: 0,
-                boxShadow: "0 10px 40px hsl(0 0% 0% / 0.25)",
+                position: "relative",
                 overflow: "hidden",
               }}
             >
