@@ -770,6 +770,20 @@ function TableBlockEditor({ block, onChange }: {
   onChange: (p: Partial<CustomBlock>) => void;
 }) {
   const dims = CUSTOM_TABLE_DIMS;
+  const pricing = usePricing((s) => s.rows);
+  const budget = useBudget((s) => s.rows);
+  const totalRows = useMemo(() => {
+    const measures = CUSTOM_TABLE_MEASURES.filter((m) => block.measures.includes(m.id));
+    if (!measures.length) return 0;
+    const unified = buildUnifiedRows(pricing, budget, "real");
+    const cfg: PivotConfig = {
+      rows: block.rowDims, cols: block.colDim ? [block.colDim] : [],
+      values: measures,
+      filters: Object.fromEntries(Object.entries(block.filters).map(([k, v]) => [k, new Set(v ?? [])])),
+    };
+    return computePivot(unified as unknown as Record<string, unknown>[], cfg).rowHeaders.length;
+  }, [pricing, budget, block.rowDims, block.colDim, block.measures, block.filters]);
+  const fit = resolveTableFit(block, totalRows);
   const toggleMeasure = (id: string) => {
     const next = block.measures.includes(id)
       ? block.measures.filter((m) => m !== id)
@@ -785,6 +799,8 @@ function TableBlockEditor({ block, onChange }: {
 
   return (
     <div className="space-y-3">
+      <TruncationAlert blockId={block.id} fit={fit} unitPlural="linhas" />
+
       <div>
         <Label className="text-[10px] uppercase text-muted-foreground">Linhas (dimensões)</Label>
         <Popover>
@@ -839,6 +855,34 @@ function TableBlockEditor({ block, onChange }: {
           ))}
         </div>
       </div>
+
+      {block.measures.length > 0 && (
+        <div>
+          <Label className="text-[10px] uppercase text-muted-foreground">Ordenar por</Label>
+          <Select value={block.sortMeasure ?? block.measures[0]}
+            onValueChange={(v) => onChange({ sortMeasure: v } as never)}>
+            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CUSTOM_TABLE_MEASURES.filter((m) => block.measures.includes(m.id))
+                .map((m) => <SelectItem key={m.id} value={m.id}>{m.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <Separator />
+      <FitControls
+        autoFit={block.autoFit !== false}
+        manualValue={block.maxRows ?? fit.shown}
+        manualLabel="Máx. linhas"
+        showOthers={!!block.showOthers}
+        exportNote={!!block.exportNote}
+        fit={fit}
+        onAutoFit={(v) => onChange({ autoFit: v } as never)}
+        onManual={(v) => onChange({ maxRows: v } as never)}
+        onShowOthers={(v) => onChange({ showOthers: v } as never)}
+        onExportNote={(v) => onChange({ exportNote: v } as never)}
+      />
     </div>
   );
 }
@@ -847,8 +891,16 @@ function TableBlockEditor({ block, onChange }: {
 function ChartBlockEditor({ block, onChange }: {
   block: ChartBlock; onChange: (p: Partial<CustomBlock>) => void;
 }) {
+  const pricing = usePricing((s) => s.rows);
+  const totalSeries = useMemo(
+    () => computeChartSeries(pricing, block.filters, block.measure, block.breakdown).series.length,
+    [pricing, block.filters, block.measure, block.breakdown],
+  );
+  const fit = resolveChartFit(block, totalSeries);
+
   return (
     <div className="space-y-2">
+      <TruncationAlert blockId={block.id} fit={fit} unitPlural="séries" />
       <Field label="Título" value={block.title ?? ""}
         onChange={(v) => onChange({ title: v } as never)} />
       <div className="grid grid-cols-2 gap-2">
@@ -894,6 +946,19 @@ function ChartBlockEditor({ block, onChange }: {
         <ToggleRow label="Legenda" value={block.showLegend} onChange={(v) => onChange({ showLegend: v } as never)} />
         <ToggleRow label="Rótulos" value={block.showLabels} onChange={(v) => onChange({ showLabels: v } as never)} />
       </div>
+      <Separator />
+      <FitControls
+        autoFit={block.autoFit !== false}
+        manualValue={block.maxSeries ?? fit.shown}
+        manualLabel="Máx. séries"
+        showOthers={!!block.showOthers}
+        exportNote={!!block.exportNote}
+        fit={fit}
+        onAutoFit={(v) => onChange({ autoFit: v } as never)}
+        onManual={(v) => onChange({ maxSeries: v } as never)}
+        onShowOthers={(v) => onChange({ showOthers: v } as never)}
+        onExportNote={(v) => onChange({ exportNote: v } as never)}
+      />
     </div>
   );
 }
@@ -903,6 +968,12 @@ function TopSkuBlockEditor({ block, onChange }: {
 }) {
   const months = useMonthsInfo();
   const fyList = useFyList();
+  const pricing = usePricing((s) => s.rows);
+  const totalItems = useMemo(
+    () => computeTopRanking(pricing, block.filters, block.dim, block.measure, 9999, block.periodMode, block.periodValue).length,
+    [pricing, block.filters, block.dim, block.measure, block.periodMode, block.periodValue],
+  );
+  const fit = resolveTopSkuFit(block, totalItems);
   const periodOpts = block.periodMode === "fy"
     ? fyList.map((f) => ({ value: f, label: f }))
     : block.periodMode === "month"
@@ -910,6 +981,7 @@ function TopSkuBlockEditor({ block, onChange }: {
       : [];
   return (
     <div className="space-y-2">
+      <TruncationAlert blockId={block.id} fit={fit} unitPlural="itens" />
       <Field label="Título" value={block.title ?? ""}
         onChange={(v) => onChange({ title: v } as never)} />
       <div className="grid grid-cols-2 gap-2">
@@ -939,21 +1011,17 @@ function TopSkuBlockEditor({ block, onChange }: {
           </Select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <NumField label="Top N" value={block.topN}
-          onChange={(v) => onChange({ topN: Math.max(1, Math.min(50, v)) } as never)} />
-        <div>
-          <Label className="text-[10px] uppercase text-muted-foreground">Período</Label>
-          <Select value={block.periodMode}
-            onValueChange={(v) => onChange({ periodMode: v as never, periodValue: null } as never)}>
-            <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="month">Mês</SelectItem>
-              <SelectItem value="fy">Ano fiscal</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div>
+        <Label className="text-[10px] uppercase text-muted-foreground">Período</Label>
+        <Select value={block.periodMode}
+          onValueChange={(v) => onChange({ periodMode: v as never, periodValue: null } as never)}>
+          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="month">Mês</SelectItem>
+            <SelectItem value="fy">Ano fiscal</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       {block.periodMode !== "all" && (
         <div>
@@ -969,6 +1037,19 @@ function TopSkuBlockEditor({ block, onChange }: {
       )}
       <ToggleRow label="Mostrar % do total" value={block.showShare}
         onChange={(v) => onChange({ showShare: v } as never)} />
+      <Separator />
+      <FitControls
+        autoFit={block.autoFit !== false}
+        manualValue={block.topN}
+        manualLabel="Top N"
+        showOthers={!!block.showOthers}
+        exportNote={!!block.exportNote}
+        fit={fit}
+        onAutoFit={(v) => onChange({ autoFit: v } as never)}
+        onManual={(v) => onChange({ topN: Math.max(1, Math.min(50, v)) } as never)}
+        onShowOthers={(v) => onChange({ showOthers: v } as never)}
+        onExportNote={(v) => onChange({ exportNote: v } as never)}
+      />
     </div>
   );
 }
@@ -981,3 +1062,57 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Auto-fit / Outros / Nota — controles compartilhados
+// ---------------------------------------------------------------------------
+function FitControls({
+  autoFit, manualValue, manualLabel, showOthers, exportNote, fit,
+  onAutoFit, onManual, onShowOthers, onExportNote,
+}: {
+  autoFit: boolean; manualValue: number; manualLabel: string;
+  showOthers: boolean; exportNote: boolean; fit: FitInfo;
+  onAutoFit: (v: boolean) => void; onManual: (v: number) => void;
+  onShowOthers: (v: boolean) => void; onExportNote: (v: boolean) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <ToggleRow label="Auto-ajustar ao tamanho" value={autoFit} onChange={onAutoFit} />
+      {!autoFit && <NumField label={manualLabel} value={manualValue} onChange={onManual} />}
+      <ToggleRow label="Linha “Outros”" value={showOthers} onChange={onShowOthers} />
+      <ToggleRow label="Nota no slide exportado" value={exportNote} onChange={onExportNote} />
+      <p className="text-[10px] text-muted-foreground">
+        Mostrando {fit.shown} de {fit.total}
+      </p>
+    </div>
+  );
+}
+
+// Alerta dismissível mostrado quando o conteúdo está sendo cortado.
+// Reaparece quando capacidade muda (ex.: usuário redimensiona o bloco).
+const dismissedTruncations = new Map<string, string>();
+function TruncationAlert({ blockId, fit, unitPlural }: {
+  blockId: string; fit: FitInfo; unitPlural: string;
+}) {
+  const key = `${fit.shown}/${fit.total}`;
+  const [, force] = useState(0);
+  if (!fit.truncated) return null;
+  if (dismissedTruncations.get(blockId) === key) return null;
+  return (
+    <Alert className="relative border-amber-300 bg-amber-50 py-2 pr-7 dark:bg-amber-950/30">
+      <Info className="h-3.5 w-3.5 text-amber-600" />
+      <AlertDescription className="text-[11px] leading-snug text-amber-900 dark:text-amber-200">
+        Mostrando {fit.shown} de {fit.total} {unitPlural} — aumente a altura do bloco para ver mais
+        {" ou ative “Linha Outros” para agregar o restante."}
+      </AlertDescription>
+      <button
+        onClick={() => { dismissedTruncations.set(blockId, key); force((n) => n + 1); }}
+        className="absolute right-1 top-1 rounded p-0.5 hover:bg-amber-100"
+        aria-label="Fechar"
+      >
+        <X className="h-3 w-3 text-amber-700" />
+      </button>
+    </Alert>
+  );
+}
+
