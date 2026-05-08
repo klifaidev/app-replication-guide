@@ -968,7 +968,7 @@ export default function SlidesBeta() {
               </Badge>
               {!readyAll && items.length > 0 && (
                 <Badge variant="outline" className="h-5 border-warning/40 px-2 text-[10px] text-warning">
-                  Slides incompletos
+                  Incompleto
                 </Badge>
               )}
             </div>
