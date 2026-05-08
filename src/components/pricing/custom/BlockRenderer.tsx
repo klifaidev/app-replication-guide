@@ -457,10 +457,21 @@ function ChartRender({ block: b }: { block: ChartBlock }) {
 // ---------------------------------------------------------------------------
 function TopSkuRender({ block: b }: { block: TopSkuBlock }) {
   const pricing = usePricing((s) => s.rows);
-  const items = useMemo(
-    () => computeTopRanking(pricing, b.filters, b.dim, b.measure, b.topN, b.periodMode, b.periodValue),
-    [pricing, b.filters, b.dim, b.measure, b.topN, b.periodMode, b.periodValue],
+  // Sempre busca todos para podermos calcular o efetivo + Outros
+  const allItems = useMemo(
+    () => computeTopRanking(pricing, b.filters, b.dim, b.measure, 9999, b.periodMode, b.periodValue),
+    [pricing, b.filters, b.dim, b.measure, b.periodMode, b.periodValue],
   );
+  const fit = resolveTopSkuFit(b, allItems.length);
+  const visible = allItems.slice(0, fit.shown);
+  const hidden = allItems.slice(fit.shown);
+  const items = b.showOthers && hidden.length > 0
+    ? [...visible, {
+        name: `Outros (${hidden.length})`,
+        value: hidden.reduce((s, x) => s + x.value, 0),
+        share: hidden.reduce((s, x) => s + x.share, 0),
+      }]
+    : visible;
   const fmt = (v: number) => formatValue(v, inferFormat(b.measure), b.measure);
   const max = Math.max(...items.map((i) => i.value), 1);
 
@@ -471,7 +482,7 @@ function TopSkuRender({ block: b }: { block: TopSkuBlock }) {
           {b.title}
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: "0 8px" }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: "hidden", padding: "0 8px" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr style={{ background: "#C8102E", color: "#fff" }}>
@@ -482,27 +493,30 @@ function TopSkuRender({ block: b }: { block: TopSkuBlock }) {
             </tr>
           </thead>
           <tbody>
-            {items.map((it, i) => (
-              <tr key={it.name} style={{ borderBottom: "1px solid #E2E8F0" }}>
-                <td style={{ padding: "4px 6px", color: "#64748B", fontWeight: 600 }}>{i + 1}</td>
-                <td style={{ padding: "4px 6px", maxWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  <div style={{ position: "relative" }}>
-                    <div style={{
-                      position: "absolute", left: 0, top: 0, bottom: 0,
-                      width: `${(it.value / max) * 100}%`,
-                      background: "rgba(200,16,46,0.08)", zIndex: 0,
-                    }} />
-                    <span style={{ position: "relative", zIndex: 1 }}>{it.name}</span>
-                  </div>
-                </td>
-                <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600 }}>{fmt(it.value)}</td>
-                {b.showShare && (
-                  <td style={{ padding: "4px 6px", textAlign: "right", color: "#64748B" }}>
-                    {(it.share * 100).toFixed(1)}%
+            {items.map((it, i) => {
+              const isOthers = b.showOthers && i === items.length - 1 && hidden.length > 0;
+              return (
+                <tr key={it.name} style={{ borderBottom: "1px solid #E2E8F0", background: isOthers ? "#F1F5F9" : undefined }}>
+                  <td style={{ padding: "4px 6px", color: "#64748B", fontWeight: 600 }}>{isOthers ? "—" : i + 1}</td>
+                  <td style={{ padding: "4px 6px", maxWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontStyle: isOthers ? "italic" : undefined }}>
+                    <div style={{ position: "relative" }}>
+                      <div style={{
+                        position: "absolute", left: 0, top: 0, bottom: 0,
+                        width: `${(it.value / max) * 100}%`,
+                        background: "rgba(200,16,46,0.08)", zIndex: 0,
+                      }} />
+                      <span style={{ position: "relative", zIndex: 1 }}>{it.name}</span>
+                    </div>
                   </td>
-                )}
-              </tr>
-            ))}
+                  <td style={{ padding: "4px 6px", textAlign: "right", fontWeight: 600, fontStyle: isOthers ? "italic" : undefined }}>{fmt(it.value)}</td>
+                  {b.showShare && (
+                    <td style={{ padding: "4px 6px", textAlign: "right", color: "#64748B" }}>
+                      {(it.share * 100).toFixed(1)}%
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
