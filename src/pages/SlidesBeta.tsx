@@ -244,7 +244,7 @@ function FlowCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative flex items-center gap-3 rounded-2xl border bg-card/60 p-3 transition-all duration-200 animate-fade-in",
+        "group relative flex items-center gap-2 rounded-xl border bg-card/60 px-2.5 py-2 transition-all duration-200 animate-fade-in",
         selected
           ? "border-primary/60 bg-primary/[0.06] shadow-[0_0_0_1px_hsl(var(--primary)/0.35),_0_8px_24px_-12px_hsl(var(--primary)/0.35)]"
           : "border-border/40 hover:-translate-y-px hover:border-border/70 hover:bg-card hover:shadow-[0_4px_16px_-8px_hsl(0_0%_0%/0.4)]",
@@ -252,7 +252,7 @@ function FlowCard({
       onClick={onSelect}
     >
       <button
-        className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center text-muted-foreground/30 transition-colors hover:text-muted-foreground active:cursor-grabbing"
+        className="flex h-7 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground/30 transition-colors hover:text-muted-foreground active:cursor-grabbing"
         {...attributes}
         {...listeners}
         onClick={(e) => e.stopPropagation()}
@@ -261,39 +261,34 @@ function FlowCard({
         <GripVertical className="h-4 w-4" />
       </button>
 
-      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border", ACCENT_BG[meta.accent])}>
+      <span className="w-6 shrink-0 text-center text-[10px] font-semibold tabular-nums tracking-wider text-muted-foreground/70">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+
+      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[meta.accent])}>
         <Icon className="h-4 w-4" />
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold tabular-nums tracking-wider text-muted-foreground/70">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          <span className="truncate text-sm font-medium tracking-tight">
-            {item.label || meta.title}
-          </span>
-        </div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span>{meta.title}</span>
-          {filtersCount > 0 && (
-            <>
-              <span>·</span>
-              <span className="inline-flex items-center gap-0.5">
-                <FilterIcon className="h-3 w-3" /> {filtersCount}
-              </span>
-            </>
-          )}
-          {!ready.ok && (
-            <>
-              <span>·</span>
-              <span className="text-warning">{ready.reason}</span>
-            </>
-          )}
+        <div className="truncate text-sm font-medium tracking-tight">
+          {item.label || meta.title}
         </div>
       </div>
 
-      <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+        {filtersCount > 0 && (
+          <span className="inline-flex items-center gap-0.5">
+            <FilterIcon className="h-3 w-3" /> {filtersCount}
+          </span>
+        )}
+        {!ready.ok && (
+          <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] text-warning">
+            {ready.reason}
+          </span>
+        )}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
         <Button
           variant="ghost" size="icon" className="h-7 w-7"
           onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
