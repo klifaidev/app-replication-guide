@@ -41,6 +41,14 @@ import {
   BUILTIN_TEMPLATES, applyTemplate, loadUserTemplates,
   saveUserTemplate, deleteUserTemplate, type CustomTemplate,
 } from "@/lib/customTemplates";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
+import { resolveTableFit, resolveChartFit, resolveTopSkuFit, type FitInfo } from "@/lib/customCapacity";
+import { usePricing } from "@/store/pricing";
+import { useBudget } from "@/store/budget";
+import { computePivot, type PivotConfig } from "@/lib/pivot";
+import { buildUnifiedRows } from "@/lib/pivotData";
+import { computeChartSeries, computeTopRanking } from "@/lib/customKpi";
 
 const BLOCK_KINDS: { kind: CustomBlockKind; icon: React.ComponentType<{ className?: string }> }[] = [
   { kind: "title",  icon: TypeIcon },
