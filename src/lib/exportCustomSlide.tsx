@@ -6,6 +6,7 @@
 
 import type PptxGenJS from "pptxgenjs";
 import React from "react";
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { toPng } from "html-to-image";
 import {
@@ -115,10 +116,19 @@ async function waitFonts() {
 }
 
 async function captureNode(node: HTMLElement): Promise<string> {
+  const width = Math.max(1, Math.ceil(node.offsetWidth || node.getBoundingClientRect().width));
+  const height = Math.max(1, Math.ceil(node.offsetHeight || node.getBoundingClientRect().height));
   return toPng(node, {
+    width,
+    height,
     pixelRatio: 2,
     backgroundColor: "#FFFFFF",
     cacheBust: true,
+    style: {
+      width: `${width}px`,
+      height: `${height}px`,
+      transform: "none",
+    },
     filter: (n) => {
       if (!(n instanceof Element)) return true;
       const cls = n.getAttribute("class") ?? "";
@@ -130,14 +140,19 @@ async function captureNode(node: HTMLElement): Promise<string> {
 async function renderBlockOffscreen(block: CustomBlock): Promise<string> {
   const host = document.createElement("div");
   host.style.cssText = [
-    "position:fixed", "left:-99999px", "top:0",
+    "position:fixed", "left:0", "top:0",
     `width:${block.w}px`, `height:${block.h}px`,
-    "background:#FFFFFF", "overflow:hidden", "z-index:-1",
+    "background:#FFFFFF", "overflow:hidden", "pointer-events:none",
+    "transform:translateX(-150vw)", "z-index:2147483647",
   ].join(";");
   document.body.appendChild(host);
   const root = createRoot(host);
   try {
-    root.render(React.createElement(BlockRenderer, { block }));
+    flushSync(() => {
+      root.render(React.createElement("div", {
+        style: { width: block.w, height: block.h, background: "#FFFFFF", overflow: "hidden" },
+      }, React.createElement(BlockRenderer, { block })));
+    });
     // Aguarda render + dados (Zustand é síncrono; SVGs precisam de 2 frames)
     await waitFonts();
     await new Promise((r) => setTimeout(r, 80));
@@ -161,7 +176,6 @@ async function renderBlockAsImage(
     slide.addImage({
       data: dataUrl,
       x: box.x, y: box.y, w: box.w, h: box.h,
-      sizing: { type: "contain", w: box.w, h: box.h },
     });
   } catch (err) {
     console.error("[customSlide export] falha ao renderizar bloco", block.kind, err);
