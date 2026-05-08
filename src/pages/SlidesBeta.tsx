@@ -45,7 +45,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MultiSelectFilter } from "@/components/pricing/MultiSelectFilter";
 import { toast } from "sonner";
 import {
-  ArrowRight, BookOpen, Bookmark, ChevronLeft, ChevronRight, Copy, Download, Filter as FilterIcon,
+  ArrowRight, BookOpen, Bookmark, ChevronLeft, ChevronRight, Copy, Download, FileText, Filter as FilterIcon,
   GitBranch, GripVertical, Layers, LayoutTemplate, Plus, RotateCcw, Save, Sparkles, Target, Trash2, X,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -244,7 +244,7 @@ function FlowCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative flex items-center gap-3 rounded-2xl border bg-card/60 p-3 transition-all duration-200 animate-fade-in",
+        "group relative flex items-center gap-2 rounded-xl border bg-card/60 px-2.5 py-2 transition-all duration-200 animate-fade-in",
         selected
           ? "border-primary/60 bg-primary/[0.06] shadow-[0_0_0_1px_hsl(var(--primary)/0.35),_0_8px_24px_-12px_hsl(var(--primary)/0.35)]"
           : "border-border/40 hover:-translate-y-px hover:border-border/70 hover:bg-card hover:shadow-[0_4px_16px_-8px_hsl(0_0%_0%/0.4)]",
@@ -252,7 +252,7 @@ function FlowCard({
       onClick={onSelect}
     >
       <button
-        className="flex h-8 w-5 shrink-0 cursor-grab items-center justify-center text-muted-foreground/30 transition-colors hover:text-muted-foreground active:cursor-grabbing"
+        className="flex h-7 w-4 shrink-0 cursor-grab items-center justify-center text-muted-foreground/30 transition-colors hover:text-muted-foreground active:cursor-grabbing"
         {...attributes}
         {...listeners}
         onClick={(e) => e.stopPropagation()}
@@ -261,39 +261,34 @@ function FlowCard({
         <GripVertical className="h-4 w-4" />
       </button>
 
-      <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border", ACCENT_BG[meta.accent])}>
+      <span className="w-6 shrink-0 text-center text-[10px] font-semibold tabular-nums tracking-wider text-muted-foreground/70">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+
+      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[meta.accent])}>
         <Icon className="h-4 w-4" />
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold tabular-nums tracking-wider text-muted-foreground/70">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          <span className="truncate text-sm font-medium tracking-tight">
-            {item.label || meta.title}
-          </span>
-        </div>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span>{meta.title}</span>
-          {filtersCount > 0 && (
-            <>
-              <span>·</span>
-              <span className="inline-flex items-center gap-0.5">
-                <FilterIcon className="h-3 w-3" /> {filtersCount}
-              </span>
-            </>
-          )}
-          {!ready.ok && (
-            <>
-              <span>·</span>
-              <span className="text-warning">{ready.reason}</span>
-            </>
-          )}
+        <div className="truncate text-sm font-medium tracking-tight">
+          {item.label || meta.title}
         </div>
       </div>
 
-      <div className="flex items-center gap-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+        {filtersCount > 0 && (
+          <span className="inline-flex items-center gap-0.5">
+            <FilterIcon className="h-3 w-3" /> {filtersCount}
+          </span>
+        )}
+        {!ready.ok && (
+          <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[10px] text-warning">
+            {ready.reason}
+          </span>
+        )}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
         <Button
           variant="ghost" size="icon" className="h-7 w-7"
           onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
@@ -704,8 +699,13 @@ function SavePresetDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2" disabled={items.length === 0}>
-          <Save className="h-4 w-4" /> Salvar pré-definição
+        <Button
+          variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
+          disabled={items.length === 0}
+          aria-label="Salvar pré-definição"
+          title="Salvar pré-definição"
+        >
+          <Save className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -896,76 +896,71 @@ export default function SlidesBeta() {
         className={cn(
           "grid h-[calc(100vh-3.5rem)] min-h-0 gap-0 overflow-hidden",
           inspectorOpen
-            ? "grid-cols-[80px_minmax(0,1fr)_320px] xl:grid-cols-[80px_minmax(0,1fr)_360px]"
-            : "grid-cols-[80px_minmax(0,1fr)_36px]",
+            ? "grid-cols-[240px_minmax(0,1fr)_300px] xl:grid-cols-[260px_minmax(0,1fr)_340px]"
+            : "grid-cols-[240px_minmax(0,1fr)_36px] xl:grid-cols-[260px_minmax(0,1fr)_36px]",
         )}
       >
         {/* ===== Coluna esquerda: catálogo + presets ===== */}
-        <aside className="flex min-h-0 flex-col items-center gap-3 border-r border-border/40 bg-sidebar/40 py-4">
-          <TooltipProvider delayDuration={150}>
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
-                Slides
-              </div>
-              {SLIDE_CATALOG.map((s) => {
-                const Icon = ICON_MAP[s.icon];
-                return (
-                  <Tooltip key={s.kind}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => addWithDefaults(s.kind)}
-                        className={cn(
-                          "group relative flex h-11 w-11 items-center justify-center rounded-xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_hsl(var(--primary)/0.5)]",
-                          ACCENT_BG[s.accent],
-                        )}
-                        aria-label={s.title}
-                      >
-                        <Icon className="h-5 w-5" />
-                        <Plus className="absolute -right-1 -top-1 h-3.5 w-3.5 rounded-full bg-background p-0.5 text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover:opacity-100" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-[240px]">
-                      <div className="text-xs font-medium">{s.title}</div>
-                      <div className="mt-0.5 text-[11px] text-muted-foreground">{s.description}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              })}
-            </div>
-
-            <div className="h-px w-8 bg-border/50" />
-
-            <Popover>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <PopoverTrigger asChild>
-                    <button
-                      className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-border/40 bg-card/50 text-muted-foreground transition-all hover:-translate-y-0.5 hover:border-border/70 hover:text-foreground"
-                      aria-label="Pré-definições"
-                    >
-                      <Bookmark className="h-4 w-4" />
-                    </button>
-                  </PopoverTrigger>
-                </TooltipTrigger>
-                <TooltipContent side="right">
-                  <div className="text-xs font-medium">Pré-definições</div>
-                </TooltipContent>
-              </Tooltip>
-              <PopoverContent side="right" align="start" className="w-72 p-3">
-                <div className="mb-2 flex items-center gap-2">
-                  <Bookmark className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-sm font-medium">Pré-definições</span>
+        <aside className="flex min-h-0 flex-col border-r border-border/40 bg-sidebar/40">
+          <ScrollArea className="flex-1">
+            <div className="flex flex-col gap-4 p-3">
+              <div className="space-y-2">
+                <div className="px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/60">
+                  Slides disponíveis
                 </div>
-                <PresetsPanel />
-              </PopoverContent>
-            </Popover>
-          </TooltipProvider>
+                <div className="flex flex-col gap-1.5">
+                  {SLIDE_CATALOG.map((s) => {
+                    const Icon = ICON_MAP[s.icon];
+                    return (
+                      <button
+                        key={s.kind}
+                        onClick={() => addWithDefaults(s.kind)}
+                        className="group relative flex items-start gap-2.5 rounded-xl border border-border/40 bg-card/40 p-2.5 text-left transition-all duration-200 hover:-translate-y-px hover:border-primary/40 hover:bg-card hover:shadow-[0_6px_16px_-10px_hsl(var(--primary)/0.5)]"
+                      >
+                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border", ACCENT_BG[s.accent])}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1 text-[13px] font-medium tracking-tight">
+                            <span className="truncate">{s.title}</span>
+                            <Plus className="h-3 w-3 shrink-0 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
+                          </div>
+                          <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground line-clamp-2">
+                            {s.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <Separator />
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-2 rounded-xl border border-border/40 bg-card/40 px-3 py-2 text-left transition-colors hover:border-border/70 hover:bg-card">
+                    <Bookmark className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-xs font-medium">Pré-definições</span>
+                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="right" align="start" className="w-72 p-3">
+                  <div className="mb-2 flex items-center gap-2">
+                    <Bookmark className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-sm font-medium">Pré-definições</span>
+                  </div>
+                  <PresetsPanel />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </ScrollArea>
         </aside>
 
         {/* ===== Coluna central: esteira ===== */}
         <main className="flex flex-col overflow-hidden bg-background/60">
           {/* Header da esteira */}
-          <div className="flex items-center justify-between gap-3 border-b border-border/40 bg-card/30 px-6 py-3 backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-2 border-b border-border/40 bg-card/30 px-4 py-2.5 backdrop-blur-xl">
             <div className="flex items-center gap-2.5">
               <h2 className="text-sm font-semibold tracking-tight">Esteira</h2>
               <Badge variant="secondary" className="h-5 px-2 text-[10px] tabular-nums">
@@ -973,7 +968,7 @@ export default function SlidesBeta() {
               </Badge>
               {!readyAll && items.length > 0 && (
                 <Badge variant="outline" className="h-5 border-warning/40 px-2 text-[10px] text-warning">
-                  Slides incompletos
+                  Incompleto
                 </Badge>
               )}
             </div>
@@ -997,8 +992,12 @@ export default function SlidesBeta() {
                 <div className="mx-1 h-5 w-px bg-border/50" />
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-normal text-muted-foreground">
-                      <span className="max-w-[180px] truncate">{fileName}</span>
+                    <Button
+                      variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground"
+                      aria-label="Nome do arquivo"
+                      title={`Nome do arquivo: ${fileName}`}
+                    >
+                      <FileText className="h-4 w-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-72 p-3">
@@ -1027,7 +1026,7 @@ export default function SlidesBeta() {
 
           {/* Conteúdo da esteira */}
           <ScrollArea className="flex-1">
-            <div className="mx-auto max-w-3xl p-6">
+            <div className="mx-auto max-w-2xl px-4 py-5">
               {items.length === 0 ? (
                 <EmptyFlow onAdd={addWithDefaults} />
               ) : (
